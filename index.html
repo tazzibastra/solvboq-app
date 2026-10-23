@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-23T11:30:01Z">
+<meta name="solvboq-build" content="2026-10-23T13:33:19Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -290,10 +290,11 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 
     <div class="grid3">
       <section class="card pad" aria-labelledby="score-h">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="score-h">Readiness score</h2><span id="scorePill"></span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h2 id="score-h">Quantities you can trust</h2><span id="scorePill"></span></div>
         <div class="gauge" id="gauge"></div>
         <div class="bands"><span>below 60 not ready</span><span>60–89 attention</span><span>90+ ready</span></div>
         <p class="center" style="font-size:13px;color:var(--ink-2)" id="scoreText"></p>
+        <div id="specRow"></div>
         <p class="center sub" id="scoreNote"></p>
       </section>
       <section class="card pad" aria-labelledby="cov-h">
@@ -303,7 +304,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
     </div>
 
     <section class="card pad" aria-labelledby="trade-h">
-      <div><h2 class="big" id="trade-h">Readiness by trade</h2><div class="sub">Share of each trade’s quantity you can take as modelled. Select a trade to see its checks.</div></div>
+      <div><h2 class="big" id="trade-h">Readiness by trade</h2><div class="sub">Share of each trade’s quantity that’s measured correctly and can be billed. Missing specification is listed separately. Select a trade to see its checks.</div></div>
       <div id="trades" class="tradegrid"></div>
     </section>
 
@@ -877,6 +878,9 @@ function runChecks(input, opts = {}) {
     (byElement[e.Id] = byElement[e.Id] || []).push(iss);
     if (!status[e.Id] || RANK[iss.severity] > RANK[status[e.Id]]) status[e.Id] = iss.severity;
   }
+  // Quantity trusted: no open flag that could change the quantity or stop it being billed (tiers 1 and 2).
+  // Missing specification and "confirm what it is" (tiers 3 and 4) leave the quantity as it is, so they only count against "fully specified".
+  const qBlocked = (id) => (byElement[id] || []).some((i) => i.tier <= 2 && (i.severity === "eyes" || i.severity === "unknown"));
   const pop = els.filter(inConcretePopulation);
   const notBuildingCats = {}; notBuilding.forEach((x) => (notBuildingCats[x.Category || x.Bic] = (notBuildingCats[x.Category || x.Bic] || 0) + 1));
   const s = { suppressedCount, trusted: 0, eyes: 0, unknown: 0, excluded: 0, elementCount: els.length, ignoredCount: ignored.length, notBuildingCount: notBuilding.length,
@@ -893,13 +897,14 @@ function runChecks(input, opts = {}) {
 
   // Readiness per trade, in each trade's own unit, plus element counts
   const tradeStats = {};
-  for (const t of TRADES) tradeStats[t.key] = { ...t, trusted: 0, eyes: 0, unknown: 0, excluded: 0, n: { trusted: 0, eyes: 0, unknown: 0, excluded: 0 }, unmeasured: 0, count: 0 };
+  for (const t of TRADES) tradeStats[t.key] = { ...t, trusted: 0, eyes: 0, unknown: 0, excluded: 0, qOk: 0, n: { trusted: 0, eyes: 0, unknown: 0, excluded: 0, qOk: 0 }, unmeasured: 0, count: 0 };
   const tradeOfId = {};
   for (const e of els) {
     const k = tradeOf(e); tradeOfId[e.Id] = k;
     const t = tradeStats[k], q = t.qty(e), st = status[e.Id];
     const b = st === "excluded" ? "excluded" : st === "unknown" ? "unknown" : st === "eyes" ? "eyes" : "trusted";
     t[b] += q; t.n[b]++; t.count++;
+    if (b !== "excluded" && !qBlocked(e.Id)) { t.qOk += q; t.n.qOk++; }
     if (q <= 0 && b !== "excluded") t.unmeasured++;
   }
   const tradeList = TRADES.map((t) => tradeStats[t.key]).filter((t) => t.count > 0).map((t) => {
@@ -907,6 +912,7 @@ function runChecks(input, opts = {}) {
     const live = t.n.trusted + t.n.eyes + t.n.unknown;
     t.byQuantity = t.total > 0 && t.unit !== "no.";
     t.ready = t.byQuantity ? t.trusted / t.total : live ? t.n.trusted / live : 0;
+    t.qReady = t.byQuantity ? t.qOk / t.total : live ? t.n.qOk / live : 0;
     t.share = (k) => (t.byQuantity ? (t.total ? t[k] / t.total : 0) : live ? t.n[k] / live : 0);
     return t;
   });
@@ -914,6 +920,8 @@ function runChecks(input, opts = {}) {
   const readyEls = liveEls.filter((e) => !status[e.Id] || status[e.Id] === "handled");
   s.overall = liveEls.length ? readyEls.length / liveEls.length : 0;
   s.readyCount = readyEls.length; s.liveCount = liveEls.length;
+  s.qCount = liveEls.filter((e) => !qBlocked(e.Id)).length;
+  s.quantities = liveEls.length ? s.qCount / liveEls.length : 0;
   s.eyesCount = liveEls.filter((e) => status[e.Id] === "eyes").length;
   s.unknownCount = liveEls.filter((e) => status[e.Id] === "unknown").length;
   s.notChecked = notChecked;
@@ -1333,7 +1341,8 @@ function load(records, name, meta = {}) {
   if (meta.ptype) $("fType").value = meta.ptype;
   const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   $("loadErr").replaceChildren(); $("aiStatus").textContent = "";
-  state.prev = recordHistory($("fProject").value.trim(), $("fRev").value.trim(), Math.round(state.result.summary.overall * 100));
+  const sm = state.result.summary;
+  state.prev = recordHistory($("fProject").value.trim(), $("fRev").value.trim(), Math.round(sm.quantities * 100), Math.round(sm.overall * 100));
   render();
   window.scrollTo(0, 0);
 }
@@ -1368,24 +1377,26 @@ $("btnGoFix").addEventListener("click", () => $("fixSection").scrollIntoView({ b
 
 // ===== Score history per project (this browser only) =====
 const HIST_KEY = "solvboq-score-history-v1";
-function recordHistory(project, rev, score) {
+// q: quantities you can trust; spec: fully specified. Entries saved before the split have only "score" (fully specified).
+function recordHistory(project, rev, q, spec) {
   if (!project || !rev) return null;
   let h = {}; try { h = JSON.parse(localStorage.getItem(HIST_KEY) || "{}") || {}; } catch (e) { h = {}; }
   const list = (h[project] = h[project] || []).filter((x) => x.rev !== rev);
   const prev = list.length ? list[list.length - 1] : null;
-  list.push({ rev, score, at: new Date().toISOString() }); h[project] = list.slice(-12);
+  list.push({ rev, q, spec, at: new Date().toISOString() }); h[project] = list.slice(-12);
   try { localStorage.setItem(HIST_KEY, JSON.stringify(h)); } catch (e) {}
   return prev;
 }
 
 // ===== Derived helpers =====
 const actionable = () => state.result.issues.filter((i) => i.severity === "eyes" || i.severity === "unknown").sort((a, b) => a.tier - b.tier || b.score - a.score || b.elements.length - a.elements.length);
-function scoreWithout(key) {
+// quantities: score only tier 1 and 2 flags (quantity could be wrong, can't be billed), as summary.quantities does
+function scoreWithout(key, quantities) {
   const r = state.result; let live = 0, ready = 0;
   for (const e of r.elements) {
     if (NON_MEASURED.has(e.Bic) || r.status[e.Id] === "excluded") continue;
     live++;
-    const worst = (r.byElement[e.Id] || []).filter((i) => i.key !== key).reduce((w, i) => (RANK[i.severity] > (RANK[w] || 0) ? i.severity : w), "");
+    const worst = (r.byElement[e.Id] || []).filter((i) => i.key !== key && (!quantities || i.tier <= 2)).reduce((w, i) => (RANK[i.severity] > (RANK[w] || 0) ? i.severity : w), "");
     if (!worst || worst === "handled") ready++;
   }
   return live ? Math.round((ready / live) * 100) : 0;
@@ -1422,30 +1433,43 @@ function renderTitle() {
 $("fType").addEventListener("change", renderTitle);
 
 function renderScore() {
-  const s = state.result.summary, score = Math.round(s.overall * 100), c = pctClass(score);
+  const s = state.result.summary, score = Math.round(s.quantities * 100), c = pctClass(score), spec = Math.round(s.overall * 100), sc = pctClass(spec);
   const label = { green: "Ready", amber: "Needs attention", red: "Not ready yet" }[c];
   $("scorePill").replaceChildren(h("span", { class: "pill p-" + c }, h("i"), label));
   const arc = Math.PI * 80;
   const tick = (f) => { const a = Math.PI * (1 - f), p = (rr) => [100 + rr * Math.cos(a), 100 - rr * Math.sin(a)]; const [x1, y1] = p(72), [x2, y2] = p(88); return `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--card)" stroke-width="3"></line>`; };
   const col = { green: "var(--green)", amber: "var(--amber)", red: "var(--red)" }[c];
   $("gauge").replaceChildren(
-    svg(`<svg width="220" height="128" viewBox="0 0 200 116" role="img" aria-label="Readiness ${score} percent; thresholds at 60 and 90"><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="var(--track)" stroke-width="14" stroke-linecap="round"></path><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(arc * Math.max(score, 1) / 100).toFixed(1)} 400"></path>${tick(0.6)}${tick(0.9)}</svg>`),
-    h("div", { class: "num" }, h("b", {}, String(score), h("small", {}, "%")), h("span", {}, "ready")));
-  $("scoreText").textContent = `${s.readyCount} of ${s.liveCount} elements can be taken as modelled. ${s.eyesCount} need checking and ${s.unknownCount} can’t be classified yet.`;
+    svg(`<svg width="220" height="128" viewBox="0 0 200 116" role="img" aria-label="Quantities you can trust ${score} percent; thresholds at 60 and 90"><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="var(--track)" stroke-width="14" stroke-linecap="round"></path><path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="${col}" stroke-width="14" stroke-linecap="round" stroke-dasharray="${(arc * Math.max(score, 1) / 100).toFixed(1)} 400"></path>${tick(0.6)}${tick(0.9)}</svg>`),
+    h("div", { class: "num" }, h("b", {}, String(score), h("small", {}, "%")), h("span", {}, "trusted")));
+  const risk = s.liveCount - s.qCount;
+  $("scoreText").textContent = `${s.qCount} of ${s.liveCount} elements are measured correctly and can be billed.` + (risk ? ` ${risk} could have a wrong quantity or can’t be billed yet.` : "");
+  $("specRow").replaceChildren(h("div", { class: "trow", style: "cursor:default" },
+    h("span", { class: "l" }, h("b", { style: "font-weight:500" }, "Fully specified"), h("b", { class: "c-" + sc }, spec + "%")),
+    h("span", { class: "track" }, h("i", { style: `width:${Math.max(spec, 1.5)}%;background:var(--${sc})` })),
+    h("span", { class: "d" }, `${s.readyCount} of ${s.liveCount} elements have no open flags. The others still need a grade, material or size, or a confirmation of what they are, before the BoQ descriptions are complete.`)));
   const notes = [];
   if (s.notChecked.length) notes.push(`Not checked, because the data doesn’t include them: ${s.notChecked.join(", ")}.`);
   if (state.note) notes.push(state.note);
   if (s.notBuildingCount) notes.push(`${s.notBuildingCount.toLocaleString("en-GB")} non-building records in the file (${s.notBuildingCats.slice(0, 3).map(([c]) => c.toLowerCase()).join(", ")} and so on) were ignored.`);
-  if (state.prev) { const d = score - state.prev.score; notes.unshift(d === 0 ? `Same as Rev ${state.prev.rev} (${state.prev.score}%).` : `${d > 0 ? "Up" : "Down"} ${Math.abs(d)} points from ${state.prev.score}% in Rev ${state.prev.rev}.`); }
+  if (state.prev && state.prev.q != null) { const d = score - state.prev.q; notes.unshift(d === 0 ? `Same as Rev ${state.prev.rev} (${state.prev.q}%).` : `${d > 0 ? "Up" : "Down"} ${Math.abs(d)} points from ${state.prev.q}% in Rev ${state.prev.rev}.`); }
   $("scoreNote").textContent = notes.join(" ") || "First check of this model. Check a later revision to see progress here.";
 }
 
 function renderTrades() {
   $("trades").replaceChildren(...state.result.trades.map((t) => {
-    const live = t.n.trusted + t.n.eyes + t.n.unknown, p = Math.round(t.ready * 100), c = pctClass(p);
+    const live = t.n.trusted + t.n.eyes + t.n.unknown, p = Math.round(t.qReady * 100), c = pctClass(p);
     let detail;
-    if (t.byQuantity) { const risk = t.eyes + t.unknown; detail = risk > 0 ? `${qtyText(risk, t.unit)} of ${qtyText(t.total, t.unit)} to check` : `${qtyText(t.total, t.unit)}, all ready`; }
-    else { const risk = t.n.eyes + t.n.unknown; detail = risk ? `${risk} of ${live} to check` : `${live} no., all ready`; if (t.unit !== "no." && live) detail += ", shown by count (no quantities in this data)"; }
+    if (t.byQuantity) {
+      const risk = t.total - t.qOk, spec = t.qOk - t.trusted;
+      detail = risk > 1e-9 ? `${qtyText(risk, t.unit)} of ${qtyText(t.total, t.unit)} could be wrong or can’t be billed` : `${qtyText(t.total, t.unit)}, all measured`;
+      if (spec > 1e-9) detail += `; ${qtyText(spec, t.unit)} needs specification`;
+    } else {
+      const risk = live - t.n.qOk, spec = t.n.qOk - t.n.trusted;
+      detail = risk ? `${risk} of ${live} could be wrong or can’t be billed` : `${live} no., all measured`;
+      if (spec) detail += `; ${spec} need specification`;
+      if (t.unit !== "no." && live) detail += ", shown by count (no quantities in this data)";
+    }
     if (t.n.excluded) detail += `, ${t.n.excluded} left out`;
     const on = state.trade === t.key;
     return h("button", { type: "button", class: "trow", "aria-pressed": String(on), onclick: () => { state.trade = on ? "" : t.key; renderTrades(); renderChecks(); if (!on) document.getElementById("checks-h").scrollIntoView({ behavior: "smooth", block: "start" }); } },
@@ -1696,7 +1720,8 @@ function renderDetail() {
   const L = impactLines(iss);
   const groups = {}; iss.elements.forEach((e) => { const k = `${e.Family || e.Category} : ${e.Type || "no type name"}`; (groups[k] = groups[k] || []).push(e); });
   const nTypes = Object.keys(groups).length, biggest = Math.max(...Object.values(groups).map((g) => g.length));
-  const now = Math.round(state.result.summary.overall * 100), after = actionable ? scoreWithout(iss.key) : now;
+  const qIssue = iss.tier <= 2, sm = state.result.summary;
+  const now = Math.round((qIssue ? sm.quantities : sm.overall) * 100), after = actionable ? scoreWithout(iss.key, qIssue) : now;
   const main = iss.byTrade[0], mt = main ? TRADE[main.trade] : null;
   const cats = [...new Set(iss.elements.map((e) => e.Category))];
   const q = state.dQ.trim().toLowerCase();
@@ -1730,7 +1755,7 @@ function renderDetail() {
         : h("div", { class: "card fig" }, h("span", {}, "Revit types involved"), h("b", {}, String(nTypes), " ", h("small", {}, nTypes === 1 ? "type" : "types"))),
       h("div", { class: "card fig" }, h("span", {}, mt ? `${mt.label} at risk${mt.section ? " · " + mt.section.replace("SANS ", "") : ""}` : "At risk"),
         h("b", {}, mt && mt.unit !== "no." && main.qty > 0 ? [qtyText(main.qty, mt.unit).split("\u00a0")[0], " ", h("small", {}, mt.unit)] : [String(main ? main.n : 0), " ", h("small", {}, "elements")])),
-      h("div", { class: "card fig" }, h("span", {}, actionable ? "Score once fixed" : "Readiness score"), h("b", {}, `${after}%`, " ", after > now ? h("em", {}, `+${after - now}`) : null))),
+      h("div", { class: "card fig" }, h("span", {}, qIssue ? (actionable ? "Quantities trusted once fixed" : "Quantities trusted") : (actionable ? "Fully specified once fixed" : "Fully specified")), h("b", {}, `${after}%`, " ", after > now ? h("em", {}, `+${after - now}`) : null))),
     iss.key === "grade" ? gradePanel(iss) : null,
     h("div", { class: "row2" },
       h("section", { class: "card grow", "aria-labelledby": "el-h" },
@@ -1793,7 +1818,7 @@ function renderMap() {
   const groups = currentGroups();
   $("mKicker").textContent = $("fProject").value.trim() || "Untitled model";
   const els = groups.reduce((s, g) => s + g.elements.length, 0);
-  $("mChips").replaceChildren(h("span", { class: "chipx file" }, svg(ICON.file), state.name), h("span", { class: "chipx" }, `${plural(groups.length, "group")} from ${plural(els, "element")}`), h("span", { class: "meta" }, "Readiness " + Math.round(state.result.summary.overall * 100) + "%"));
+  $("mChips").replaceChildren(h("span", { class: "chipx file" }, svg(ICON.file), state.name), h("span", { class: "chipx" }, `${plural(groups.length, "group")} from ${plural(els, "element")}`), h("span", { class: "meta" }, "Quantities trusted " + Math.round(state.result.summary.quantities * 100) + "%"));
   renderMapCards(groups); renderMapGroups(groups); renderBoq(groups);
   const unmatched = groups.filter((g) => g.method === "none").length;
   $("btnAskMap").disabled = !sampleFn || !unmatched;
