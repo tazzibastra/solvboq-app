@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-23T14:44:03Z">
+<meta name="solvboq-build" content="2026-10-23T16:19:18Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -240,6 +240,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .boqtable td.it{font-family:var(--mono);font-size:12px;color:var(--muted)}
 .boqtable td.desc{max-width:560px}
 .boqtable td.desc small{display:block;font-size:12px;color:var(--muted)}
+.batches{border-top:1px solid var(--rule);margin-top:12px}
+.batches .listrow.on{background:var(--chip)}
 </style>
 </head>
 <body>
@@ -388,6 +390,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
           <div class="seg" role="group" aria-label="Filter groups" id="mFilter"></div>
         </div>
       </div>
+      <div id="mBatches"></div>
       <div class="scroll"><table class="maptable">
         <thead><tr><th>Revit group</th><th class="r">Quantity</th><th>SANS item</th><th>How</th><th><span class="sr">Actions</span></th></tr></thead>
         <tbody id="mGroups"></tbody>
@@ -458,6 +461,9 @@ const DEFAULT_HINTS = {
   concreteMaterial: ["concrete", "blinding", "screed", "grout", "cement", "mpa"],
   unreinforced: ["unreinforced", "re:\\bmass\\b", "re:\\bplain\\b"],
   notBuilt: ["analytical"],
+  // model title or description: what kind of structure this is (decides the standard concrete grade)
+  waterStructure: ["tank", "thickener", "reservoir", "digester", "clarifier", "sump", "wet well", "wetwell", "settling", "sedimentation", "basin", "pond", "lagoon", "aeration", "filter bed"],
+  buildingStructure: ["building", "house", "office", "workshop", "store", "substation", "re:\\broom\\b"],
 };
 
 // Grade for concrete whose material gives none, by kind of structure (the engineer's standard: water tanks 35 MPa, buildings 30 MPa).
@@ -778,7 +784,16 @@ function runChecks(input, opts = {}) {
   const noGrade = live.filter((e) => /concrete/i.test(e.Material || "") && !RX.grade.test(e.Material) && !grades[e.Material] && !roleIs(e, "blinding", "screed") && !/precast|grout|no.?fines/i.test(`${e.Material} ${e.Type}`) && !H().screed.test(e.Material) && !H().blinding.test(e.Material));
   // Reinforced concrete with no grade takes the standard grade for the kind of structure. Benching, aprons and the like
   // are often a lower grade (25 MPa in the Gravity Thickeners BoQ), so they still need a grade from the drawings.
-  const civil = !els.some((e) => ["masonry", "openings", "roofing", "cladding"].includes(tradeOf(e)));
+  // What kind of structure: the model's title says it best ("Sludge Holding Tanks", "Boiler House"). Without a clear title,
+  // a model with no brickwork, doors or windows is taken as a water structure (a covered tank can still have roof sheeting).
+  const title = String(opts.title || "");
+  const titleWater = H().waterStructure.test(title), titleBuilding = H().buildingStructure.test(title);
+  const hasBuilding = els.some((e) => ["masonry", "openings"].includes(tradeOf(e)));
+  const civil = titleWater ? true : titleBuilding ? false : !hasBuilding;
+  const structureWhy = titleWater ? `The model is called “${title.trim()}”, so it’s taken as a water-retaining structure${hasBuilding ? " (it also has brickwork, doors or windows: if part of it is a building at a different grade, set that material’s grade)" : ""}.`
+    : titleBuilding ? `The model is called “${title.trim()}”, so it’s taken as a building.`
+    : civil ? "The model has no brickwork, doors or windows, so it’s taken as a water-retaining structure such as a tank."
+    : "The model has brickwork, doors or windows, so it’s taken as a building.";
   const assumedGrade = CONV.structureGrades[civil ? "civil" : "building"] || "";
   const lowGrade = (e) => roleIs(e, "benching", "chamfer", "apron", "kerb", "plinth", "noFines") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`);
   const assumed = assumedGrade ? noGrade.filter((e) => !lowGrade(e)) : [];
@@ -786,8 +801,7 @@ function runChecks(input, opts = {}) {
     "Strength concrete (SANS 1200 G 8.4.3) is priced by grade, and the model doesn’t say which.",
     "Take the grade from the drawings or specification, then set it once per material so every element using it is graded.", noGrade.filter((e) => !assumed.includes(e)));
   add("gradeassumed", "handled", `Concrete grade taken as ${assumedGrade}`,
-    civil ? `The material doesn’t give a grade. This looks like a water-retaining structure (no brickwork, doors, windows or sheeting), so the standard ${assumedGrade} for water tanks is used.`
-      : `The material doesn’t give a grade. This is a building, so the standard ${assumedGrade} for buildings is used.`,
+    `The material doesn’t give a grade. ${structureWhy} The standard grade is ${assumedGrade} for ${civil ? "water-retaining structures" : "buildings"}.`,
     "If any of it is a different grade, set the grade for that material and it replaces this one.", assumed);
   const noLevel = live.filter((e) => !e.Level);
   add("nolevel", "eyes", "Elements with no level",
@@ -1206,8 +1220,10 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null) {
   }
   if (trade === "fittings" && /puddle/.test(n)) return it("SANS 1200 G", "8.13", "Casting items in concrete", `Puddle flanges cast into walls or floors${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN",
     "");
+  // A "Default" material only matters when the type name doesn't say what the fitting is (a standard, class or size)
+  const namesFitting = /\bpn\s?\d|sans|sabs|\biso\b|astm|ansi|bs\s?en|\bdin\b|class\s?\d|\bdn\s?\d|\d+\s*\/\s*\d|\d{2,4}\s*mm/i.test(`${e.Type} ${e.Family}`);
   if (trade === "fittings") return it("SANS 1200 L", "", "Specials and fittings", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : e.Family}${mat && !/^default$/i.test(mat) ? ` (${mat})` : ""}`, "No", "L-FITTING",
-    /^default$/i.test(mat) || !mat ? "The material is “Default”, so the fitting type and class are read from its name." : "");
+    (/^default$/i.test(mat) || !mat) && !namesFitting ? "The material is “Default” and the type name doesn’t give a standard, class or size, so check what this fitting is." : "");
   if (trade === "openings") {
     const kind = e.Bic === "OST_Doors" ? "Door" : "Window";
     return it("PD", "PD 10.4", "Doors and windows", `${kind}: ${e.Family}${e.Type ? `, ${e.Type}` : ""}`, "No", kind === "Door" ? "PD-DOOR" : "PD-WINDOW",
@@ -1371,9 +1387,9 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "" });
+  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "" });
   state.records = records;
-  state.result = runChecks(records, { profile: state.profile }); noteCheckTitles();
+  state.result = runChecks(records, { profile: state.profile, title: modelTitle() }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
   if (meta.ptype) $("fType").value = meta.ptype;
   const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -1707,7 +1723,9 @@ function readsFor(e, key) {
   if (e.Warnings && e.Warnings.length) add("warnings", "Revit warning", e.Warnings[0]);
   return rows.map((r) => ({ ...r, st: flags[r.k] || (r.value === "empty" && ["material", "type"].includes(r.k) && flags[r.k] ? "bad" : "") }));
 }
-function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile }); noteCheckTitles(); } }
+// The model's name and description tell the engine what kind of structure it is (tank or building)
+function modelTitle() { return [state.name, state.desc].filter(Boolean).join(" ").replace(/_\d{8}_\d{6}|\.(json|csv|rvt)$/gi, " "); }
+function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile, title: modelTitle() }); noteCheckTitles(); } }
 function noteCheckTitles() { for (const i of state.result.issues) CHECK_TITLES[i.key] = i.title; }
 function gradePanel(iss) {
   const mats = {};
@@ -1842,6 +1860,10 @@ const METHOD = {
 };
 function mapQty(q, unit) { if (unit === "No") return `${Math.round(q)}`; if (unit === "t") return q.toFixed(2); return q.toFixed(unit === "m³" ? 2 : 1); }
 const needsDecision = (g) => !g.excluded && !g.confirmed;
+// Groups suggested for the same reason are one decision, not one per Revit type
+const batchKey = (g) => `${g.trade}|${g.method}|${g.reason}`;
+// A suggestion with a placeholder such as [grade] isn't finished, so it isn't saved for future models
+const savable = (g) => g.item && !/\[[^\]]*\]/.test(g.item.description);
 function currentGroups() { return buildGroups(state.result, state.mapDecisions, CONV.mapping); }
 function goMap() { state.view = "map"; render(); window.scrollTo(0, 0); }
 $("navMap").addEventListener("click", goMap);
@@ -1889,7 +1911,8 @@ function renderMapGroups(groups) {
   const filters = [["decide", `Needs a decision (${decide})`], ["all", "All"], ["mapped", "Mapped"], ["excluded", "Left out"]];
   $("mFilter").replaceChildren(...filters.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(state.mFilter === k), onclick: () => { state.mFilter = k; renderMapGroups(currentGroups()); } }, l)));
   const q = state.mQ.trim().toLowerCase();
-  const list = groups.filter((g) => (state.mFilter === "all" || (state.mFilter === "decide" ? needsDecision(g) : state.mFilter === "mapped" ? g.confirmed && !g.excluded : g.excluded))
+  renderBatches(groups);
+  const list = groups.filter((g) => (!state.mBatch || (needsDecision(g) && batchKey(g) === state.mBatch)) && (state.mFilter === "all" || (state.mFilter === "decide" ? needsDecision(g) : state.mFilter === "mapped" ? g.confirmed && !g.excluded : g.excluded))
     && (!q || [g.sample.Family, g.sample.Type, g.sample.Material, g.sample.Category, g.item && g.item.description].some((x) => String(x || "").toLowerCase().includes(q))));
   const rows = [];
   for (const g of list) {
@@ -1917,11 +1940,41 @@ function renderMapGroups(groups) {
   $("mFoot").textContent = `${plural(list.length, "group")} shown. Element IDs for each group are in the downloaded BoQ.`;
 }
 
+// A confirmed mapping goes into the profile, so the next revision of this model (and the next model) doesn't ask again
 function confirmGroup(g) {
   state.mapDecisions[g.key] = { item: g.item, method: g.method === "claude" ? "claude" : "confirmed", confirmed: true, confidence: g.confidence };
-  // Claude's suggestion, once accepted, goes into the profile so it isn't asked again
-  if (g.method === "claude") Profiles.setEntry("mapping", g.key, g.item, "mapping", "claude");
-  toast("Mapping confirmed"); renderMap();
+  if (savable(g)) Profiles.setEntry("mapping", g.key, g.item, "mapping", g.method === "claude" ? "claude" : "confirmed");
+  toast(savable(g) ? "Mapping confirmed and saved for future models" : "Mapping confirmed"); renderMap();
+}
+function confirmBatch(list) {
+  for (const g of list) state.mapDecisions[g.key] = { item: g.item, method: g.method === "claude" ? "claude" : "confirmed", confirmed: true, confidence: g.confidence };
+  const save = list.filter(savable);
+  if (save.length) Profiles.setEntries("mapping", save.map((g) => [g.key, g.item]), "mapping", "confirmed");
+  state.mBatch = null;
+  toast(`${plural(list.length, "group")} confirmed` + (save.length ? `, ${save.length} saved for future models` : "")); renderMap();
+}
+
+// Batches: two or more groups waiting for the same decision, for the same reason
+function renderBatches(groups) {
+  const by = new Map();
+  for (const g of groups.filter((g) => needsDecision(g) && g.item)) { const k = batchKey(g); if (!by.has(k)) by.set(k, []); by.get(k).push(g); }
+  const batches = [...by.entries()].filter(([, l]) => l.length > 1).sort((a, b) => b[1].length - a[1].length);
+  if (state.mBatch && !by.has(state.mBatch)) state.mBatch = null;
+  if (!batches.length) { $("mBatches").replaceChildren(); return; }
+  const n = batches.reduce((s, [, l]) => s + l.length, 0);
+  $("mBatches").replaceChildren(h("div", { class: "batches" },
+    h("div", { class: "sub", style: "padding:14px 20px 4px" }, `${plural(n, "group")} fall into ${batches.length === 1 ? "1 batch" : `${batches.length} batches`} with the same suggestion and the same reason. Check one batch with “Show them”, then confirm it in one go.`),
+    ...batches.map(([k, l]) => {
+      const g = l[0], els = l.reduce((s, x) => s + x.elements.length, 0), on = state.mBatch === k;
+      const what = [...new Set(l.map((x) => x.item.description))];
+      return h("div", { class: "listrow" + (on ? " on" : "") },
+        h("div", { class: "t" }, h("b", {}, `${plural(l.length, "group")} of ${(TRADE[g.trade]?.label || "other items").toLowerCase()}, ${METHOD[g.method][0].toLowerCase()}`),
+          h("span", {}, (g.reason || "Matched by a rule.") + ` Suggested as: ${what.slice(0, 2).join("; ")}${what.length > 2 ? ` and ${what.length - 2} more` : ""}.`)),
+        h("span", { class: "r" }, plural(els, "element")),
+        h("div", { class: "acts" },
+          h("button", { type: "button", class: "btn sm dark", onclick: () => confirmBatch(l) }, `Confirm all ${l.length}`),
+          h("button", { type: "button", class: "btn sm", "aria-pressed": String(on), onclick: () => { state.mBatch = on ? null : k; state.mFilter = "decide"; renderMapGroups(currentGroups()); } }, on ? "Show every group" : "Show them")));
+    })));
 }
 
 // Common items per trade, offered as quick picks when changing a mapping
@@ -2131,6 +2184,14 @@ const Profiles = {
   async setEntry(listName, key, value, kind, source) {
     const p = this.active(); upsert(p[listName], key, value);
     await this.save(p); await this.record(kind, key, value, source);
+    rerunChecks(); render();
+  },
+  // Several entries at once (a batch of confirmed mappings): one save and one rerun
+  async setEntries(listName, entries, kind, source) {
+    const p = this.active();
+    for (const [key, value] of entries) upsert(p[listName], key, value);
+    await this.save(p);
+    for (const [key, value] of entries) await this.record(kind, key, value, source);
     rerunChecks(); render();
   },
   async removeEntry(listName, key, value) {
