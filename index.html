@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-23T14:29:42Z">
+<meta name="solvboq-build" content="2026-10-23T14:44:03Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -460,6 +460,10 @@ const DEFAULT_HINTS = {
   notBuilt: ["analytical"],
 };
 
+// Grade for concrete whose material gives none, by kind of structure (the engineer's standard: water tanks 35 MPa, buildings 30 MPa).
+// "civil" = no brickwork, doors, windows or sheeting in the model. A profile can override with structureGrades: [{key, value}].
+const DEFAULT_STRUCTURE_GRADES = { civil: "35 MPa", building: "30 MPa" };
+
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
   slab: { label: "Concrete slab", trade: "concrete" }, wall: { label: "Concrete wall", trade: "concrete" },
@@ -502,7 +506,8 @@ function compileConventions(profile) {
   const suppress = {};
   // profile entries are { key: type, value: check }; the engine looks up by check
   for (const { key, value } of p.suppress || []) (suppress[value] = suppress[value] || new Set()).add(key);
-  return { hint, hintWords, grades: listToMap(p.materialGrades), roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
+  const structureGrades = { ...DEFAULT_STRUCTURE_GRADES, ...listToMap(p.structureGrades) };
+  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
 let CONV = compileConventions(null);
@@ -771,9 +776,19 @@ function runChecks(input, opts = {}) {
     "Their quantities are often fine, but they can’t be matched to rules reliably and tend to change between revisions.",
     "Check their quantities by hand, and recheck them on each new revision.", inPlace);
   const noGrade = live.filter((e) => /concrete/i.test(e.Material || "") && !RX.grade.test(e.Material) && !grades[e.Material] && !roleIs(e, "blinding", "screed") && !/precast|grout|no.?fines/i.test(`${e.Material} ${e.Type}`) && !H().screed.test(e.Material) && !H().blinding.test(e.Material));
+  // Reinforced concrete with no grade takes the standard grade for the kind of structure. Benching, aprons and the like
+  // are often a lower grade (25 MPa in the Gravity Thickeners BoQ), so they still need a grade from the drawings.
+  const civil = !els.some((e) => ["masonry", "openings", "roofing", "cladding"].includes(tradeOf(e)));
+  const assumedGrade = CONV.structureGrades[civil ? "civil" : "building"] || "";
+  const lowGrade = (e) => roleIs(e, "benching", "chamfer", "apron", "kerb", "plinth", "noFines") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`);
+  const assumed = assumedGrade ? noGrade.filter((e) => !lowGrade(e)) : [];
   add("grade", "eyes", "Concrete with no grade in its material",
     "Strength concrete (SANS 1200 G 8.4.3) is priced by grade, and the model doesn’t say which.",
-    "Take the grade from the drawings or specification, then set it once per material so every element using it is graded.", noGrade);
+    "Take the grade from the drawings or specification, then set it once per material so every element using it is graded.", noGrade.filter((e) => !assumed.includes(e)));
+  add("gradeassumed", "handled", `Concrete grade taken as ${assumedGrade}`,
+    civil ? `The material doesn’t give a grade. This looks like a water-retaining structure (no brickwork, doors, windows or sheeting), so the standard ${assumedGrade} for water tanks is used.`
+      : `The material doesn’t give a grade. This is a building, so the standard ${assumedGrade} for buildings is used.`,
+    "If any of it is a different grade, set the grade for that material and it replaces this one.", assumed);
   const noLevel = live.filter((e) => !e.Level);
   add("nolevel", "eyes", "Elements with no level",
     "No level was found, even through the element’s host, so these can’t be split by floor.",
@@ -945,7 +960,7 @@ function runChecks(input, opts = {}) {
   }
   Object.values(byType).forEach((t) => (t.total = t.trusted + t.eyes + t.unknown));
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
-  const out = { materialGrades: grades, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
+  const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
   out.derived = deriveItems(out);
   return out;
 }
@@ -960,8 +975,8 @@ function deriveItems(r) {
   const slabs = T("concrete").filter((e) => e.Bic === "OST_Floors" && !isBlinding(e) && !isScreed(e) && e.Volume > 0 && (e.Thickness == null || e.Thickness >= 0.1)
     && !["benching", "chamfer", "plinth", "kerb", "apron", "noFines"].includes(r.roles[e.Id]?.role) && !/step/i.test(`${e.Type} ${e.Family}`));
   const screeds = live.filter(isScreed);
-  // No brickwork, doors, windows or sheeting: a civil structure such as a tank, where damp-proofing and ant poison usually aren't billed
-  const civil = !live.some((e) => ["masonry", "openings", "roofing", "cladding"].includes(r.tradeOfId[e.Id]));
+  // A civil structure such as a tank (no brickwork, doors, windows or sheeting): damp-proofing and ant poison usually aren't billed
+  const civil = r.structure === "civil";
   const blinding = live.filter(isBlinding);
   const hasElev = slabs.length > 0 && slabs.every((e) => e.LevelElevation != null);
   const lowest = hasElev ? Math.min(...slabs.map((e) => e.LevelElevation)) : null;
@@ -1149,7 +1164,7 @@ function concreteGroupLabel(e, role) {
 }
 
 // The built-in rules. Each returns an item for the group's first element, a confidence, and any reason to confirm.
-function ruleFor(e, trade, grades = {}, role = "") {
+function ruleFor(e, trade, grades = {}, role = "", assumed = null) {
   const mat = e.Material || "", n = nm(e), mm = mmOf(e);
   const it = (section, clause, heading, description, unit, ruleId, check) => ({ item: { section, clause, heading, description, unit }, ruleId, check: check || "" });
   // Clauses for no-fines (PSG 8.10), subsoil drains (PSLE 8.2.14) and cast-in items (PSG 8.13) are from the engineer's Gravity Thickeners BoQ
@@ -1160,7 +1175,7 @@ function ruleFor(e, trade, grades = {}, role = "") {
     if (role === "blinding" || (!role && /blind/i.test(mat + n))) return it("SANS 1200 G", "8.4.2", "Blinding layer", `Class 15 MPa/19 mm concrete, ${mm || 75} mm thick under floors`, "m²", "G-BLIND");
     if (role === "screed" || (!role && /screed/i.test(mat + n))) return it("PD", "", "Screeds", `Cement screed to floors, ${mm || 50} mm thick`, "m²", "PD-SCREED");
     if (/precast/i.test(mat) && /kerb/.test(n)) return it("SANS 1200 MK", "", "Precast concrete kerbs", `${e.Type || "Kerb"}`, "m", "MK-KERB", e.Bic === "OST_GenericModel" ? "Modelled as a Generic Model, so the kerb type is read from its name." : "");
-    const grade = gradeOf(mat) || grades[mat] || "", unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
+    const grade = gradeOf(mat) || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
     const group = concreteGroupLabel(e, role);
     const why = !mat ? "No material, so the grade is unknown and concrete is assumed from the element type."
       : !grade ? "The material doesn’t give a grade. Add it from the specification."
@@ -1238,7 +1253,7 @@ function buildGroups(result, decisions, learned) {
     else if (d) { ({ item, method, confirmed } = d); reason = d.reason || ""; confidence = d.confidence ?? null; }
     else if (learned[g.key]) { item = learned[g.key].item || learned[g.key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
     else {
-      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "");
+      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade);
       if (r) { item = r.item; ruleId = r.ruleId; method = r.check ? "check" : "rule"; confirmed = !r.check; reason = r.check; }
       else reason = "No rule matches this category, family and material.";
     }
@@ -2157,12 +2172,12 @@ const Profiles = {
 
 function normaliseProfile(p) {
   const base = emptyProfile(p.id, p.name || p.id);
-  for (const k of ["materialGrades", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
+  for (const k of ["materialGrades", "structureGrades", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
   base.hints = {};
   for (const [k, v] of Object.entries(p.hints || {})) if (Array.isArray(v)) base.hints[k] = v.map(String).filter((w) => w.length <= 200).slice(0, 60);
   return { ...base, updatedAt: p.updatedAt || "", updatedBy: p.updatedBy || "" };
 }
-const hasContent = (p) => ["materialGrades", "roles", "mapping", "suppress"].some((k) => p[k].length) || Object.keys(p.hints).length;
+const hasContent = (p) => ["materialGrades", "structureGrades", "roles", "mapping", "suppress"].some((k) => p[k].length) || Object.keys(p.hints).length;
 function upsert(list, key, value) { const i = list.findIndex((x) => x.key === key); if (i < 0) list.push({ key, value }); else list[i] = { key, value }; }
 
 // ----- The conventions chip in the header -----
