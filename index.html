@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-23T13:33:19Z">
+<meta name="solvboq-build" content="2026-10-23T14:29:42Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -434,6 +434,8 @@ const DEFAULT_HINTS = {
   blinding: ["blind", "bliding"],
   screed: ["screed", "granolithic", "grano", "topping"],
   benching: ["bench"],
+  noFines: ["no fines", "no-fines", "nofines"],
+  subsoilDrain: ["subsoil", "sub-soil", "french drain"],
   chamfer: ["chamfer", "fillet"],
   plinth: ["plinth", "bund"],
   apron: ["apron", "ramp"],
@@ -464,6 +466,7 @@ const ROLES = {
   column: { label: "Concrete column", trade: "concrete" }, beam: { label: "Concrete beam", trade: "concrete" },
   foundation: { label: "Foundation", trade: "concrete" }, blinding: { label: "Blinding", trade: "concrete" },
   screed: { label: "Screed or topping", trade: "concrete" }, benching: { label: "Benching", trade: "concrete" },
+  noFines: { label: "No-fines concrete", trade: "concrete" }, subsoilDrain: { label: "Subsoil drain", trade: "other" },
   chamfer: { label: "Chamfer or fillet", trade: "concrete" }, plinth: { label: "Plinth or bund", trade: "concrete" },
   apron: { label: "Apron or ramp", trade: "concrete" }, kerb: { label: "Kerb", trade: "concrete" },
   steel: { label: "Structural steel", trade: "steel" }, timber: { label: "Timber", trade: "timber" },
@@ -627,7 +630,9 @@ function computeRoles(els) {
     const name = `${e.Family} ${e.Type}`, mat = e.Material || "", both = `${name} ${mat}`;
     const concrete = inConcretePopulation(e) || isConcreteMat(mat) || !mat;
     const floorLike = e.Bic === "OST_Floors" || e.Bic === "OST_GenericModel";
-    if (e.Bic === "OST_Floors" && H().blinding.test(both) && concrete) set(e, "blinding", "name");
+    if (floorLike && H().noFines.test(name)) set(e, "noFines", "name");
+    else if (floorLike && H().subsoilDrain.test(name)) set(e, "subsoilDrain", "name");
+    else if (e.Bic === "OST_Floors" && H().blinding.test(both) && concrete) set(e, "blinding", "name");
     else if (e.Bic === "OST_Floors" && H().screed.test(both) && !H().benching.test(name) && concrete) set(e, "screed", "name");
     else if (floorLike && H().benching.test(both)) set(e, "benching", "name");
     else if (floorLike && concrete && H().chamfer.test(name)) set(e, "chamfer", "name");
@@ -856,9 +861,9 @@ function runChecks(input, opts = {}) {
 
   // Handled for you
   const concreteLive = live.filter((e) => tradeOf(e) === "concrete" && e.Volume > 0 && !roleIs(e, "blinding", "screed"));
-  const unreinforced = concreteLive.filter((e) => roleIs(e, "apron", "kerb", "benching", "chamfer") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`));
+  const unreinforced = concreteLive.filter((e) => roleIs(e, "apron", "kerb", "benching", "chamfer", "noFines") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`));
   add("unreinf", "handled", "Concrete treated as unreinforced",
-    "Aprons, ramps, kerbs, benching, chamfers and mass concrete are billed as unreinforced. Everything else is billed as reinforced, because the model doesn’t say.",
+    "Aprons, ramps, kerbs, benching, chamfers, no-fines and mass concrete are billed as unreinforced. Everything else is billed as reinforced, because the model doesn’t say.",
     "Confirm the split against the drawings.", unreinforced);
   const blinding = live.filter((e) => roleIs(e, "blinding"));
   add("blinding", "handled", "Blinding modelled as a floor",
@@ -953,7 +958,10 @@ function deriveItems(r) {
   const isBlinding = (e) => r.roles[e.Id]?.role === "blinding";
   const isScreed = (e) => r.roles[e.Id]?.role === "screed";
   const slabs = T("concrete").filter((e) => e.Bic === "OST_Floors" && !isBlinding(e) && !isScreed(e) && e.Volume > 0 && (e.Thickness == null || e.Thickness >= 0.1)
-    && !["benching", "chamfer", "plinth", "kerb", "apron"].includes(r.roles[e.Id]?.role) && !/step/i.test(`${e.Type} ${e.Family}`));
+    && !["benching", "chamfer", "plinth", "kerb", "apron", "noFines"].includes(r.roles[e.Id]?.role) && !/step/i.test(`${e.Type} ${e.Family}`));
+  const screeds = live.filter(isScreed);
+  // No brickwork, doors, windows or sheeting: a civil structure such as a tank, where damp-proofing and ant poison usually aren't billed
+  const civil = !live.some((e) => ["masonry", "openings", "roofing", "cladding"].includes(r.tradeOfId[e.Id]));
   const blinding = live.filter(isBlinding);
   const hasElev = slabs.length > 0 && slabs.every((e) => e.LevelElevation != null);
   const lowest = hasElev ? Math.min(...slabs.map((e) => e.LevelElevation)) : null;
@@ -979,8 +987,12 @@ function deriveItems(r) {
     if (blinding.length) item({ key: "blinding", label: "Blinding under floors", ref: "1200 G 8.4.2", unit: "m²", qty: area(blinding), status: "ready", note: "Taken from the blinding modelled as floors." });
     else item({ key: "blinding", label: "Blinding under floors", ref: "1200 G 8.4.2", unit: "m²", qty: hasElev || withBoxes ? area(ground) : allSlabArea, status: hasElev || withBoxes ? "ready" : "partly", note: gbNote });
     for (const [key, label, ref] of [["dpm", "Damp-proof sheeting under floors", "PD 10.8"], ["antpoison", "Ant poison under floors", "PD 10.8"]])
-      item({ key, label, ref, unit: "m²", qty: hasElev || withBoxes ? area(ground) : allSlabArea, status: hasElev || withBoxes ? "ready" : "partly", note: gbNote });
-    item({ key: "float", label: "Steel-floated finish to top of slabs", ref: "1200 G 8.4.4", unit: "m²", qty: allSlabArea, status: slabs.length ? "ready" : "none", note: "Top area of all structural slabs. Deduct any areas that get a screed or another finish." });
+      item({ key, label, ref, unit: "m²", qty: hasElev || withBoxes ? area(ground) : allSlabArea, status: civil ? "partly" : hasElev || withBoxes ? "ready" : "partly",
+        note: civil ? `${gbNote} This looks like a civil structure (no brickwork, doors, windows or sheeting). Tanks and other water-retaining structures usually don’t get this item, so confirm it’s in the specification before billing it.` : gbNote });
+    // A screed modelled on top gets its own finish, so its area comes off the slab finish
+    const screedArea = area(screeds), floated = Math.max(0, allSlabArea - screedArea);
+    item({ key: "float", label: "Floated finish to top of slabs", ref: "1200 G 8.4.4", unit: "m²", qty: floated, status: slabs.length ? "ready" : "none",
+      note: `Top area of all structural slabs${screedArea ? `, less ${fmt1(screedArea)} m² under modelled screeds` : ""}. Split it into wood-floated and steel-floated as the specification says, and deduct any other finishes.` });
     item({ key: "floorfinish", label: "Floor finishes (for example resin or quartz)", ref: "1200 G 8.23", unit: "m²", qty: allSlabArea, status: slabs.length ? "partly" : "none", note: "The area comes from the slabs. Which finish goes where comes from the finishes schedule." });
     const withEdge = slabs.filter((e) => e.Perimeter > 0 && e.Thickness > 0);
     item({ key: "fwedge", label: "Formwork to slab edges", ref: "1200 G 8.2.1", unit: "m²", qty: withEdge.reduce((s, e) => s + e.Perimeter * e.Thickness, 0),
@@ -1107,8 +1119,8 @@ function inventory(result) {
 }
 
 // ===== Map to SANS: group elements by Revit type and material, then map each group to a BoQ item =====
-const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
-const SECTION_TITLE = { "SANS 1200 D": "Earthworks", "SANS 1200 G": "Concrete (structural)", "SANS 1200 H": "Structural steelwork", "SANS 1200 HB": "Cladding and sheeting",
+const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
+const SECTION_TITLE = { "SANS 1200 D": "Earthworks", "SANS 1200 G": "Concrete (structural)", "SANS 1200 LE": "Stormwater drainage", "SANS 1200 H": "Structural steelwork", "SANS 1200 HB": "Cladding and sheeting",
   "SANS 1200 L": "Medium-pressure pipelines", "SANS 1200 MK": "Kerbing and channelling", "PD": "Particular specification PD: building work" };
 const UNITS = ["m³", "m²", "m", "t", "No"];
 const sectionRank = (s) => { const i = SECTION_ORDER.indexOf(s); return i < 0 ? 99 : i; };
@@ -1116,6 +1128,8 @@ const sectionRank = (s) => { const i = SECTION_ORDER.indexOf(s); return i < 0 ? 
 function basisQty(e, unit) {
   if (unit === "m³") return e.Volume || 0;
   if (unit === "m²") return e.Area || 0;
+  // A floor billed by length is a strip (a subsoil drain, say): its centreline is about half its perimeter
+  if (unit === "m" && e.Bic === "OST_Floors" && !(e.Length > 0) && e.Perimeter > 0) return e.Perimeter / 2;
   if (unit === "m") return linearLength(e);
   if (unit === "t") return (e.Volume || 0) * STEEL_DENSITY;
   return 1;
@@ -1138,6 +1152,10 @@ function concreteGroupLabel(e, role) {
 function ruleFor(e, trade, grades = {}, role = "") {
   const mat = e.Material || "", n = nm(e), mm = mmOf(e);
   const it = (section, clause, heading, description, unit, ruleId, check) => ({ item: { section, clause, heading, description, unit }, ruleId, check: check || "" });
+  // Clauses for no-fines (PSG 8.10), subsoil drains (PSLE 8.2.14) and cast-in items (PSG 8.13) are from the engineer's Gravity Thickeners BoQ
+  if (role === "noFines") return it("SANS 1200 G", "8.10", "No-fines concrete", `No-fines concrete layer, ${mm || "[thickness]"} mm thick`, "m³", "G-NOFINES");
+  if (role === "subsoilDrain") return it("SANS 1200 LE", "8.2.14", "Subsoil drains", `Supply and install subsoil drains complete${mat ? ` (${mat})` : ""}`, "m", "LE-SUBSOIL",
+    e.Bic === "OST_Floors" && !(e.Length > 0) ? "Modelled as a floor, so the length is taken as half its perimeter. Check it against the drawings." : "");
   if (trade === "concrete") {
     if (role === "blinding" || (!role && /blind/i.test(mat + n))) return it("SANS 1200 G", "8.4.2", "Blinding layer", `Class 15 MPa/19 mm concrete, ${mm || 75} mm thick under floors`, "m²", "G-BLIND");
     if (role === "screed" || (!role && /screed/i.test(mat + n))) return it("PD", "", "Screeds", `Cement screed to floors, ${mm || 50} mm thick`, "m²", "PD-SCREED");
@@ -1171,6 +1189,8 @@ function ruleFor(e, trade, grades = {}, role = "") {
     return it("SANS 1200 L", "", "Supply, lay and joint pipes", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : "Pipe"}, ${dia}`, "m", "L-PIPE",
       !e.Diameter ? "No diameter in the data." : /^default$/i.test(e.Type) || !e.Type ? "The pipe type doesn’t say what the pipe is." : !(e.Length > 0) ? "No pipe length in the data." : "");
   }
+  if (trade === "fittings" && /puddle/.test(n)) return it("SANS 1200 G", "8.13", "Casting items in concrete", `Puddle flanges cast into walls or floors${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN",
+    "");
   if (trade === "fittings") return it("SANS 1200 L", "", "Specials and fittings", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : e.Family}${mat && !/^default$/i.test(mat) ? ` (${mat})` : ""}`, "No", "L-FITTING",
     /^default$/i.test(mat) || !mat ? "The material is “Default”, so the fitting type and class are read from its name." : "");
   if (trade === "openings") {
@@ -1181,14 +1201,16 @@ function ruleFor(e, trade, grades = {}, role = "") {
   if (trade === "metalwork") {
     if (/grating|grid|rectagrid/.test(`${n} ${mat.toLowerCase()}`)) return it("SANS 1200 H", "8.3.9", "Flooring, complete and installed with frames", `Open grid flooring: ${e.Type || e.Family}`, "m²", "H-GRATING");
     if (/ladder|step iron/.test(n)) return it("SANS 1200 H", "8.3.8", "Ladders, complete and installed", `Step irons and ladders: ${e.Family}`, "No", "H-LADDER");
-    if (e.Bic === "OST_StairsRailing" || /handrail|balustrade|railing/.test(n)) return it("SANS 1200 H", "8.3.7", "Handrails", `Handrail assembly complete, horizontal: ${e.Type || "as detailed"}`, "m", "H-RAIL", !(linearLength(e) > 0) ? "No handrail length in the data. Measure it from the drawings." : !mat ? "No material, so the finish (galvanised or stainless) is unknown." : "");
+    if (e.Bic === "OST_StairsRailing" || /handrail|balustrade|railing/.test(n)) return it("SANS 1200 H", "8.3.7", "Handrails", `Handrail assembly complete, ${railSloped(e) ? "sloping (measured on slope)" : "horizontal"}: ${e.Type || "as detailed"}`, "m", "H-RAIL", !(linearLength(e) > 0) ? "No handrail length in the data. Measure it from the drawings." : !mat ? "No material, so the finish (galvanised or stainless) is unknown." : "");
     if (/manhole|cover|lid/.test(n)) return it("PD", "PD 10.8", "Miscellaneous items", `Manhole covers and frames: ${e.Family}`, "No", "PD-COVER");
   }
   if (e.Bic === "OST_PlumbingFixtures") return it("PD", "", "Sanitary fittings", `${e.Family}${e.Type && e.Type !== e.Family ? ", " + e.Type : ""}`, "No", "PD-SANITARY");
   return null;
 }
 
-const groupKey = (e) => [e.Bic, e.Family, e.Type, e.Material].map((x) => String(x || "").trim().toLowerCase()).join("|");
+// A railing that rises more than 1.3 m overall follows a stair, and the BoQ bills sloping handrails separately
+const railSloped = (e) => e.Bic === "OST_StairsRailing" && !!e.Box && e.Box[5] - e.Box[2] > 1.3;
+const groupKey = (e) => [e.Bic, e.Family, e.Type, e.Material].map((x) => String(x || "").trim().toLowerCase()).join("|") + (railSloped(e) ? "|sloping" : "");
 
 const LEARN_KEY = "solvboq-mapping-rules-v1";
 function loadLearned() { try { return JSON.parse(localStorage.getItem(LEARN_KEY) || "{}") || {}; } catch (e) { return {}; } }
