@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T09:26:56Z">
+<meta name="solvboq-build" content="2026-10-28T09:33:17Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -252,8 +252,9 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .wsbar .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .ws .linkrow{display:inline-flex;align-items:flex-start;gap:6px;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
 .ws .linkrow svg{flex:none;width:14px;height:14px;margin-top:3px;transition:transform .15s;color:var(--muted)}
-.ws tr.open .linkrow svg{transform:rotate(90deg)}
-.ws tr.line:hover td{background:var(--chip)}
+.ws tr.expanded .linkrow svg{transform:rotate(90deg)}
+.ws tr.line{cursor:pointer}
+.ws tr.line:hover td,.ws tr.line.expanded td{background:var(--chip)}
 .ws tr.detail td{background:var(--head);border-top:0;font-size:13px}
 .ws tr.detail .grp span{font-size:12px}
 .ws .qtyin{width:160px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card);color:var(--ink)}
@@ -2409,7 +2410,8 @@ function renderWorkspace(groups = currentGroups()) {
     const pendingGroups = L.groups.filter((g) => !g.confirmed && g.item);
     const src = L.expected ? L.why : L.unmapped || L.excludedGroup ? `${plural(L.elements, "element")} · ${L.groups[0].reason || ""}` : `${L.inferred ? "Inferred from " : "From "}${plural(L.elements, "element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}`;
     const toggle = () => { open ? state.open.delete(key) : state.open.add(key); renderWorkspace(); };
-    rows.push(h("tr", { class: "line" + (L.expected && L.qty == null ? " muted" : "") + (open ? " open" : "") },
+    // Clicking anywhere on the line (except its buttons) opens or closes it
+    rows.push(h("tr", { class: "line" + (L.expected && L.qty == null ? " muted" : "") + (open ? " expanded" : ""), onclick: (ev) => { if (!ev.target.closest("button, input, a, select")) toggle(); } },
       h("td", { class: "it" }, String(num)), h("td", {}),
       h("td", { class: "desc" }, h("button", { type: "button", class: "linkrow", "aria-expanded": String(open), onclick: toggle }, svg(ICON.chevron), L.description), h("small", {}, src)),
       h("td", { style: "white-space:nowrap" }, L.unit || ""),
@@ -2419,7 +2421,7 @@ function renderWorkspace(groups = currentGroups()) {
         pendingGroups.length ? h("button", { type: "button", class: "btn sm dark", onclick: () => (pendingGroups.length === 1 ? confirmGroup(pendingGroups[0]) : confirmBatch(pendingGroups)) }, pendingGroups.some((g) => g.method === "claude") ? "Accept" : "Confirm") : null,
         L.unmapped ? h("button", { type: "button", class: "btn sm dark", onclick: () => { state.mEdit = L.groups[0].key; state.open.add(key); renderWorkspace(); } }, "Choose item") : null,
         L.unmapped && sampleFn ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude(L.groups) }, "Ask Claude") : null,
-        L.expected && L.qty == null ? h("button", { type: "button", class: "btn sm", onclick: () => { state.open.add(key); renderWorkspace(); } }, "Enter quantity") : null))));
+        L.expected ? h("button", { type: "button", class: "btn sm", "aria-expanded": String(open), onclick: toggle }, open ? "Close" : L.qty == null ? "Enter quantity" : "Change quantity") : null))));
     if (open) rows.push(...lineDetail(L, key));
   }
   $("mBoq").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "7", class: "empty" }, state.wFilter === "confirm" ? "Nothing left to confirm." : state.wFilter === "unmapped" ? "Every group is mapped." : "No lines match."))]));
