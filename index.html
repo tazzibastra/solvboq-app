@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T08:34:58Z">
+<meta name="solvboq-build" content="2026-10-28T08:56:25Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -246,6 +246,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .earth summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
 .earth summary b{color:var(--ink);font-weight:600}
 .earth .sub{margin:10px 0}
+.boqtable tr.muted td{color:var(--muted)}
+.boqtable td.desc small .pill{font-size:11px;padding:1px 7px}
 </style>
 </head>
 <body>
@@ -405,7 +407,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
     <section class="card" style="overflow:hidden" aria-labelledby="mboq-h">
       <div class="cardhead">
         <div><h2 class="big" id="mboq-h">BoQ preview</h2><div class="sub" id="mBoqSub"></div></div>
-        <div class="tools"><button class="btn" id="btnBoqCopy" type="button">Copy BoQ</button><button class="btn dark" id="btnBoqCsv" type="button" hidden>Download BoQ (CSV)</button></div>
+        <div class="tools"><div class="seg" role="group" aria-label="What the preview shows" id="mBoqView"></div><button class="btn" id="btnBoqCopy" type="button">Copy BoQ</button><button class="btn dark" id="btnBoqCsv" type="button" hidden>Download BoQ (CSV)</button></div>
       </div>
       <div class="scroll"><table class="boqtable">
         <thead><tr><th>Item</th><th>Ref</th><th>Description</th><th>Unit</th><th class="r">Quantity</th></tr></thead>
@@ -993,6 +995,7 @@ function runChecks(input, opts = {}) {
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
   const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
   out.derived = deriveItems(out, opts);
+  out.derived.expected = expectedItems(out, out.derived.lines);
   return out;
 }
 
@@ -1433,6 +1436,39 @@ function inferMore(r, ctx) {
   return [...lines.values()];
 }
 
+// ===== Items a bill like this always has, which the model can't quantify =====
+// Shown in the full BoQ with no quantity, so the bill's structure is complete from the start.
+// Every clause is from the engineer's Gravity Thickeners or Incinerator BoQ, or the SANS 1200 G and H schedules.
+function expectedItems(r, lines) {
+  const live = r.elements.filter((e) => !NON_MEASURED.has(e.Bic) && r.status[e.Id] !== "excluded");
+  const has = (k) => live.some((e) => r.tradeOfId[e.Id] === k);
+  const civil = r.structure === "civil";
+  const out = [];
+  const add = (section, clause, heading, description, unit, why) => out.push({ section, clause, heading, description, unit, why });
+  if (lines.some((l) => l.kind === "earth")) {
+    add("SANS 1200 D", "8.3.3", "Restricted excavation", "Extra over for excavation in hard rock (provisional)", "m³", "A provisional quantity, from the geotechnical report.");
+    add("SANS 1200 D", "8.3.3", "Restricted excavation", "Extra over for hand excavation (provisional)", "m³", "A provisional quantity, where machines can’t work near services.");
+    if (civil) {
+      add("SANS 1200 D", "8.3.16", "Importing of materials for fill under floors and foundations", "G6 compacted to 95% Mod. AASHTO in 150 mm layers", "m³", "Layers and thicknesses from the geotechnical report.");
+      add("SANS 1200 D", "8.3.16", "Importing of materials for fill under floors and foundations", "Compacted pioneer layer of 100 mm to 300 mm boulders", "m³", "Only where the geotechnical report calls for it.");
+    }
+  }
+  if (has("concrete")) {
+    add("SANS 1200 G", "8.2.6", "Box out holes / form voids", "Box-outs and voids for pipes and openings, by size and depth", "No", "Sizes and depths from the drawings.");
+    if (live.some((e) => e.Bic === "OST_Stairs")) add("SANS 1200 G", "8.2.5", "Narrow widths", "Formwork to staircase risers, up to 200 mm", "m", "Riser lengths from the stair drawings.");
+    if (civil) {
+      add("SANS 1200 G", "8.21", "Watertightness testing", "Watertightness test of each water-retaining structure", "Sum", "One per structure, as the specification describes.");
+      add("SANS 1200 G", "8.23", "Concrete protection", "Protective coating to wetted concrete faces, as specified", "m²", "Which faces get it is in the specification.");
+    } else {
+      add("SANS 1200 G", "8.5", "Joints", "Isolation joints, 10 mm thick, with sealant", "m", "Around columns, plinths and walls, from the joint layout.");
+      add("SANS 1200 G", "8.23", "Concrete protection and proprietary floor finishes", "Floor finish as specified (for example quartz-encapsulated resin)", "m²", "Which floors get it is in the finishes schedule.");
+    }
+  }
+  if (has("steel")) add("SANS 1200 H", "8.3.5", "Site welding", "Site welding", "m", "From the connection details.");
+  if (live.some((e) => e.Bic === "OST_StairsRailing")) add("SANS 1200 H", "8.3.7", "Handrails", "Handrail bends, end closures and accessories", "No", "Count them on the handrail drawings.");
+  return out;
+}
+
 
 // ===== Map to SANS: group elements by Revit type and material, then map each group to a BoQ item =====
 const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
@@ -1579,14 +1615,15 @@ function buildGroups(result, decisions, learned) {
   return out.sort((a, b) => (order[a.method] - order[b.method]) || (a.item && b.item ? sectionRank(a.item.section) - sectionRank(b.item.section) : 0) || b.elements.length - a.elements.length);
 }
 
-// Aggregate confirmed groups into BoQ lines, in BoQ order
-function boqLines(groups) {
+// Aggregate groups into BoQ lines, in BoQ order: confirmed groups only, or (full) every group with an item,
+// with the unconfirmed ones counted in `pending`
+function boqLines(groups, { full = false } = {}) {
   const lines = new Map();
   for (const g of groups) {
-    if (!g.item || !g.confirmed || g.excluded) continue;
+    if (!g.item || g.excluded || (!full && !g.confirmed)) continue;
     const it = g.item, k = [it.section, it.clause, it.heading, it.description, it.unit].join("|");
-    if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true });
-    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false;
+    if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true, pending: 0 });
+    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++;
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
 }
@@ -2355,34 +2392,57 @@ function editRow(g) {
 }
 
 // ===== BoQ preview =====
+// The BoQ preview. "Full BoQ" shows the whole bill: confirmed lines, lines still to confirm (with their quantities),
+// items the model can't quantify (still to measure), and groups not yet mapped. "Confirmed only" is the bill as decided.
 function renderBoq(groups) {
-  const lines = boqLines(groups), pending = groups.filter(needsDecision);
-  $("mBoqSub").textContent = `${plural(lines.length, "line")} from the mapped groups, in BoQ order.` + (pending.length ? ` ${plural(pending.length, "group")} still need a decision and aren’t included yet.` : " Every group is included.");
+  const full = state.boqView !== "confirmed";
+  $("mBoqView").replaceChildren(...[["full", "Full BoQ"], ["confirmed", "Confirmed only"]].map(([k, l]) =>
+    h("button", { type: "button", "aria-pressed": String((full ? "full" : "confirmed") === k), onclick: () => { state.boqView = k; renderBoq(currentGroups()); } }, l)));
+  const mapped = boqLines(groups, { full });
+  const have = new Set(mapped.map((L) => [L.section, L.clause, L.description].join("|")));
+  const expected = full ? (state.result.derived.expected || []).filter((x) => !have.has([x.section, x.clause, x.description].join("|"))).map((x) => ({ ...x, qty: null, groups: [], elements: 0, expected: true })) : [];
+  const lines = [...mapped, ...expected].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
+  const unmapped = full ? groups.filter((g) => !g.item && !g.excluded) : [];
+  const pending = groups.filter(needsDecision), toConfirm = lines.filter((L) => L.pending).length;
+  $("mBoqSub").textContent = full
+    ? `${plural(lines.length, "line")} in BoQ order: ${lines.length - toConfirm - expected.length} confirmed, ${toConfirm} to confirm, ${expected.length} still to measure${unmapped.length ? `, and ${plural(unmapped.length, "group")} not yet mapped` : ""}.`
+    : `${plural(lines.length, "line")} from the confirmed groups, in BoQ order.` + (pending.length ? ` ${plural(pending.length, "group")} still need a decision and aren’t included yet.` : " Every group is included.");
   const rows = []; let sec = "", head = "", n = 0;
   for (const L of lines) {
     if (L.section !== sec) { sec = L.section; head = ""; rows.push(h("tr", { class: "sec" }, h("td", { colspan: "5" }, `${L.section}  ${(SECTION_TITLE[L.section] || "").toUpperCase()}`))); }
     const hk = L.clause + "|" + L.heading;
     if (hk !== head) { head = hk; rows.push(h("tr", { class: "head" }, h("td", {}), h("td", { class: "ref" }, L.clause || ""), h("td", { colspan: "3" }, L.heading || ""))); }
     n++;
-    rows.push(h("tr", {}, h("td", { class: "it" }, String(n)), h("td", {}), h("td", { class: "desc" }, L.description, h("small", {}, `${L.inferred ? "Inferred from " : ""}${plural(L.elements, "element")} in ${plural(L.groups.length, "group")}`)),
-      h("td", { style: "white-space:nowrap" }, L.unit), h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, mapQty(L.qty, L.unit))));
+    const note = L.expected ? h("small", {}, h("span", { class: "pill p-plain", style: "margin-right:6px" }, "Still to measure"), L.why)
+      : h("small", {}, L.pending ? h("span", { class: "pill p-amber", style: "margin-right:6px" }, "To confirm") : null, `${L.inferred ? "Inferred from " : ""}${plural(L.elements, "element")} in ${plural(L.groups.length, "group")}`);
+    rows.push(h("tr", { class: L.expected ? "muted" : "" }, h("td", { class: "it" }, String(n)), h("td", {}), h("td", { class: "desc" }, L.description, note),
+      h("td", { style: "white-space:nowrap" }, L.unit), h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, L.qty == null ? "–" : mapQty(L.qty, L.unit))));
+  }
+  if (unmapped.length) {
+    rows.push(h("tr", { class: "sec" }, h("td", { colspan: "5" }, "NOT YET MAPPED")));
+    for (const g of unmapped) { n++; rows.push(h("tr", { class: "muted" }, h("td", { class: "it" }, String(n)), h("td", {}),
+      h("td", { class: "desc" }, `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, h("small", {}, h("span", { class: "pill p-red", style: "margin-right:6px" }, "Not mapped"), `${plural(g.elements.length, "element")}. Choose an item for it in Mapping groups.`)),
+      h("td", {}), h("td", { class: "r" }, "–"))); }
   }
   $("mBoq").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "5", class: "empty" }, "Confirm some mappings to build the BoQ preview."))]));
-  state.boqLines = lines;
+  state.boqLines = lines; state.boqUnmapped = unmapped;
 }
 function boqRows() {
   const out = []; let n = 0;
-  for (const L of state.boqLines || []) { n++; out.push({ item: n, section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit, quantity: mapQty(L.qty, L.unit), basis: L.inferred ? "inferred" : "modelled",
+  for (const L of state.boqLines || []) { n++; out.push({ item: n, section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit,
+    quantity: L.qty == null ? "" : mapQty(L.qty, L.unit), status: L.expected ? "to measure" : L.pending ? "to confirm" : "confirmed", basis: L.expected ? "" : L.inferred ? "inferred" : "modelled",
     element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") }); }
+  for (const g of state.boqUnmapped || []) { n++; out.push({ item: n, section: "", clause: "", heading: "", description: `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, unit: "", quantity: "",
+    status: "not mapped", basis: "modelled", element_ids: g.elements.map((e) => e.Id).join(";") }); }
   return out;
 }
 $("btnBoqCopy").addEventListener("click", () => {
   const rows = boqRows(); if (!rows.length) return toast("The BoQ preview is empty.");
-  copyText(rows.map((r) => [r.item, `${r.section} ${r.clause}`.trim(), r.heading ? `${r.heading}: ${r.description}` : r.description, r.unit, r.quantity].join("\t")).join("\n"), "BoQ copied. Paste it into Excel.");
+  copyText(rows.map((r) => [r.item, `${r.section} ${r.clause}`.trim(), r.heading ? `${r.heading}: ${r.description}` : r.description, r.unit, r.quantity, r.status].join("\t")).join("\n"), "BoQ copied. Paste it into Excel.");
 });
 $("btnBoqCsv").addEventListener("click", async () => {
   const rows = boqRows(); if (!rows.length) return toast("The BoQ preview is empty.");
-  const cols = ["item", "section", "clause", "heading", "description", "unit", "quantity", "basis", "element_ids"];
+  const cols = ["item", "section", "clause", "heading", "description", "unit", "quantity", "status", "basis", "element_ids"];
   const data = [cols.join(","), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(","))].join("\n");
   try { await saveFile("boq-preview_" + state.name.replace(/\.[a-z0-9]+$/i, "").replace(/[^\w.-]+/g, "_") + ".csv", data); }
   catch (e) { if (e && e.code !== "declined") toast("The file couldn’t be saved here. Use Copy BoQ instead."); }
