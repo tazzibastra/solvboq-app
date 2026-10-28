@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-23T16:19:18Z">
+<meta name="solvboq-build" content="2026-10-28T08:10:31Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -469,6 +469,9 @@ const DEFAULT_HINTS = {
 // Grade for concrete whose material gives none, by kind of structure (the engineer's standard: water tanks 35 MPa, buildings 30 MPa).
 // "civil" = no brickwork, doors, windows or sheeting in the model. A profile can override with structureGrades: [{key, value}].
 const DEFAULT_STRUCTURE_GRADES = { civil: "35 MPa", building: "30 MPa" };
+// Reinforcement estimate until bar schedules exist: kg of steel per m³ of reinforced concrete, and the mild steel share.
+// From the earlier pipeline (about 100 kg/m³, 10% mild steel). Gravity Thickeners measured 113 kg/m³.
+const DEFAULT_REBAR = { civil: 100, building: 100, mildShare: 0.1 };
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -513,7 +516,9 @@ function compileConventions(profile) {
   // profile entries are { key: type, value: check }; the engine looks up by check
   for (const { key, value } of p.suppress || []) (suppress[value] = suppress[value] || new Set()).add(key);
   const structureGrades = { ...DEFAULT_STRUCTURE_GRADES, ...listToMap(p.structureGrades) };
-  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
+  const rebar = { ...DEFAULT_REBAR };
+  for (const [k, v] of Object.entries(listToMap(p.rebar))) if (k in rebar && Number.isFinite(+v) && +v >= 0) rebar[k] = +v;
+  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
 let CONV = compileConventions(null);
@@ -1023,17 +1028,22 @@ function deriveItems(r) {
     item({ key: "float", label: "Floated finish to top of slabs", ref: "1200 G 8.4.4", unit: "m²", qty: floated, status: slabs.length ? "ready" : "none",
       note: `Top area of all structural slabs${screedArea ? `, less ${fmt1(screedArea)} m² under modelled screeds` : ""}. Split it into wood-floated and steel-floated as the specification says, and deduct any other finishes.` });
     item({ key: "floorfinish", label: "Floor finishes (for example resin or quartz)", ref: "1200 G 8.23", unit: "m²", qty: allSlabArea, status: slabs.length ? "partly" : "none", note: "The area comes from the slabs. Which finish goes where comes from the finishes schedule." });
-    const withEdge = slabs.filter((e) => e.Perimeter > 0 && e.Thickness > 0);
-    item({ key: "fwedge", label: "Formwork to slab edges", ref: "1200 G 8.2.1", unit: "m²", qty: withEdge.reduce((s, e) => s + e.Perimeter * e.Thickness, 0),
-      status: !slabs.length ? "none" : withEdge.length === slabs.length ? "ready" : withEdge.length ? "partly" : "none",
-      note: withEdge.length === slabs.length ? "Slab perimeter × slab thickness." : withEdge.length ? `Only ${withEdge.length} of ${slabs.length} slabs have a perimeter and thickness in the data.` : "The data has no slab perimeters or thicknesses, so edge formwork can’t be worked out." });
- item({ key: "fwsoffit", label: "Formwork to soffits of suspended slabs", ref: "1200 G 8.2.1", unit: "m²", qty: area(suspended), status: hasElev || withBoxes ? "ready" : "none",
-      note: hasElev || withBoxes ? (suspended.length ? `Underside of ${plural2(suspended.length, "suspended slab")}.` : "No suspended slabs found.") : "Needs level heights to tell which slabs are suspended." });
   }
-  const cWalls = T("concrete").filter((e) => e.Bic === "OST_Walls" && e.Area > 0);
-  if (cWalls.length) item({ key: "fwwalls", label: "Formwork to concrete walls", ref: "1200 G 8.2.1", unit: "m²", qty: 2 * area(cWalls), status: "ready", note: "Both faces of each concrete wall." });
-  const cColBeam = T("concrete").filter((e) => (e.Bic === "OST_StructuralColumns" || e.Bic === "OST_StructuralFraming") && e.Area > 0);
-  if (cColBeam.length) item({ key: "fwcols", label: "Formwork to columns and beams", ref: "1200 G 8.2.1", unit: "m²", qty: area(cColBeam), status: "partly", note: "Surface area as modelled. Deduct tops of columns and beam tops cast with slabs." });
+  // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
+  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? suspended : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding });
+  const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
+  const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
+  const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
+  fwItem("fwedge", "Formwork to edges of slabs and footings", "fwedge", "Outer edges only, and only where nothing is cast against them. Each line is in Map to SANS.");
+  fwItem("fwsoffit", "Formwork to soffits of suspended slabs", "fwsoffit", hasElev || withBoxes ? "Underside of each suspended slab." : "Needs level heights to tell which slabs are suspended.");
+  fwItem("fwwalls", "Formwork to concrete walls", "fwwalls", "Both faces of each concrete wall, rough below the ground-bearing floor and smooth above it.");
+  fwItem("fwcols", "Formwork to columns", "fwcols", "Perimeter × height, from the section size in the type name.");
+  fwItem("fwbeams", "Formwork to concrete beams", "fwbeams", "Two sides and the soffit, from the section size in the type name.");
+  if (inferred.notMeasured.length) item({ key: "fwother", label: "Formwork to stairs and in-place concrete", ref: "1200 G 8.2", unit: "m²", qty: null, status: "none",
+    note: `${plural2(inferred.notMeasured.length, "stair or in-place element")} (${fmt1(inferred.notMeasured.reduce((s, e) => s + (e.Volume || 0), 0))} m³) can’t be measured for formwork from the model. Measure it from the drawings.` });
+  const rebarT = total("rebar");
+  if (rebarT > 0) item({ key: "rebar", label: "Reinforcement (estimate)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: "partly",
+    note: `${CONV.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
 
   const masonry = T("masonry");
   if (masonry.length) {
@@ -1070,14 +1080,15 @@ function deriveItems(r) {
   }
 
   const fromDrawings = [];
+  void inferred;
   if (slabs.length || T("concrete").length) {
-    if (!T("rebar").length) fromDrawings.push({ label: "Reinforcement (mild steel and high-tensile bars)", ref: "1200 G 8.3", unit: "t", why: "Not modelled. Take it from the bar schedules, or estimate with kg/m³ ratios until they’re available." });
+    if (!T("rebar").length) fromDrawings.push({ label: "Reinforcement by bar diameter", ref: "1200 G 8.3", unit: "t", why: "Estimated above from kg/m³. The split by diameter comes from the bar schedules." });
     if (slabs.length) fromDrawings.push({ label: "Isolation and saw-cut joints, and sealants", ref: "1200 G 8.5", unit: "m", why: "Joint layouts are on the slab drawings, not in the model." });
   }
   if (steel.length) fromDrawings.push({ label: "Erection bolts", ref: "1200 H 8.3.4", unit: "t", why: "An allowance based on the connection details." });
   if (T("roofing").length || T("cladding").length) fromDrawings.push({ label: "Flute closures and fillers", ref: "1200 HB 8.2.3", unit: "m", why: "Follow the sheeting edges on the roof and elevation drawings." });
   if (T("openings").length) fromDrawings.push({ label: "Door and window specification (ironmongery, seals, glazing)", ref: "PD 10.4", unit: "", why: "Usually included in the item rate. Check against the door and window schedule." });
-  return { items, fromDrawings };
+  return { items, fromDrawings, lines: inferred.lines };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
 
@@ -1146,6 +1157,112 @@ function inventory(result) {
     findings: result.issues.map((i) => `${i.title}: ${i.elements.length} element(s)`).join("; "),
   };
 }
+// ===== Inferred BoQ lines: items the model implies but doesn't contain (formwork, reinforcement) =====
+// Each line keeps the elements it came from and how much each contributed, and says how it was worked out.
+// Checked against the engineer's Gravity Thickeners take-off (see CLAUDE.md).
+function inferLines(r, ctx) {
+  const { live, slabs, suspended, ground, isBlinding } = ctx;
+  const role = (e) => r.roles[e.Id]?.role || "";
+  const noForm = ["blinding", "screed", "noFines", "benching", "chamfer", "kerb", "apron"];
+  const conc = live.filter((e) => r.tradeOfId[e.Id] === "concrete" && e.Volume > 0 && !noForm.includes(role(e)) && !isBlinding(e));
+  const lines = new Map();
+  const add = (key, item, reason, e, qty, check = "") => {
+    if (!(qty > 0)) return;
+    if (!lines.has(key)) lines.set(key, { key, kind: key.split("|")[0], item, reason, check, qty: 0, elements: [], parts: [] });
+    const L = lines.get(key); L.qty += qty; L.elements.push(e); L.parts.push({ id: e.Id, qty });
+    if (check && !L.check) L.check = check;
+  };
+  const typeName = (e) => e.Type || e.Family || e.Category;
+  const height = (e) => (e.Box ? e.Box[5] - e.Box[2] : 0);
+  const dims = (e) => { const m = `${e.Type} ${e.Family}`.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})/i); return m ? [+m[1] / 1000, +m[2] / 1000] : null; };
+  const fw = (rough) => rough ? { clause: "8.2.1", heading: "Rough formwork" } : { clause: "8.2.2", heading: "Smooth formwork" };
+  const item = (rough, description) => ({ section: "SANS 1200 G", ...fw(rough), description, unit: "m²" });
+  // Faces below the top of the main ground-bearing floor (the largest one) are taken as rough, because they won't be seen;
+  // the rest as smooth. One level for the whole model: a small raised slab with nothing under it isn't the floor.
+  const mainFloor = ground.filter((e) => e.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
+  const groundTop = mainFloor ? mainFloor.Box[5] : null;
+  const buried = (e) => groundTop != null && e.Box && e.Box[5] <= groundTop + 0.05;
+  const finishNote = "Rough or smooth is taken from position (below the ground-bearing floor is rough); change it if the specification says otherwise.";
+
+  // Walls: both faces
+  for (const e of conc.filter((e) => e.Bic === "OST_Walls" && e.Area > 0 && (e.Thickness == null || e.Thickness >= 0.1))) {
+    const curved = e.Length > 0 && e.Box && e.Length > 1.1 * Math.hypot(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]);
+    const rough = buried(e);
+    add(`fwwalls|${typeKey(e)}|${rough ? "r" : "s"}|${curved ? "c" : ""}`, item(rough, `Vertical formwork to sides of walls${curved ? ", curved on plan" : ""} (${typeName(e)})`),
+      `Inferred: both faces of each wall (face area × 2). Faces cast against other concrete aren’t deducted. ${finishNote}`, e, 2 * e.Area);
+  }
+  // Columns: perimeter × height, from the section size in the type name
+  for (const e of conc.filter((e) => e.Bic === "OST_StructuralColumns")) {
+    // With a known section, the height is the smaller of the box height and volume ÷ section (boxes of notched or sloping columns overstate it)
+    const d = dims(e), h = d ? Math.min(height(e) || Infinity, e.Volume / (d[0] * d[1])) : height(e);
+    const per = d ? 2 * (d[0] + d[1]) : h > 0 ? 4 * Math.sqrt(e.Volume / h) : 0;
+    add(`fwcols|${typeKey(e)}`, item(false, `Vertical formwork to sides of columns (${typeName(e)})`),
+      "Inferred: column perimeter × height, with the section size read from the type name.", e, per * h, d ? "" : "The type name gives no section size, so the column is taken as square. Check its size on the drawings.");
+  }
+  // Concrete beams: two sides and the soffit
+  for (const e of conc.filter((e) => e.Bic === "OST_StructuralFraming")) {
+    const d = dims(e), len = e.Length > 0 ? e.Length : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
+    if (!d) { add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, e.Area || 0,
+      "The type name gives no section size, so the beam’s surface area as modelled is used. Check it on the drawings."); continue; }
+    const [b, hgt] = d[0] < d[1] ? d : [d[1], d[0]];
+    add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, (2 * hgt + b) * len);
+  }
+  // Soffits of suspended slabs
+  for (const e of suspended.filter((e) => conc.includes(e))) {
+    add(`fwsoffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of suspended slabs (${typeName(e)})`),
+      "Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it). Sloping soffits aren’t told apart from flat ones.", e, e.Area || 0);
+  }
+  // Edges of slabs and foundations: only the outer edge, and only where nothing is cast against it at the same height
+  const solid = conc.filter((e) => e.Box && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls"].includes(e.Bic));
+  const enclosed = (s) => {
+    const b = s.Box, t = s.Thickness || height(s), tol = 0.05; let u = null;
+    for (const p of solid) {
+      if (p === s) continue;
+      const q = p.Box;
+      if (Math.min(b[5], q[5]) - Math.max(b[2], q[2]) < 0.5 * t) continue;
+      if (q[3] < b[0] - tol || q[0] > b[3] + tol || q[4] < b[1] - tol || q[1] > b[4] + tol) continue;
+      u = u ? [Math.min(u[0], q[0]), Math.min(u[1], q[1]), Math.max(u[2], q[3]), Math.max(u[3], q[4])] : [q[0], q[1], q[3], q[4]];
+    }
+    return !!u && u[0] <= b[0] + tol && u[1] <= b[1] + tol && u[2] >= b[3] - tol && u[3] >= b[4] - tol;
+  };
+  for (const e of conc.filter((e) => e.Box && (e.Bic === "OST_StructuralFoundation" || slabs.includes(e)))) {
+    if (enclosed(e)) continue;
+    const o = outerEdge(e), t = e.Thickness || height(e);
+    const found = e.Bic === "OST_StructuralFoundation" || !suspended.includes(e);
+    add(`fwedge|${typeKey(e)}`, item(found, `Vertical formwork to edges of ${e.Bic === "OST_StructuralFoundation" ? "foundations" : found ? "ground-bearing slabs and footings" : "suspended slabs"} (${typeName(e)})`),
+      "Inferred: outer edge × depth. Inner edges, and edges with concrete cast against them at the same height, aren’t formed, so they’re left out.", e, o.len * t, o.check);
+  }
+
+  // Reinforcement, estimated from the reinforced concrete volume until the bar schedules are available
+  if (!live.some((e) => r.tradeOfId[e.Id] === "rebar")) {
+    const unreinf = new Set((r.issues.find((i) => i.key === "unreinf")?.elements || []).map((e) => e.Id));
+    const rc = conc.filter((e) => !unreinf.has(e.Id));
+    const kg = CONV.rebar[r.structure === "civil" ? "civil" : "building"] || 0, mild = CONV.rebar.mildShare;
+    const why = `Estimated at ${kg} kg of steel per m³ of reinforced concrete (${Math.round(mild * 100)}% mild steel). Replace it with the bar schedule quantities, split by diameter, when they’re available.`;
+    for (const e of rc) {
+      add("rebar|mild", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: mild steel bars", description: "Mild steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * mild) / 1000);
+      add("rebar|ht", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: high tensile steel bars", description: "High tensile steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * (1 - mild)) / 1000);
+    }
+  }
+  const notMeasured = live.filter((e) => r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_GenericModel" || e.Bic === "OST_Stairs") && !noForm.includes(role(e)));
+  return { lines: [...lines.values()], notMeasured };
+}
+
+// The outer edge length of a slab or footing. Revit's perimeter includes the edges of holes, so a ring's inner edge
+// (cast against the floor inside it) would double the formwork; it's left out when the shape can be recognised.
+function outerEdge(e) {
+  const w = e.Box[3] - e.Box[0], h = e.Box[4] - e.Box[1], P = e.Perimeter, A = e.Area;
+  if (!(P > 0)) return { len: 2 * (w + h), check: "No perimeter in the data, so the edge is taken from the element’s overall size." };
+  if (Math.abs(w - h) <= 0.03 * Math.max(w, h)) {
+    const outer = Math.PI * w;
+    if (P <= outer * 1.03) return { len: P };
+    const ri = (P - outer) / (2 * Math.PI), ro = w / 2;
+    if (A > 0 && Math.abs(Math.PI * (ro * ro - ri * ri) - A) <= 0.05 * A) return { len: outer };
+  }
+  if (P <= 2 * (w + h) * 1.03) return { len: P };
+  return { len: 2 * (w + h), check: "The perimeter is longer than the outside of the element, so it has openings or a complex shape. The outer edge is taken from its overall size." };
+}
+
 
 // ===== Map to SANS: group elements by Revit type and material, then map each group to a BoQ item =====
 const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
@@ -1278,7 +1395,16 @@ function buildGroups(result, decisions, learned) {
     if (method === "rule" && unit && unit !== "No" && !(qty > 0)) { method = "check"; confirmed = false; reason = "The model gives no quantity for these elements. Measure them from the drawings."; }
     out.push({ ...g, sample: e, item, method, confirmed, reason, ruleId, confidence, qty, issues, excluded });
   }
-  const order = { none: 0, claude: 1, check: 2, edited: 3, learned: 4, rule: 5, excluded: 6 };
+  // Inferred lines (formwork, reinforcement): items the model implies, with the elements they came from. Always confirmed by the user.
+  for (const L of result.derived?.lines || []) {
+    const key = "inferred|" + L.key, d = decisions[key];
+    let item = L.item, method = "inferred", confirmed = false, reason = L.check ? `${L.reason} ${L.check}` : L.reason;
+    if (d) ({ item, method, confirmed } = d);
+    else if (learned[key]) { item = learned[key].item || learned[key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
+    out.push({ key, elements: L.elements, trade: L.kind === "rebar" ? "rebar" : "concrete", sample: L.elements[0], item, method, confirmed, reason, ruleId: "INFER-" + L.kind,
+      confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, label: L.item.description, parts: L.parts });
+  }
+  const order = { none: 0, claude: 1, check: 2, inferred: 2, edited: 3, learned: 4, rule: 5, excluded: 6 };
   return out.sort((a, b) => (order[a.method] - order[b.method]) || (a.item && b.item ? sectionRank(a.item.section) - sectionRank(b.item.section) : 0) || b.elements.length - a.elements.length);
 }
 
@@ -1288,8 +1414,8 @@ function boqLines(groups) {
   for (const g of groups) {
     if (!g.item || !g.confirmed || g.excluded) continue;
     const it = g.item, k = [it.section, it.clause, it.heading, it.description, it.unit].join("|");
-    if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0 });
-    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length;
+    if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true });
+    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false;
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
 }
@@ -1856,7 +1982,7 @@ function renderDetail() {
 // ===== Map to SANS view =====
 const METHOD = {
   rule: ["Rule", "p-green"], learned: ["Your saved mapping", "p-green"], confirmed: ["Confirmed by you", "p-green"], edited: ["Changed by you", "p-green"],
-  check: ["Rule, to confirm", "p-amber"], claude: ["Claude suggestion", "p-amber"], none: ["Unmatched", "p-red"], excluded: ["Left out", "p-plain"],
+  check: ["Rule, to confirm", "p-amber"], inferred: ["Inferred, to confirm", "p-amber"], claude: ["Claude suggestion", "p-amber"], none: ["Unmatched", "p-red"], excluded: ["Left out", "p-plain"],
 };
 function mapQty(q, unit) { if (unit === "No") return `${Math.round(q)}`; if (unit === "t") return q.toFixed(2); return q.toFixed(unit === "m³" ? 2 : 1); }
 const needsDecision = (g) => !g.excluded && !g.confirmed;
@@ -1898,7 +2024,7 @@ function renderMapCards(groups) {
   const count = (m) => groups.filter((g) => g.method === m).length;
   const saved = Object.keys(CONV.mapping).length;
   $("mHow").replaceChildren(
-    ...[["rule", "Matched by a rule"], ["check", "Matched by a rule, to confirm"], ["learned", "Your saved mappings"], ["claude", "Suggested by Claude"], ["confirmed", "Confirmed by you"], ["edited", "Changed by you"], ["none", "Unmatched"]]
+    ...[["rule", "Matched by a rule"], ["check", "Matched by a rule, to confirm"], ["inferred", "Inferred from the model, to confirm"], ["learned", "Your saved mappings"], ["claude", "Suggested by Claude"], ["confirmed", "Confirmed by you"], ["edited", "Changed by you"], ["none", "Unmatched"]]
       .map(([m, l]) => h("div", { class: "howrow" }, h("span", { style: "display:flex;align-items:center;gap:10px" }, h("i", { style: `width:8px;height:8px;border-radius:50%;flex:none;background:var(--${METHOD[m][1] === "p-green" ? "green" : METHOD[m][1] === "p-amber" ? "amber" : METHOD[m][1] === "p-red" ? "red" : "grey"})` }), l), h("b", {}, String(count(m))))),
     h("div", { class: "sep" }, saved ? [`${plural(saved, "saved mapping")} in the “${Profiles.active().name}” profile, applied automatically to future models. `,
       h("button", { type: "button", class: "link", onclick: async () => { if (!confirm("Remove all saved mappings from this conventions profile?")) return; const p = Profiles.active(); p.mapping = []; await Profiles.save(p); rerunChecks(); renderMap(); toast("Saved mappings removed"); } }, "Remove them")]
@@ -1919,8 +2045,8 @@ function renderMapGroups(groups) {
     const e = g.sample, m = METHOD[g.method] || METHOD.none;
     const label = g.method === "claude" && g.confidence != null ? `${m[0]} · ${Math.round(g.confidence * 100)}%` : m[0];
     rows.push(h("tr", {},
-      h("td", { class: "grp", style: "min-width:240px" }, h("b", {}, `${e.Family || "–"} : ${e.Type || "no type name"}`),
-        h("span", {}, [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")),
+      h("td", { class: "grp", style: "min-width:240px" }, h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`),
+        h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")),
         g.issues.length ? h("span", { style: "display:block;color:var(--amber-t)" }, "Readiness: " + g.issues.slice(0, 2).join("; ")) : null),
       h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, g.item ? `${mapQty(g.qty, g.item.unit)} ${g.item.unit}` : "–"),
       h("td", { class: "sitem", style: "min-width:300px" }, g.item
@@ -2034,7 +2160,7 @@ function renderBoq(groups) {
     const hk = L.clause + "|" + L.heading;
     if (hk !== head) { head = hk; rows.push(h("tr", { class: "head" }, h("td", {}), h("td", { class: "ref" }, L.clause || ""), h("td", { colspan: "3" }, L.heading || ""))); }
     n++;
-    rows.push(h("tr", {}, h("td", { class: "it" }, String(n)), h("td", {}), h("td", { class: "desc" }, L.description, h("small", {}, `${plural(L.elements, "element")} in ${plural(L.groups.length, "group")}`)),
+    rows.push(h("tr", {}, h("td", { class: "it" }, String(n)), h("td", {}), h("td", { class: "desc" }, L.description, h("small", {}, `${L.inferred ? "Inferred from " : ""}${plural(L.elements, "element")} in ${plural(L.groups.length, "group")}`)),
       h("td", { style: "white-space:nowrap" }, L.unit), h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, mapQty(L.qty, L.unit))));
   }
   $("mBoq").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "5", class: "empty" }, "Confirm some mappings to build the BoQ preview."))]));
@@ -2042,7 +2168,7 @@ function renderBoq(groups) {
 }
 function boqRows() {
   const out = []; let n = 0;
-  for (const L of state.boqLines || []) { n++; out.push({ item: n, section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit, quantity: mapQty(L.qty, L.unit),
+  for (const L of state.boqLines || []) { n++; out.push({ item: n, section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit, quantity: mapQty(L.qty, L.unit), basis: L.inferred ? "inferred" : "modelled",
     element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") }); }
   return out;
 }
@@ -2052,7 +2178,7 @@ $("btnBoqCopy").addEventListener("click", () => {
 });
 $("btnBoqCsv").addEventListener("click", async () => {
   const rows = boqRows(); if (!rows.length) return toast("The BoQ preview is empty.");
-  const cols = ["item", "section", "clause", "heading", "description", "unit", "quantity", "element_ids"];
+  const cols = ["item", "section", "clause", "heading", "description", "unit", "quantity", "basis", "element_ids"];
   const data = [cols.join(","), ...rows.map((r) => cols.map((c) => csvCell(r[c])).join(","))].join("\n");
   try { await saveFile("boq-preview_" + state.name.replace(/\.[a-z0-9]+$/i, "").replace(/[^\w.-]+/g, "_") + ".csv", data); }
   catch (e) { if (e && e.code !== "declined") toast("The file couldn’t be saved here. Use Copy BoQ instead."); }
@@ -2233,7 +2359,7 @@ const Profiles = {
 
 function normaliseProfile(p) {
   const base = emptyProfile(p.id, p.name || p.id);
-  for (const k of ["materialGrades", "structureGrades", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
+  for (const k of ["materialGrades", "structureGrades", "rebar", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
   base.hints = {};
   for (const [k, v] of Object.entries(p.hints || {})) if (Array.isArray(v)) base.hints[k] = v.map(String).filter((w) => w.length <= 200).slice(0, 60);
   return { ...base, updatedAt: p.updatedAt || "", updatedBy: p.updatedBy || "" };
