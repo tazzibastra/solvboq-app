@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T09:33:17Z">
+<meta name="solvboq-build" content="2026-10-28T09:40:00Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -258,6 +258,12 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .ws tr.detail td{background:var(--head);border-top:0;font-size:13px}
 .ws tr.detail .grp span{font-size:12px}
 .ws .qtyin{width:160px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card);color:var(--ink)}
+.ws tr.detail.els td{padding-top:0}
+.eltable{width:100%;border-collapse:collapse;font-size:12px;background:var(--card);border:1px solid var(--rule);border-radius:8px}
+.eltable th{text-align:left;font-weight:500;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--rule)}
+.eltable td{padding:5px 10px;border-top:1px solid var(--rule);background:var(--card) !important;font-size:12px}
+.eltable .r{text-align:right;white-space:nowrap}
+.eltable .mono{font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -2451,8 +2457,8 @@ function lineDetail(L, key) {
     const left = g.excluded || g.method === "excluded";
     const top = !g.confirmed && !left ? Profiles.agreement("mapping", g.key)[0] : null;
     out.push(h("tr", { class: "detail" }, h("td", {}), h("td", {}),
-      h("td", { class: "grp" }, h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`),
-        h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")),
+      h("td", { class: "grp" }, L.groups.length > 1 || !g.inferred ? h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`) : null,
+        L.groups.length > 1 || !g.inferred ? h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")) : null,
         g.issues.length ? h("span", { style: "display:block;color:var(--amber-t)" }, "Readiness: " + g.issues.slice(0, 2).join("; ")) : null,
         g.reason ? h("span", { style: "display:block;margin-top:4px" }, g.reason) : null,
         g.item && L.groups.length > 1 ? h("span", { style: "display:block" }, `${mapQty(g.qty, g.item.unit)} ${g.item.unit} of this line`) : null,
@@ -2467,8 +2473,25 @@ function lineDetail(L, key) {
           : h("button", { type: "button", class: "btn sm", "aria-expanded": String(state.mEdit === g.key), onclick: () => { state.mEdit = state.mEdit === g.key ? null : g.key; renderWorkspace(); } }, g.item ? "Change" : "Choose item"),
         !g.item && sampleFn && !left ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude([g]) }, "Ask Claude") : null))));
     if (state.mEdit === g.key) out.push(editRow(g));
+    out.push(elementRows(g));
   }
   return out;
+}
+// The elements behind a group: ID, level, type, material and what each contributes to the line, with their IDs to copy
+function elementRows(g) {
+  const unit = g.item?.unit, part = new Map((g.parts || []).map((p) => [String(p.id), p.qty]));
+  const qtyOf = (e) => (part.size ? part.get(String(e.Id)) : unit ? basisQty(e, unit) : null);
+  const els = g.elements.filter((e) => state.result.status[e.Id] !== "excluded" || g.excluded);
+  const LIMIT = 25, all = (state.allEls = state.allEls || new Set()).has(g.key), shown = all ? els : els.slice(0, LIMIT);
+  return h("tr", { class: "detail els" }, h("td", {}), h("td", {}), h("td", { colspan: "5" },
+    h("table", { class: "eltable" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Element ID"), h("th", {}, "Level"), h("th", {}, "Family : type"), h("th", {}, "Material"), h("th", { class: "r" }, unit ? `Quantity (${unit})` : "Quantity"))),
+      h("tbody", {}, shown.map((e) => { const q = qtyOf(e); return h("tr", {},
+        h("td", { class: "mono" }, String(e.Id)), h("td", {}, e.Level || "–"), h("td", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`),
+        h("td", {}, e.Material || "–"), h("td", { class: "r" }, q == null ? "–" : mapQty(q, unit))); }))),
+    h("div", { class: "tools", style: "margin-top:8px" },
+      h("button", { type: "button", class: "btn sm", onclick: () => copyText(els.map((e) => e.Id).join(";"), plural(els.length, "ID") + " copied. Paste them into Revit’s Manage › Select by ID.") }, `Copy ${plural(els.length, "element ID")}`),
+      els.length > LIMIT ? h("button", { type: "button", class: "link", onclick: () => { all ? state.allEls.delete(g.key) : state.allEls.add(g.key); renderWorkspace(); } }, all ? "Show fewer" : `Show all ${els.length}`) : null)));
 }
 function boqRows() {
   const out = []; let n = 0;
