@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T08:18:18Z">
+<meta name="solvboq-build" content="2026-10-28T08:25:23Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1091,14 +1091,20 @@ function deriveItems(r, opts = {}) {
 
   const fromDrawings = [];
   void inferred;
+  fromDrawings.push({ label: "Preliminaries and general, dayworks and contingencies", ref: "", unit: "Sum", why: "Priced in the contract’s general bills, not from the model." });
   if (slabs.length || T("concrete").length) {
     if (!T("rebar").length) fromDrawings.push({ label: "Reinforcement by bar diameter", ref: "1200 G 8.3", unit: "t", why: "Estimated above from kg/m³. The split by diameter comes from the bar schedules." });
-    if (slabs.length) fromDrawings.push({ label: "Isolation and saw-cut joints, and sealants", ref: "1200 G 8.5", unit: "m", why: "Joint layouts are on the slab drawings, not in the model." });
+    if (slabs.length) fromDrawings.push({ label: "Joint types and the full joint layout", ref: "1200 G 8.5", unit: "m", why: "Joints are estimated from wall lengths and floor areas. The types (water bars, sealants, isolation joints) and exact runs are on the joint drawings." });
   }
   if (steel.length) fromDrawings.push({ label: "Erection bolts", ref: "1200 H 8.3.4", unit: "t", why: "An allowance based on the connection details." });
   if (T("roofing").length || T("cladding").length) fromDrawings.push({ label: "Flute closures and fillers", ref: "1200 HB 8.2.3", unit: "m", why: "Follow the sheeting edges on the roof and elevation drawings." });
   if (T("openings").length) fromDrawings.push({ label: "Door and window specification (ironmongery, seals, glazing)", ref: "PD 10.4", unit: "", why: "Usually included in the item rate. Check against the door and window schedule." });
-  return { items, fromDrawings, lines: [...earth.lines, ...inferred.lines], earthworks: earth.assumptions };
+  const sArea = area(screeds);
+  const more = inferMore(r, { live, slabs, ground: withBoxes || hasElev ? ground : slabs, civil, floated: Math.max(0, allSlabArea - sArea), screedArea: sArea });
+  // Readiness shows the same holding-down bolt count as the BoQ line (only columns standing on concrete)
+  const hd = items.find((i) => i.key === "hdbolts"), hdLine = more.find((l) => l.key === "hdbolts");
+  if (hd && hdLine) { hd.qty = hdLine.qty; hd.note = `${plural2(hdLine.elements.length, "steel column base")} on concrete, at an assumed 4 bolts each. Confirm bolts per base on the drawings.`; }
+  return { items, fromDrawings, lines: [...earth.lines, ...inferred.lines, ...more], earthworks: earth.assumptions };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
 
@@ -1331,6 +1337,96 @@ function inferEarthworks(r, ctx, opts) {
   return { lines, assumptions: { ...A, groundLevel: G, groundWhy, civil, mainFloorTop: main.Box[5], footprints: els.length, area } };
 }
 
+// ===== More inferred lines: finishes, brickwork sundries, joints and steelwork items =====
+// Ported from the earlier pipeline's Companion Rules, with the assumptions written into each line.
+// PD 10.2 plaster and PD 10.7 paint are from the Incinerator BoQ; G and H clauses from the SANS 1200 schedules.
+function inferMore(r, ctx) {
+  const { live, slabs, ground, civil, floated, screedArea } = ctx;
+  const T = (k) => live.filter((e) => r.tradeOfId[e.Id] === k);
+  const role = (e) => r.roles[e.Id]?.role || "";
+  const lines = new Map();
+  const add = (key, kind, item, reason, e, qty, check = "") => {
+    if (!(qty > 0)) return;
+    if (!lines.has(key)) lines.set(key, { key, kind, item, reason, check, qty: 0, elements: [], parts: [] });
+    const L = lines.get(key); L.qty += qty; L.elements.push(e); L.parts.push({ id: e.Id, qty });
+    if (check && !L.check) L.check = check;
+  };
+  const G = (clause, heading, description, unit) => ({ section: "SANS 1200 G", clause, heading, description, unit });
+  const PD = (clause, heading, description, unit) => ({ section: "PD", clause, heading, description, unit });
+  const H = (clause, heading, description, unit) => ({ section: "SANS 1200 H", clause, heading, description, unit });
+
+  // Blinding, only where none is modelled (modelled blinding is mapped like any element)
+  if (!live.some((e) => role(e) === "blinding"))
+    for (const e of ground) add("blind", "finish", G("8.4.2", "Blinding layer", "Class 15 MPa/19 mm concrete, 75 mm thick under floors", "m²"),
+      "Inferred: none is modelled, so it’s taken under every ground-bearing slab, at 75 mm.", e, e.Area || 0);
+  // Floated finish to tops of slabs, less any area under a modelled screed
+  const slabArea = slabs.reduce((s, e) => s + (e.Area || 0), 0);
+  for (const e of slabs) add("float", "finish", G("8.4.4", "Unformed surface finishes", "Wood-floated finish to top of floor slabs and footings", "m²"),
+    `Inferred: top area of the slabs${screedArea ? `, less ${fmt1(screedArea)} m² under modelled screeds` : ""}. Split wood-floated and steel-floated as the specification says.`, e, slabArea > 0 ? (e.Area || 0) * (floated / slabArea) : 0);
+
+  // Joints
+  const groundArea = ground.reduce((s, e) => s + (e.Area || 0), 0);
+  const tops = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_Floors" || e.Bic === "OST_StructuralFoundation"));
+  if (civil) {
+    // Water-retaining: a construction joint with a water bar where each wall meets the base it stands on, and bay joints in the floors
+    for (const e of live.filter((e) => e.Bic === "OST_Walls" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Length > 0))
+      if (tops.some((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]))
+        add("jwall", "joint", G("8.5", "Joints", "Watertight construction joints with water bar, at the base of walls", "m"),
+          "Inferred: the length of each wall that stands on a slab or footing. Joint types and any other lifts come from the joint drawings.", e, e.Length);
+    for (const e of ground) add("jfloor", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs (estimate, about 6 m bays)", "m"),
+      "Inferred: about 0.33 m of joint per m² of floor (bays of about 6 m). Replace it with the joint layout when it’s available.", e, (e.Area || 0) * 0.33);
+  } else if (groundArea > 0) {
+    for (const e of ground) {
+      add("jsaw", "joint", G("8.5", "Joints", "Saw-cut contraction joints in ground slabs (estimate, about 6 m grid)", "m"),
+        "Inferred: about 0.33 m of joint per m² of ground slab (a 6 m grid). Replace it with the joint layout when it’s available.", e, (e.Area || 0) * 0.33);
+      add("jseal", "joint", G("8.5", "Joints", "Joint sealant to saw-cut joints (estimate)", "m"), "Inferred: the same length as the saw-cut joints.", e, (e.Area || 0) * 0.33);
+    }
+    // Damp-proofing and ant poison under ground-bearing slabs, for buildings
+    for (const e of ground) {
+      add("dpm", "building", PD("PD 10.8", "Damp-proofing", "Damp-proof membrane under ground-bearing slabs", "m²"), "Inferred: plan area of each ground-bearing slab.", e, e.Area || 0);
+      add("antpoison", "building", PD("PD 10.8", "Soil poisoning", "Soil poisoning under ground-bearing slabs", "m²"), "Inferred: plan area of each ground-bearing slab.", e, e.Area || 0);
+    }
+  }
+
+  // Brickwork: plaster and paint on common brick (face brick isn’t plastered), DPC, lintels over openings
+  const face = (e) => /face|\bfb\b|klinker/i.test(`${e.Type} ${e.Family} ${e.Material}`);
+  for (const e of T("masonry").filter((e) => e.Area > 0)) {
+    const faces = face(e) ? 1 : 2;
+    const why = "Inferred: wall face area, both faces of common brick and the inside face of face brick. Deduct faces that are tiled or clad.";
+    add("plaster", "building", PD("PD 10.2", "Plasterwork", "Cement plaster to brick walls", "m²"), why, e, faces * e.Area);
+    add("paint", "building", PD("PD 10.7", "Paintwork", "Paint to plastered walls", "m²"), "Inferred: the same area as the plaster.", e, faces * e.Area);
+    if (e.Box && e.Thickness > 0) add("dpc", "building", PD("PD 10.8", "Damp-proofing", "Damp-proof course in brick walls", "m²"),
+      "Inferred: wall length × wall thickness at the base.", e, Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) * e.Thickness);
+  }
+  for (const e of T("openings")) {
+    const m = `${e.Type} ${e.Family}`.match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/i);
+    const w = m ? +m[1] / 1000 : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
+    add("lintel", "building", PD("PD 10.1", "Brickwork sundries", "Precast concrete lintels over openings", "m"),
+      "Inferred: opening width plus 200 mm bearing at each end, from the width in the type name.", e, w + 0.4, m ? "" : "Some openings have no size in the type name, so the width is read from the element’s overall size.");
+  }
+
+  // Structural steelwork: the same tonnage as supply for shop drawings, delivery and erection; coating unless galvanised
+  const steel = T("steel");
+  const t = (e) => (e.Volume || 0) * STEEL_DENSITY;
+  for (const e of steel) {
+    add("shop", "steel", H("8.3.1.1", "Supply and fabrication", "Preparation of shop detail drawings", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
+    add("delivery", "steel", H("8.3.2", "Delivery to site", "Delivery of steelwork to site, normal loads", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
+    add("erection", "steel", H("8.3.3", "Erection on site", "Erection of steelwork on site", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
+    add("bolts", "steel", H("8.3.4", "Erection bolts", "Erection bolts, nuts and washers (estimate)", "t"),
+      "Inferred: 1% of the steel tonnage, until the connection details are known.", e, 0.01 * t(e));
+    if (!/galvani|hdg/i.test(`${e.Material} ${e.Type}`)) add("coating", "steel", H("8.3.13", "Corrosion protection", "Surface preparation, priming and coating of steelwork", "t"),
+      "Inferred: all steel tonnage except members that are galvanised.", e, t(e));
+  }
+  // Holding-down bolts only where a steel column stands on concrete (upper columns spliced onto steel have none)
+  const concTops = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete");
+  const onConcrete = (c) => c.Box && concTops.some((s) => Math.abs(s.Box[5] - c.Box[2]) <= 0.3 && s.Box[0] <= c.Box[3] && s.Box[3] >= c.Box[0] && s.Box[1] <= c.Box[4] && s.Box[4] >= c.Box[1]);
+  for (const e of steel.filter((e) => e.Bic === "OST_StructuralColumns" && (!e.Box || onConcrete(e))))
+    add("hdbolts", "steel", H("8.3.6", "Holding-down bolts", "Holding-down bolt assemblies (4 per column base, assumed)", "No"),
+      "Inferred: 4 bolts at the base of each steel column that stands on concrete. Confirm the bolts per base on the drawings.", e, 4,
+      e.Box ? "" : "Some columns have no position in the data, so they’re assumed to stand on concrete.");
+  return [...lines.values()];
+}
+
 
 // ===== Map to SANS: group elements by Revit type and material, then map each group to a BoQ item =====
 const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
@@ -1469,7 +1565,8 @@ function buildGroups(result, decisions, learned) {
     let item = L.item, method = "inferred", confirmed = false, reason = L.check ? `${L.reason} ${L.check}` : L.reason;
     if (d) ({ item, method, confirmed } = d);
     else if (learned[key]) { item = learned[key].item || learned[key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
-    out.push({ key, elements: L.elements, trade: L.kind === "rebar" ? "rebar" : "concrete", sample: L.elements[0], item, method, confirmed, reason, ruleId: "INFER-" + L.kind,
+    const trade = { rebar: "rebar", steel: "steel", building: "masonry", earth: "other" }[L.kind] || "concrete";
+    out.push({ key, elements: L.elements, trade, sample: L.elements[0], item, method, confirmed, reason, ruleId: "INFER-" + L.kind,
       confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, label: L.item.description, parts: L.parts });
   }
   const order = { none: 0, claude: 1, check: 2, inferred: 2, edited: 3, learned: 4, rule: 5, excluded: 6 };
@@ -2184,8 +2281,13 @@ function renderBatches(groups) {
   if (state.mBatch && !by.has(state.mBatch)) state.mBatch = null;
   if (!batches.length) { $("mBatches").replaceChildren(); return; }
   const n = batches.reduce((s, [, l]) => s + l.length, 0);
+  const inferred = groups.filter((g) => needsDecision(g) && g.inferred && g.item);
   $("mBatches").replaceChildren(h("div", { class: "batches" },
     h("div", { class: "sub", style: "padding:14px 20px 4px" }, `${plural(n, "group")} fall into ${batches.length === 1 ? "1 batch" : `${batches.length} batches`} with the same suggestion and the same reason. Check one batch with “Show them”, then confirm it in one go.`),
+    inferred.length > 1 ? h("div", { class: "listrow" },
+      h("div", { class: "t" }, h("b", {}, `${plural(inferred.length, "inferred line")}: earthworks, formwork, reinforcement, finishes, joints and sundries`),
+        h("span", {}, "Worked out from the model with the assumptions stated on each line. Confirm them all to put them in the BoQ, then adjust any line or the earthworks assumptions later.")),
+      h("div", { class: "acts" }, h("button", { type: "button", class: "btn sm dark", onclick: () => confirmBatch(inferred) }, `Confirm all ${inferred.length} inferred lines`))) : null,
     ...batches.map(([k, l]) => {
       const g = l[0], els = l.reduce((s, x) => s + x.elements.length, 0), on = state.mBatch === k;
       const what = [...new Set(l.map((x) => x.item.description))];
