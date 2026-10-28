@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T08:10:31Z">
+<meta name="solvboq-build" content="2026-10-28T08:18:18Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -242,6 +242,10 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .boqtable td.desc small{display:block;font-size:12px;color:var(--muted)}
 .batches{border-top:1px solid var(--rule);margin-top:12px}
 .batches .listrow.on{background:var(--chip)}
+.earth{border-top:1px solid var(--rule);margin-top:12px;padding:14px 20px}
+.earth summary{cursor:pointer;font-size:13px;color:var(--ink-2)}
+.earth summary b{color:var(--ink);font-weight:600}
+.earth .sub{margin:10px 0}
 </style>
 </head>
 <body>
@@ -390,6 +394,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
           <div class="seg" role="group" aria-label="Filter groups" id="mFilter"></div>
         </div>
       </div>
+      <div id="mEarth"></div>
       <div id="mBatches"></div>
       <div class="scroll"><table class="maptable">
         <thead><tr><th>Revit group</th><th class="r">Quantity</th><th>SANS item</th><th>How</th><th><span class="sr">Actions</span></th></tr></thead>
@@ -472,6 +477,9 @@ const DEFAULT_STRUCTURE_GRADES = { civil: "35 MPa", building: "30 MPa" };
 // Reinforcement estimate until bar schedules exist: kg of steel per m³ of reinforced concrete, and the mild steel share.
 // From the earlier pipeline (about 100 kg/m³, 10% mild steel). Gravity Thickeners measured 113 kg/m³.
 const DEFAULT_REBAR = { civil: 100, building: 100, mildShare: 0.1 };
+// Earthworks assumptions (m): building excavation depth (the engineer's standard: footprint × 1 m), working space width,
+// imported fill thickness under floors and foundations. A ground level can be entered per model.
+const DEFAULT_EARTHWORKS = { buildingDepth: 1, workingSpace: 1, fillThickness: 0.3 };
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -516,9 +524,11 @@ function compileConventions(profile) {
   // profile entries are { key: type, value: check }; the engine looks up by check
   for (const { key, value } of p.suppress || []) (suppress[value] = suppress[value] || new Set()).add(key);
   const structureGrades = { ...DEFAULT_STRUCTURE_GRADES, ...listToMap(p.structureGrades) };
+  const earthworks = { ...DEFAULT_EARTHWORKS };
+  for (const [k, v] of Object.entries(listToMap(p.earthworks))) if (k in earthworks && Number.isFinite(+v) && +v >= 0) earthworks[k] = +v;
   const rebar = { ...DEFAULT_REBAR };
   for (const [k, v] of Object.entries(listToMap(p.rebar))) if (k in rebar && Number.isFinite(+v) && +v >= 0) rebar[k] = +v;
-  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
+  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
 let CONV = compileConventions(null);
@@ -565,6 +575,7 @@ const overlap = (a, b) => { const dx = Math.min(a[3], b[3]) - Math.max(a[0], b[0
 const boxVol = (b) => Math.max(0, (b[3] - b[0]) * (b[4] - b[1]) * (b[5] - b[2]));
 const planOverlap = (a, b) => Math.min(a[3], b[3]) - Math.max(a[0], b[0]) > 0.05 && Math.min(a[4], b[4]) - Math.max(a[1], b[1]) > 0.05;
 const fmt1 = (v) => (Math.round(v * 10) / 10).toFixed(1);
+const fmt2 = (v) => (Math.round(v * 100) / 100).toFixed(2);
 
 
 // ===== Trades: every measurable element belongs to exactly one, measured in that trade's unit =====
@@ -980,13 +991,13 @@ function runChecks(input, opts = {}) {
   Object.values(byType).forEach((t) => (t.total = t.trusted + t.eyes + t.unknown));
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
   const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
-  out.derived = deriveItems(out);
+  out.derived = deriveItems(out, opts);
   return out;
 }
 
 
 // ===== BoQ items worked out from model data, and items that always come from the drawings =====
-function deriveItems(r) {
+function deriveItems(r, opts = {}) {
   const live = r.elements.filter((e) => !NON_MEASURED.has(e.Bic) && r.status[e.Id] !== "excluded");
   const T = (k) => live.filter((e) => r.tradeOfId[e.Id] === k);
   const isBlinding = (e) => r.roles[e.Id]?.role === "blinding";
@@ -1054,17 +1065,16 @@ function deriveItems(r) {
       note: ok.length ? "Wall length × wall thickness at floor level." : "Needs wall lengths and thicknesses, which this data doesn’t have." });
   }
 
-  const foundations = live.filter((e) => e.Bic === "OST_StructuralFoundation" || (e.Bic === "OST_Floors" && slabs.includes(e) && (!hasElev || e.LevelElevation <= lowest + 0.5)));
-  if (foundations.length) {
-    const hasGround = r.elements.some((e) => ["OST_Topography", "OST_Toposolid", "OST_Site"].includes(e.Bic)) ||
-      Object.keys(r.levels || {}).some((n) => /ngl|natural ground|existing ground|egl/i.test(n));
-    const footprint = area(foundations.filter((e) => e.Bic === "OST_Floors")) + area(foundations.filter((e) => e.Bic === "OST_StructuralFoundation")) / 3;
-    const why = hasGround ? "Footprint is in the model. Depth from natural ground level to underside of foundations comes from the levels." : "The model has no natural ground level or topography, so excavation depths can’t be worked out. The footprint is available.";
-    item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: null, status: hasGround ? "partly" : "none", note: why });
-    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m²", qty: null, status: hasGround ? "partly" : "none", note: hasGround ? "Foundation perimeters × working-space depth." : "Needs excavation depths first." });
-    item({ key: "fill", label: "Imported fill under floors and foundations", ref: "1200 D 8.3.16", unit: "m³", qty: null, status: "partly", note: `Area under the ground-bearing slabs is ${Math.round(hasElev ? area(ground) : allSlabArea)} m²${hasElev ? "" : " (all slabs, since ground-bearing ones can’t be identified)"}. Multiply by the layer thickness from the drawings or geotechnical report.` });
-    void footprint;
-  }
+  // Earthworks: inferred from the lowest parts of the structure and stated assumptions (inferEarthworks)
+  const earth = withBoxes ? inferEarthworks(r, { live, ground }, opts) : { lines: [], assumptions: null };
+  const eTotal = (k) => earth.lines.find((l) => l.key === "earth|" + k)?.qty;
+  if (earth.assumptions) {
+    const a = earth.assumptions;
+    item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: eTotal("exc") ?? 0, status: "partly",
+      note: a.civil ? `Tank: from the ${a.groundWhy} down to the lowest layer under it. Enter the real ground level under Earthworks in Map to SANS.` : `Building: footprint × ${fmt2(a.buildingDepth)} m.` });
+    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m³", qty: eTotal("ws") ?? 0, status: "partly", note: `Outer perimeter × ${fmt2(a.workingSpace)} m wide × the excavation depth.` });
+    item({ key: "fill", label: "Imported fill under floors and foundations", ref: "1200 D 8.3.16", unit: "m³", qty: eTotal("fill") ?? 0, status: "partly", note: `Footprint × ${fmt2(a.fillThickness)} m (assumed). The geotechnical report gives the real layers.` });
+  } else if (slabs.length) item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: null, status: "none", note: "The data has no element positions, so footprints and depths can’t be worked out." });
 
   const steel = T("steel");
   if (steel.length) {
@@ -1088,7 +1098,7 @@ function deriveItems(r) {
   if (steel.length) fromDrawings.push({ label: "Erection bolts", ref: "1200 H 8.3.4", unit: "t", why: "An allowance based on the connection details." });
   if (T("roofing").length || T("cladding").length) fromDrawings.push({ label: "Flute closures and fillers", ref: "1200 HB 8.2.3", unit: "m", why: "Follow the sheeting edges on the roof and elevation drawings." });
   if (T("openings").length) fromDrawings.push({ label: "Door and window specification (ironmongery, seals, glazing)", ref: "PD 10.4", unit: "", why: "Usually included in the item rate. Check against the door and window schedule." });
-  return { items, fromDrawings, lines: inferred.lines };
+  return { items, fromDrawings, lines: [...earth.lines, ...inferred.lines], earthworks: earth.assumptions };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
 
@@ -1261,6 +1271,64 @@ function outerEdge(e) {
   }
   if (P <= 2 * (w + h) * 1.03) return { len: P };
   return { len: 2 * (w + h), check: "The perimeter is longer than the outside of the element, so it has openings or a complex shape. The outer edge is taken from its overall size." };
+}
+
+// ===== Earthworks, inferred from the lowest parts of the structure and a few stated assumptions =====
+// The models carry no ground survey, so the ground level is a level named for it when there is one, otherwise the top of
+// the main ground-bearing floor; the user can enter it. Every assumption is written into the line, and all can be changed.
+function inferEarthworks(r, ctx, opts) {
+  const { live, ground } = ctx;
+  const A = { ...CONV.earthworks, ...(opts.earthworks || {}) };
+  const civil = r.structure === "civil";
+  const base = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_StructuralFoundation" || ground.includes(e)));
+  if (!base.length) return { lines: [], assumptions: null };
+  const outerArea = (e) => {
+    const w = e.Box[3] - e.Box[0], h = e.Box[4] - e.Box[1], o = outerEdge(e);
+    if (Math.abs(w - h) <= 0.03 * Math.max(w, h) && Math.abs(o.len - Math.PI * w) <= 0.03 * o.len) return (Math.PI * w * w) / 4;
+    return e.Perimeter > 2 * (w + h) * 1.03 ? w * h : e.Area || w * h;
+  };
+  const inside = (a, b, tol = 0.1) => a[0] >= b[0] - tol && a[1] >= b[1] - tol && a[3] <= b[3] + tol && a[4] <= b[4] + tol;
+  // Footprints: the biggest ground-bearing element and everything inside it in plan count once (a tank's floor sits inside its footing ring)
+  const roots = [];
+  for (const e of [...base].sort((a, b) => outerArea(b) - outerArea(a))) if (!roots.some((x) => inside(e.Box, x.Box))) roots.push(e);
+  // Ground level: the user's, a level named for it, or the top of the main ground-bearing floor
+  const named = Object.entries(r.levels || {}).find(([n, z]) => z != null && /\b(ngl|egl|ogl|natural ground|existing ground|ground level|ground line|platform level|terrace level)\b/i.test(n));
+  const main = [...ground].filter((e) => e.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0] || roots[0];
+  const G = Number.isFinite(A.groundLevel) ? A.groundLevel : named ? named[1] : main.Box[5];
+  const groundWhy = Number.isFinite(A.groundLevel) ? `ground level ${fmt2(G)} m (entered)` : named ? `ground level ${fmt2(G)} m (level “${named[0]}”)` : `ground level taken as the top of the main floor, ${fmt2(G)} m`;
+  // Everything below the structure counts for depth: blinding, no-fines, subsoil drains as well as concrete
+  const below = live.filter((e) => e.Box && e.Volume > 0 && ["concrete", "other"].includes(r.tradeOfId[e.Id]) && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls", "OST_GenericModel"].includes(e.Bic));
+  let exc = 0, ws = 0, fill = 0, area = 0;
+  const els = [];
+  // A raised slab or base with nothing under it (a landing, a bridge support) isn't dug for
+  for (const root of roots.filter((e) => e.Box[2] < Math.min(G, main.Box[5]) + 0.5)) {
+    const fp = outerArea(root), per = outerEdge(root).len;
+    let vol;
+    if (civil) {
+      // Deepest parts first: each takes its own plan area at its own depth, until the footprint is used up
+      const parts = below.filter((e) => inside(e.Box, root.Box, 0.6)).sort((a, b) => a.Box[2] - b.Box[2]);
+      let left = fp; vol = 0;
+      for (const p of parts) { if (left <= 0) break; const a = Math.min(left, outerArea(p)); vol += a * Math.max(0, G - p.Box[2]); left -= a; }
+      if (left > 0) vol += left * Math.max(0, G - root.Box[2]);
+    } else vol = fp * A.buildingDepth;
+    const depth = fp > 0 ? vol / fp : 0;
+    exc += vol; ws += per * A.workingSpace * (civil ? depth : A.buildingDepth); fill += fp * A.fillThickness; area += fp;
+    els.push(root);
+  }
+  const how = civil
+    ? `Tanks: excavated from the ${groundWhy}, down to the underside of the lowest layer under each part (blinding, no-fines, subsoil drains), deeper under sumps.`
+    : `Buildings: footprint × ${fmt2(A.buildingDepth)} m, the engineer’s standard for buildings.`;
+  const fp = `${plural2(els.length, "footprint")}, ${fmt1(area)} m² in plan`;
+  const item = (clause, heading, description) => ({ section: "SANS 1200 D", clause, heading, description, unit: "m³" });
+  const line = (key, it, qty, reason) => ({ key: "earth|" + key, kind: "earth", item: it, reason: `Inferred: ${reason}`, check: "", qty, elements: els, parts: els.map((e) => ({ id: e.Id, qty: qty / els.length })) });
+  const lines = [
+    line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for structures"), exc, `${how} ${fp}. Change the assumptions under Earthworks if the levels are known.`),
+    line("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), ws, `outer perimeter × ${fmt2(A.workingSpace)} m wide × the excavation depth.`),
+    line("stock", item("8.3.14", "Stockpiling", "Extra over item 8.3.3 for temporary stockpiling"), exc, "the same volume as the excavation."),
+    line("fill", item("8.3.16", "Importing of materials for fill under floors and foundations", `G5 compacted to 98% Mod. AASHTO in 150 mm layers, ${Math.round(A.fillThickness * 1000)} mm thick (assumed)`),
+      fill, `footprint × ${fmt2(A.fillThickness)} m. The layer thicknesses come from the geotechnical report; replace this when it’s available.`),
+  ].filter((l) => l.qty > 0);
+  return { lines, assumptions: { ...A, groundLevel: G, groundWhy, civil, mainFloorTop: main.Box[5], footprints: els.length, area } };
 }
 
 
@@ -1513,9 +1581,9 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "" });
+  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name) });
   state.records = records;
-  state.result = runChecks(records, { profile: state.profile, title: modelTitle() }); noteCheckTitles();
+  state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
   if (meta.ptype) $("fType").value = meta.ptype;
   const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -1556,6 +1624,10 @@ $("btnGoFix").addEventListener("click", () => $("fixSection").scrollIntoView({ b
 
 // ===== Score history per project (this browser only) =====
 const HIST_KEY = "solvboq-score-history-v1";
+// Earthworks assumptions entered for a model (ground level and so on), kept in this browser by model name
+const EARTH_KEY = "solvboq-earthworks-v1";
+function loadEarth(name) { try { return (JSON.parse(localStorage.getItem(EARTH_KEY) || "{}") || {})[name] || {}; } catch (e) { return {}; } }
+function saveEarth(name, v) { try { const all = JSON.parse(localStorage.getItem(EARTH_KEY) || "{}") || {}; if (Object.keys(v).length) all[name] = v; else delete all[name]; localStorage.setItem(EARTH_KEY, JSON.stringify(all)); } catch (e) {} }
 // q: quantities you can trust; spec: fully specified. Entries saved before the split have only "score" (fully specified).
 function recordHistory(project, rev, q, spec) {
   if (!project || !rev) return null;
@@ -1851,7 +1923,7 @@ function readsFor(e, key) {
 }
 // The model's name and description tell the engine what kind of structure it is (tank or building)
 function modelTitle() { return [state.name, state.desc].filter(Boolean).join(" ").replace(/_\d{8}_\d{6}|\.(json|csv|rvt)$/gi, " "); }
-function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile, title: modelTitle() }); noteCheckTitles(); } }
+function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile, title: modelTitle(), earthworks: state.earth }); noteCheckTitles(); } }
 function noteCheckTitles() { for (const i of state.result.issues) CHECK_TITLES[i.key] = i.title; }
 function gradePanel(iss) {
   const mats = {};
@@ -2004,7 +2076,7 @@ function renderMap() {
   $("mKicker").textContent = $("fProject").value.trim() || "Untitled model";
   const els = groups.reduce((s, g) => s + g.elements.length, 0);
   $("mChips").replaceChildren(h("span", { class: "chipx file" }, svg(ICON.file), state.name), h("span", { class: "chipx" }, `${plural(groups.length, "group")} from ${plural(els, "element")}`), h("span", { class: "meta" }, "Quantities trusted " + Math.round(state.result.summary.quantities * 100) + "%"));
-  renderMapCards(groups); renderMapGroups(groups); renderBoq(groups);
+  renderMapCards(groups); renderEarth(); renderMapGroups(groups); renderBoq(groups);
   const unmatched = groups.filter((g) => g.method === "none").length;
   $("btnAskMap").disabled = !sampleFn || !unmatched;
   $("btnAskMap").textContent = unmatched ? `Ask Claude about ${plural(unmatched, "unmatched group")}` : "Nothing unmatched";
@@ -2078,6 +2150,30 @@ function confirmBatch(list) {
   if (save.length) Profiles.setEntries("mapping", save.map((g) => [g.key, g.item]), "mapping", "confirmed");
   state.mBatch = null;
   toast(`${plural(list.length, "group")} confirmed` + (save.length ? `, ${save.length} saved for future models` : "")); renderMap();
+}
+
+// Earthworks assumptions: the model has no ground survey, so these drive excavation, working space and fill
+function renderEarth() {
+  const a = state.result.derived.earthworks;
+  if (!a) { $("mEarth").replaceChildren(); return; }
+  const m = (v) => (Math.round(v * 100) / 100).toString();
+  const field = (k, label, val, hint) => h("label", { class: "field" }, label, h("input", { id: "ew-" + k, type: "number", step: "0.05", value: m(val) }), hint ? h("small", { style: "color:var(--muted)" }, hint) : null);
+  const apply = () => {
+    const v = {};
+    for (const k of ["groundLevel", "workingSpace", "buildingDepth", "fillThickness"]) { const x = parseFloat($("ew-" + k).value); if (Number.isFinite(x) && (k === "groundLevel" || x >= 0)) v[k] = x; }
+    state.earth = v; saveEarth(state.name, v); rerunChecks(); renderMap(); toast("Earthworks recalculated");
+  };
+  $("mEarth").replaceChildren(h("details", { class: "earth", open: state.earthOpen ? true : null, ontoggle: (e) => { state.earthOpen = e.target.open; } },
+    h("summary", {}, h("b", {}, "Earthworks assumptions"), ` ${a.civil ? "Tank" : "Building"}: ${a.groundWhy}. Working space ${m(a.workingSpace)} m, imported fill ${Math.round(a.fillThickness * 1000)} mm.`),
+    h("p", { class: "sub" }, "The model has no ground survey, so excavation, working space, stockpiling and imported fill are worked out from these. Change them when the levels and the geotechnical report are known."),
+    h("div", { class: "editgrid" },
+      field("groundLevel", "Ground level (m, in model heights)", a.groundLevel, `The top of the main floor is at ${m(a.mainFloorTop)} m.`),
+      field("workingSpace", "Working space width (m)", a.workingSpace),
+      field("buildingDepth", "Excavation depth for buildings (m)", a.buildingDepth, "Buildings only: footprint × this depth."),
+      field("fillThickness", "Imported fill under floors and foundations (m)", a.fillThickness)),
+    h("div", { class: "tools", style: "margin-top:12px" },
+      h("button", { type: "button", class: "btn sm dark", onclick: apply }, "Recalculate"),
+      Object.keys(state.earth || {}).length ? h("button", { type: "button", class: "btn sm", onclick: () => { state.earth = {}; saveEarth(state.name, {}); rerunChecks(); renderMap(); toast("Back to the defaults"); } }, "Use the defaults") : null)));
 }
 
 // Batches: two or more groups waiting for the same decision, for the same reason
@@ -2359,7 +2455,7 @@ const Profiles = {
 
 function normaliseProfile(p) {
   const base = emptyProfile(p.id, p.name || p.id);
-  for (const k of ["materialGrades", "structureGrades", "rebar", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
+  for (const k of ["materialGrades", "structureGrades", "rebar", "earthworks", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
   base.hints = {};
   for (const [k, v] of Object.entries(p.hints || {})) if (Array.isArray(v)) base.hints[k] = v.map(String).filter((w) => w.length <= 200).slice(0, 60);
   return { ...base, updatedAt: p.updatedAt || "", updatedBy: p.updatedBy || "" };
