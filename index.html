@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T08:25:23Z">
+<meta name="solvboq-build" content="2026-10-28T08:34:58Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -475,11 +475,12 @@ const DEFAULT_HINTS = {
 // "civil" = no brickwork, doors, windows or sheeting in the model. A profile can override with structureGrades: [{key, value}].
 const DEFAULT_STRUCTURE_GRADES = { civil: "35 MPa", building: "30 MPa" };
 // Reinforcement estimate until bar schedules exist: kg of steel per m³ of reinforced concrete, and the mild steel share.
-// From the earlier pipeline (about 100 kg/m³, 10% mild steel). Gravity Thickeners measured 113 kg/m³.
-const DEFAULT_REBAR = { civil: 100, building: 100, mildShare: 0.1 };
-// Earthworks assumptions (m): building excavation depth (the engineer's standard: footprint × 1 m), working space width,
-// imported fill thickness under floors and foundations. A ground level can be entered per model.
-const DEFAULT_EARTHWORKS = { buildingDepth: 1, workingSpace: 1, fillThickness: 0.3 };
+// From the engineer's BoQs: Gravity Thickeners 113 kg/m³ (all high tensile), Incinerator building 133 kg/m³ (6% mild steel).
+const DEFAULT_REBAR = { civil: 115, building: 130, mildShare: 0.05 };
+// Earthworks assumptions (m): building excavation depth, working space width, imported fill thickness under floors and
+// foundations. From his BoQs: the Incinerator building dug about 1.5 m and imported about 1.7 m of G5 over its footprint;
+// Gravity Thickeners imported over 1.5 m of engineered fill. A ground level can be entered per model.
+const DEFAULT_EARTHWORKS = { buildingDepth: 1.5, workingSpace: 1, fillThickness: 1.5 };
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -1361,7 +1362,8 @@ function inferMore(r, ctx) {
       "Inferred: none is modelled, so it’s taken under every ground-bearing slab, at 75 mm.", e, e.Area || 0);
   // Floated finish to tops of slabs, less any area under a modelled screed
   const slabArea = slabs.reduce((s, e) => s + (e.Area || 0), 0);
-  for (const e of slabs) add("float", "finish", G("8.4.4", "Unformed surface finishes", "Wood-floated finish to top of floor slabs and footings", "m²"),
+  // His tank BoQ wood-floats floors and footings; his building BoQ steel-floats the slabs
+  for (const e of slabs) add("float", "finish", G("8.4.4", "Unformed surface finishes", civil ? "Wood-floated finish to top of floor slabs and footings" : "Steel-floated finish to top of slabs", "m²"),
     `Inferred: top area of the slabs${screedArea ? `, less ${fmt1(screedArea)} m² under modelled screeds` : ""}. Split wood-floated and steel-floated as the specification says.`, e, slabArea > 0 ? (e.Area || 0) * (floated / slabArea) : 0);
 
   // Joints
@@ -1377,9 +1379,10 @@ function inferMore(r, ctx) {
       "Inferred: about 0.33 m of joint per m² of floor (bays of about 6 m). Replace it with the joint layout when it’s available.", e, (e.Area || 0) * 0.33);
   } else if (groundArea > 0) {
     for (const e of ground) {
-      add("jsaw", "joint", G("8.5", "Joints", "Saw-cut contraction joints in ground slabs (estimate, about 6 m grid)", "m"),
-        "Inferred: about 0.33 m of joint per m² of ground slab (a 6 m grid). Replace it with the joint layout when it’s available.", e, (e.Area || 0) * 0.33);
-      add("jseal", "joint", G("8.5", "Joints", "Joint sealant to saw-cut joints (estimate)", "m"), "Inferred: the same length as the saw-cut joints.", e, (e.Area || 0) * 0.33);
+      // His Incinerator floor: 67 m of saw-cut joints in 170 m² (0.4 m/m²), sealant over the same length
+      add("jsaw", "joint", G("8.5", "Joints", "Saw-cut contraction joints in ground slabs (estimate, about 5 m grid)", "m"),
+        "Inferred: about 0.4 m of joint per m² of ground slab (a 5 m grid). Replace it with the joint layout when it’s available.", e, (e.Area || 0) * 0.4);
+      add("jseal", "joint", G("8.5", "Joints", "Joint sealant to saw-cut joints (estimate)", "m"), "Inferred: the same length as the saw-cut joints.", e, (e.Area || 0) * 0.4);
     }
     // Damp-proofing and ant poison under ground-bearing slabs, for buildings
     for (const e of ground) {
@@ -1398,18 +1401,21 @@ function inferMore(r, ctx) {
     if (e.Box && e.Thickness > 0) add("dpc", "building", PD("PD 10.8", "Damp-proofing", "Damp-proof course in brick walls", "m²"),
       "Inferred: wall length × wall thickness at the base.", e, Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) * e.Thickness);
   }
+  // Cavity walls have two skins, so each opening gets two lintels (his Incinerator BoQ: 40 m for about 20 m of openings)
+  const cavity = T("masonry").some((e) => /cavity/i.test(`${e.Type} ${e.Family}`) || e.Thickness >= 0.25);
   for (const e of T("openings")) {
     const m = `${e.Type} ${e.Family}`.match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/i);
     const w = m ? +m[1] / 1000 : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
     add("lintel", "building", PD("PD 10.1", "Brickwork sundries", "Precast concrete lintels over openings", "m"),
-      "Inferred: opening width plus 200 mm bearing at each end, from the width in the type name.", e, w + 0.4, m ? "" : "Some openings have no size in the type name, so the width is read from the element’s overall size.");
+      `Inferred: opening width plus 200 mm bearing at each end${cavity ? ", one lintel per skin of the cavity walls" : ""}, from the width in the type name.`, e, (w + 0.4) * (cavity ? 2 : 1),
+      m ? "" : "Some openings have no size in the type name, so the width is read from the element’s overall size.");
   }
 
   // Structural steelwork: the same tonnage as supply for shop drawings, delivery and erection; coating unless galvanised
   const steel = T("steel");
   const t = (e) => (e.Volume || 0) * STEEL_DENSITY;
   for (const e of steel) {
-    add("shop", "steel", H("8.3.1.1", "Supply and fabrication", "Preparation of shop detail drawings", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
+    // Shop drawings aren't a line of their own: his supply item includes “preparation of shop detail drawings”
     add("delivery", "steel", H("8.3.2", "Delivery to site", "Delivery of steelwork to site, normal loads", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("erection", "steel", H("8.3.3", "Erection on site", "Erection of steelwork on site", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("bolts", "steel", H("8.3.4", "Erection bolts", "Erection bolts, nuts and washers (estimate)", "t"),
