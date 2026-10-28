@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T09:40:00Z">
+<meta name="solvboq-build" content="2026-10-28T09:42:30Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -186,7 +186,6 @@ tr.click:hover td{background:var(--head)}
 .elbtn{width:100%;min-height:56px;padding:8px 16px;border:0;background:transparent;text-align:left;cursor:pointer;display:flex;flex-direction:column;justify-content:center;color:var(--ink)}
 .elbtn b{font-family:var(--mono);font-size:13px;font-weight:500}
 .elbtn span{font-size:12px;color:var(--muted);white-space:nowrap}
-.eltable td{padding:0 16px;vertical-align:middle;font-size:13px}
 .eltable td:first-child{padding:0}
 .eltable tr.on td{background:var(--sel)}
 .eltable tr.on td:first-child{box-shadow:inset 3px 0 0 var(--focus)}
@@ -255,15 +254,31 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .ws tr.expanded .linkrow svg{transform:rotate(90deg)}
 .ws tr.line{cursor:pointer}
 .ws tr.line:hover td,.ws tr.line.expanded td{background:var(--chip)}
-.ws tr.detail td{background:var(--head);border-top:0;font-size:13px}
-.ws tr.detail .grp span{font-size:12px}
 .ws .qtyin{width:160px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card);color:var(--ink)}
-.ws tr.detail.els td{padding-top:0}
-.eltable{width:100%;border-collapse:collapse;font-size:12px;background:var(--card);border:1px solid var(--rule);border-radius:8px}
-.eltable th{text-align:left;font-weight:500;color:var(--muted);padding:6px 10px;border-bottom:1px solid var(--rule)}
-.eltable td{padding:5px 10px;border-top:1px solid var(--rule);background:var(--card) !important;font-size:12px}
-.eltable .r{text-align:right;white-space:nowrap}
-.eltable .mono{font-family:var(--mono)}
+.ws tr.detail > td{background:var(--head);padding:4px 20px 16px 56px;border-top:0}
+.ws .panel{background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:4px 18px}
+.ws .gblock{display:flex;flex-direction:column;gap:12px;padding:14px 0}
+.ws .gblock + .gblock{border-top:1px solid var(--rule)}
+.ws .ghead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.ws .ghead b{display:block;font-weight:600}
+.ws .ghead span:not(.pill){display:block;font-size:12px;color:var(--muted)}
+.ws .pblock p{margin:2px 0 0;font-size:13px;line-height:1.5;color:var(--ink-2);max-width:760px}
+.ws .plabel{font-size:12px;font-weight:600;color:var(--muted)}
+.ws .plabel.row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:6px}
+.ws .plabel .link{font-size:12px;font-weight:500}
+.ws .pwarn{margin:0;font-size:12px;color:var(--amber-t)}
+.ws .pnote{margin:0;font-size:12px;color:var(--muted)}
+.ws .pactions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ws .pactions:empty{display:none}
+.ws .elwrap{max-height:320px;overflow:auto;border:1px solid var(--rule);border-radius:8px}
+.ws table.srctable{width:100%;border-collapse:collapse}
+.ws table.srctable th{position:sticky;top:0;background:var(--head);text-align:left;font-size:12px;font-weight:500;color:var(--muted);padding:7px 12px;border-bottom:1px solid var(--rule)}
+.ws table.srctable td{padding:6px 12px;font-size:12px;color:var(--ink-2);border-top:1px solid var(--rule);background:transparent;vertical-align:baseline}
+.ws table.srctable tbody tr:first-child td{border-top:0}
+.ws table.srctable tbody tr:hover td{background:var(--chip)}
+.ws table.srctable .r{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ws table.srctable .mono{font-family:var(--mono);color:var(--ink)}
+.ws .editbox{background:var(--head);border-radius:10px;padding:14px 16px}
 </style>
 </head>
 <body>
@@ -1316,10 +1331,10 @@ function inferEarthworks(r, ctx, opts) {
   // Everything below the structure counts for depth: blinding, no-fines, subsoil drains as well as concrete
   const below = live.filter((e) => e.Box && e.Volume > 0 && ["concrete", "other"].includes(r.tradeOfId[e.Id]) && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls", "OST_GenericModel"].includes(e.Bic));
   let exc = 0, ws = 0, fill = 0, area = 0;
-  const els = [];
+  const els = [], per = new Map();   // each footprint's own excavation, working space and fill, so the element list shows its share
   // A raised slab or base with nothing under it (a landing, a bridge support) isn't dug for
   for (const root of roots.filter((e) => e.Box[2] < Math.min(G, main.Box[5]) + 0.5)) {
-    const fp = outerArea(root), per = outerEdge(root).len;
+    const fp = outerArea(root), perim = outerEdge(root).len;
     let vol;
     if (civil) {
       // Deepest parts first: each takes its own plan area at its own depth, until the footprint is used up
@@ -1329,15 +1344,16 @@ function inferEarthworks(r, ctx, opts) {
       if (left > 0) vol += left * Math.max(0, G - root.Box[2]);
     } else vol = fp * A.buildingDepth;
     const depth = fp > 0 ? vol / fp : 0;
-    exc += vol; ws += per * A.workingSpace * (civil ? depth : A.buildingDepth); fill += fp * A.fillThickness; area += fp;
-    els.push(root);
+    const w = perim * A.workingSpace * (civil ? depth : A.buildingDepth), f = fp * A.fillThickness;
+    exc += vol; ws += w; fill += f; area += fp;
+    els.push(root); per.set(root.Id, { exc: vol, ws: w, stock: vol, fill: f });
   }
   const how = civil
     ? `Tanks: excavated from the ${groundWhy}, down to the underside of the lowest layer under each part (blinding, no-fines, subsoil drains), deeper under sumps.`
     : `Buildings: footprint × ${fmt2(A.buildingDepth)} m, the engineer’s standard for buildings.`;
   const fp = `${plural2(els.length, "footprint")}, ${fmt1(area)} m² in plan`;
   const item = (clause, heading, description) => ({ section: "SANS 1200 D", clause, heading, description, unit: "m³" });
-  const line = (key, it, qty, reason) => ({ key: "earth|" + key, kind: "earth", item: it, reason: `Inferred: ${reason}`, check: "", qty, elements: els, parts: els.map((e) => ({ id: e.Id, qty: qty / els.length })) });
+  const line = (key, it, qty, reason) => ({ key: "earth|" + key, kind: "earth", item: it, reason: `Inferred: ${reason}`, check: "", qty, elements: els, parts: els.map((e) => ({ id: e.Id, qty: per.get(e.Id)[key] })) });
   const lines = [
     line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for structures"), exc, `${how} ${fp}. Change the assumptions under Earthworks if the levels are known.`),
     line("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), ws, `outer perimeter × ${fmt2(A.workingSpace)} m wide × the excavation depth.`),
@@ -2165,7 +2181,7 @@ function renderDetail() {
               h("input", { id: "elSearch", type: "search", placeholder: "Search ID, type or material", value: state.dQ, oninput: (e) => { state.dQ = e.target.value; const pos = e.target.selectionStart; renderDetail(); const n = $("elSearch"); n.focus(); n.setSelectionRange(pos, pos); } })),
             cats.length > 1 ? h("div", { class: "seg", role: "group", "aria-label": "Filter by category" },
               [["", "All"], ...cats.map((c) => [c, c])].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(state.dCat === k), onclick: () => { state.dCat = k; renderDetail(); } }, l))) : null)),
-        h("div", { class: "scroll" }, h("table", { class: "eltable" },
+        h("div", { class: "scroll" }, h("table", { class: "srctable" },
           h("thead", {}, h("tr", {}, h("th", {}, "Element"), h("th", {}, "Family : Type"), h("th", {}, "Level"), h("th", { class: "r" }, "Quantity"), h("th", {}, "Also flagged"))),
           h("tbody", {}, shown.slice(0, LIMIT).map((e) => {
             const t = TRADE[state.result.tradeOfId[e.Id]], qv = t && t.unit !== "no." ? t.qty(e) : null;
@@ -2336,11 +2352,11 @@ function quickPicks(g) {
 }
 function editRow(g) {
   const cur = g.item || quickPicks(g)[0];
-  const sections = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
+  const sections = SECTION_ORDER;
   const f = { section: cur.section, clause: cur.clause, heading: cur.heading, description: cur.description, unit: cur.unit };
   const id = (n) => "ed-" + n;
   const fill = (p) => { $(id("section")).value = p.section; $(id("clause")).value = p.clause; $(id("heading")).value = p.heading; $(id("description")).value = p.description; $(id("unit")).value = p.unit; };
-  return h("tr", { class: "editrow" }, h("td", { colspan: "7" },
+  return h("div", { class: "editbox" },
     h("div", { class: "sub", style: "margin-bottom:8px" }, "Quick picks"),
     h("div", { class: "picks" }, quickPicks(g).map((p) => h("button", { type: "button", onclick: () => fill(p) }, `${p.section.replace("SANS ", "")}${p.clause ? " " + p.clause : ""}: ${p.description}`))),
     h("div", { class: "editgrid" },
@@ -2358,7 +2374,7 @@ function editRow(g) {
         if ($(id("remember")).checked) Profiles.setEntry("mapping", g.key, item, "mapping");
         state.mEdit = null; toast("Mapping saved"); renderMap();
       } }, "Save mapping"),
-      h("button", { type: "button", class: "btn", onclick: () => { state.mEdit = null; renderWorkspace(); } }, "Cancel"))));
+      h("button", { type: "button", class: "btn", onclick: () => { state.mEdit = null; renderWorkspace(); } }, "Cancel")));
 }
 
 // ===== The BoQ workspace: one table for the whole bill =====
@@ -2439,59 +2455,61 @@ function renderWorkspace(groups = currentGroups()) {
   $("btnAskMap").textContent = `Ask Claude about ${plural(unmatched, "unmatched group")}`;
   state.boqLines = lines; state.boqUnmapped = unmapped;
 }
-// The rows under an open line: each Revit group with its reason and actions, or a quantity box for items still to measure
+// The panel under an open line: how it's worked out, the elements behind it, and what can be done with it.
+// A line with one group keeps its Confirm on the line itself; a line made of several groups shows each one with its own.
 function lineDetail(L, key) {
-  const out = [];
+  const panel = (...kids) => [h("tr", { class: "detail" }, h("td", { colspan: "7" }, h("div", { class: "panel" }, ...kids)))];
   if (L.expected) {
     const id = "mq-" + key.replace(/[^\w]/g, "_");
-    out.push(h("tr", { class: "detail" }, h("td", {}), h("td", {}), h("td", { colspan: "5" },
-      h("div", { class: "sub", style: "margin-bottom:8px" }, `${L.why} The model can’t give this quantity, so enter it from the drawings or specification.`),
-      h("div", { class: "tools" }, h("input", { id, type: "number", step: "0.01", min: "0", value: L.qty ?? "", placeholder: `Quantity in ${L.unit}`, class: "qtyin", "aria-label": `Quantity in ${L.unit}` }),
-        h("button", { type: "button", class: "btn sm dark", onclick: () => { const v = parseFloat($(id).value); if (!Number.isFinite(v) || v < 0) return toast("Enter a quantity of 0 or more."); state.manual[key] = v; saveManual(state.name, state.manual); toast("Quantity saved"); renderWorkspace(); } }, "Save quantity"),
-        L.qty != null ? h("button", { type: "button", class: "btn sm", onclick: () => { delete state.manual[key]; saveManual(state.name, state.manual); renderWorkspace(); } }, "Clear") : null))));
-    return out;
+    const save = () => { const v = parseFloat($(id).value); if (!Number.isFinite(v) || v < 0) return toast("Enter a quantity of 0 or more."); state.manual[key] = v; saveManual(state.name, state.manual); toast("Quantity saved"); renderWorkspace(); };
+    return panel(
+      h("div", { class: "pblock" }, h("div", { class: "plabel" }, "Where the quantity comes from"), h("p", {}, `${L.why} The model can’t give this quantity, so enter it from the drawings or specification.`)),
+      h("div", { class: "pactions" },
+        h("input", { id, type: "number", step: "0.01", min: "0", value: L.qty ?? "", placeholder: `Quantity in ${L.unit}`, class: "qtyin", "aria-label": `Quantity in ${L.unit}`, onkeydown: (e) => { if (e.key === "Enter") save(); } }),
+        h("button", { type: "button", class: "btn sm dark", onclick: save }, "Save quantity"),
+        L.qty != null ? h("button", { type: "button", class: "btn sm", onclick: () => { delete state.manual[key]; saveManual(state.name, state.manual); renderWorkspace(); } }, "Clear") : null));
   }
-  for (const g of L.groups) {
-    const e = g.sample, m = METHOD[g.method] || METHOD.none;
-    const label = g.method === "claude" && g.confidence != null ? `${m[0]} · ${Math.round(g.confidence * 100)}%` : m[0];
-    const left = g.excluded || g.method === "excluded";
-    const top = !g.confirmed && !left ? Profiles.agreement("mapping", g.key)[0] : null;
-    out.push(h("tr", { class: "detail" }, h("td", {}), h("td", {}),
-      h("td", { class: "grp" }, L.groups.length > 1 || !g.inferred ? h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`) : null,
-        L.groups.length > 1 || !g.inferred ? h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")) : null,
-        g.issues.length ? h("span", { style: "display:block;color:var(--amber-t)" }, "Readiness: " + g.issues.slice(0, 2).join("; ")) : null,
-        g.reason ? h("span", { style: "display:block;margin-top:4px" }, g.reason) : null,
-        g.item && L.groups.length > 1 ? h("span", { style: "display:block" }, `${mapQty(g.qty, g.item.unit)} ${g.item.unit} of this line`) : null,
-        top ? h("span", { style: "display:block;margin-top:4px" }, `${plural(top.users.size, "person")} mapped this to ${top.value.section} ${top.value.clause || ""} ${top.value.description}. `,
-          h("button", { type: "button", class: "link", onclick: () => { state.mapDecisions[g.key] = { item: top.value, method: "edited", confirmed: true }; Profiles.setEntry("mapping", g.key, top.value, "mapping", "learned"); toast("Mapping used"); } }, "Use this")) : null),
-      h("td", {}), h("td", {}),
-      h("td", { style: "white-space:nowrap" }, h("span", { class: "pill " + m[1] }, label)),
-      h("td", {}, h("div", { class: "acts2" },
-        g.item && !g.confirmed && !left ? h("button", { type: "button", class: "btn sm dark", onclick: () => confirmGroup(g) }, g.method === "claude" ? "Accept" : "Confirm") : null,
-        // Demolished, existing and non-primary option elements can't be billed; items left for the mechanical bill can
-        g.excluded ? null : left ? h("button", { type: "button", class: "btn sm", onclick: () => { state.mEdit = g.key; renderWorkspace(); } }, "Bill it anyway")
-          : h("button", { type: "button", class: "btn sm", "aria-expanded": String(state.mEdit === g.key), onclick: () => { state.mEdit = state.mEdit === g.key ? null : g.key; renderWorkspace(); } }, g.item ? "Change" : "Choose item"),
-        !g.item && sampleFn && !left ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude([g]) }, "Ask Claude") : null))));
-    if (state.mEdit === g.key) out.push(editRow(g));
-    out.push(elementRows(g));
-  }
-  return out;
+  const single = L.groups.length === 1;
+  return panel(...L.groups.map((g) => groupBlock(g, L, single)));
 }
-// The elements behind a group: ID, level, type, material and what each contributes to the line, with their IDs to copy
-function elementRows(g) {
+function groupBlock(g, L, single) {
+  const e = g.sample, m = METHOD[g.method] || METHOD.none, left = g.excluded || g.method === "excluded";
+  const label = g.method === "claude" && g.confidence != null ? `${m[0]} · ${Math.round(g.confidence * 100)}%` : m[0];
+  const top = !g.confirmed && !left ? Profiles.agreement("mapping", g.key)[0] : null;
+  const name = g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`;
+  const meta = g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ");
+  const actions = [
+    !single && g.item && !g.confirmed && !left ? h("button", { type: "button", class: "btn sm dark", onclick: () => confirmGroup(g) }, g.method === "claude" ? "Accept" : "Confirm") : null,
+    g.excluded ? null : left ? h("button", { type: "button", class: "btn sm", onclick: () => { state.mEdit = g.key; renderWorkspace(); } }, "Bill it anyway")
+      : h("button", { type: "button", class: "btn sm" + (!g.item ? " dark" : ""), "aria-expanded": String(state.mEdit === g.key), onclick: () => { state.mEdit = state.mEdit === g.key ? null : g.key; renderWorkspace(); } }, g.item ? "Change item" : "Choose item"),
+    !g.item && sampleFn && !left ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude([g]) }, "Ask Claude") : null,
+    g.ruleId === "INFER-earth" ? h("button", { type: "button", class: "btn sm", onclick: () => { state.earthOpen = true; renderEarth(); $("mEarth").scrollIntoView({ behavior: "smooth", block: "center" }); } }, "Earthworks assumptions") : null,
+  ];
+  return h("div", { class: "gblock" },
+    !single ? h("div", { class: "ghead" }, h("div", {}, h("b", {}, name), h("span", {}, meta)), h("span", { class: "pill " + m[1] }, label)) : null,
+    g.reason ? h("div", { class: "pblock" }, h("div", { class: "plabel" }, g.inferred ? "How it’s worked out" : g.method === "claude" ? "Claude’s reason" : "Why it’s mapped this way"), h("p", {}, g.reason.replace(/^Inferred: /, ""))) : null,
+    g.issues.length ? h("p", { class: "pwarn" }, "Readiness: " + g.issues.slice(0, 3).join("; ")) : null,
+    top ? h("p", { class: "pnote" }, `${plural(top.users.size, "person")} mapped this to ${top.value.section} ${top.value.clause || ""} ${top.value.description}. `,
+      h("button", { type: "button", class: "link", onclick: () => { state.mapDecisions[g.key] = { item: top.value, method: "edited", confirmed: true }; Profiles.setEntry("mapping", g.key, top.value, "mapping", "learned"); toast("Mapping used"); } }, "Use this")) : null,
+    state.mEdit === g.key ? editRow(g) : null,
+    elementTable(g),
+    h("div", { class: "pactions" }, ...actions));
+}
+// The elements behind a group: ID, level, type, material and what each contributes to the line
+function elementTable(g) {
   const unit = g.item?.unit, part = new Map((g.parts || []).map((p) => [String(p.id), p.qty]));
   const qtyOf = (e) => (part.size ? part.get(String(e.Id)) : unit ? basisQty(e, unit) : null);
   const els = g.elements.filter((e) => state.result.status[e.Id] !== "excluded" || g.excluded);
   const LIMIT = 25, all = (state.allEls = state.allEls || new Set()).has(g.key), shown = all ? els : els.slice(0, LIMIT);
-  return h("tr", { class: "detail els" }, h("td", {}), h("td", {}), h("td", { colspan: "5" },
-    h("table", { class: "eltable" },
-      h("thead", {}, h("tr", {}, h("th", {}, "Element ID"), h("th", {}, "Level"), h("th", {}, "Family : type"), h("th", {}, "Material"), h("th", { class: "r" }, unit ? `Quantity (${unit})` : "Quantity"))),
+  return h("div", { class: "pblock" },
+    h("div", { class: "plabel row" }, h("span", {}, `${plural(els.length, "element")}`),
+      h("span", {}, h("button", { type: "button", class: "link", onclick: () => copyText(els.map((e) => e.Id).join(";"), plural(els.length, "ID") + " copied. Paste them into Revit’s Manage › Select by ID.") }, "Copy IDs for Revit"),
+        els.length > LIMIT ? [" · ", h("button", { type: "button", class: "link", onclick: () => { all ? state.allEls.delete(g.key) : state.allEls.add(g.key); renderWorkspace(); } }, all ? "Show fewer" : `Show all ${els.length}`)] : null)),
+    h("div", { class: "elwrap" }, h("table", { class: "srctable" },
+      h("thead", {}, h("tr", {}, h("th", {}, "Element ID"), h("th", {}, "Level"), h("th", {}, "Family : type"), h("th", {}, "Material"), h("th", { class: "r" }, unit || ""))),
       h("tbody", {}, shown.map((e) => { const q = qtyOf(e); return h("tr", {},
         h("td", { class: "mono" }, String(e.Id)), h("td", {}, e.Level || "–"), h("td", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`),
-        h("td", {}, e.Material || "–"), h("td", { class: "r" }, q == null ? "–" : mapQty(q, unit))); }))),
-    h("div", { class: "tools", style: "margin-top:8px" },
-      h("button", { type: "button", class: "btn sm", onclick: () => copyText(els.map((e) => e.Id).join(";"), plural(els.length, "ID") + " copied. Paste them into Revit’s Manage › Select by ID.") }, `Copy ${plural(els.length, "element ID")}`),
-      els.length > LIMIT ? h("button", { type: "button", class: "link", onclick: () => { all ? state.allEls.delete(g.key) : state.allEls.add(g.key); renderWorkspace(); } }, all ? "Show fewer" : `Show all ${els.length}`) : null)));
+        h("td", {}, e.Material || "–"), h("td", { class: "r" }, q == null ? "–" : mapQty(q, unit))); })))));
 }
 function boqRows() {
   const out = []; let n = 0;
