@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-10-28T08:56:25Z">
+<meta name="solvboq-build" content="2026-10-28T09:26:56Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -248,6 +248,15 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .earth .sub{margin:10px 0}
 .boqtable tr.muted td{color:var(--muted)}
 .boqtable td.desc small .pill{font-size:11px;padding:1px 7px}
+.wsbar{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;padding:0 20px 12px}
+.wsbar .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.ws .linkrow{display:inline-flex;align-items:flex-start;gap:6px;background:none;border:0;padding:0;font:inherit;color:inherit;text-align:left;cursor:pointer}
+.ws .linkrow svg{flex:none;width:14px;height:14px;margin-top:3px;transition:transform .15s;color:var(--muted)}
+.ws tr.open .linkrow svg{transform:rotate(90deg)}
+.ws tr.line:hover td{background:var(--chip)}
+.ws tr.detail td{background:var(--head);border-top:0;font-size:13px}
+.ws tr.detail .grp span{font-size:12px}
+.ws .qtyin{width:160px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--card);color:var(--ink)}
 </style>
 </head>
 <body>
@@ -373,11 +382,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
       </div>
       <div class="tools">
         <button class="btn big" id="btnBackReady" type="button">Back to readiness</button>
-        <button class="btn big dark" id="btnAskMap" type="button">Ask Claude about unmatched</button>
-        <button class="btn big" id="btnStopMap" type="button" hidden>Stop</button>
       </div>
     </div>
-    <div class="sub" id="mAiStatus" hidden></div>
     <div class="grid3">
       <section class="card pad" aria-labelledby="mprog-h">
         <div><h2 id="mprog-h">Mapping progress</h2><div class="sub">Groups of elements that share a Revit type and material</div></div>
@@ -388,31 +394,25 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
         <div id="mHow" style="display:flex;flex-direction:column;gap:10px"></div>
       </section>
     </div>
-    <section class="card" style="overflow:hidden" aria-labelledby="mgroups-h">
+    <section class="card" style="overflow:hidden" aria-labelledby="mboq-h">
       <div class="cardhead">
-        <div><h2 class="big" id="mgroups-h">Mapping groups</h2><div class="sub">Confirm or change the SANS item for each group. Groups that need a decision come first.</div></div>
+        <div><h2 class="big" id="mboq-h">Bill of Quantities</h2><div class="sub" id="mBoqSub"></div></div>
         <div class="tools">
-          <div class="search"><label class="sr" for="mSearch">Search groups</label><span id="mSearchIcon"></span><input id="mSearch" type="search" placeholder="Search family, type or material"></div>
-          <div class="seg" role="group" aria-label="Filter groups" id="mFilter"></div>
+          <div class="search"><label class="sr" for="mSearch">Search the BoQ</label><span id="mSearchIcon"></span><input id="mSearch" type="search" placeholder="Search items, families, types or materials"></div>
+          <button class="btn" id="btnBoqCopy" type="button">Copy BoQ</button><button class="btn dark" id="btnBoqCsv" type="button" hidden>Download BoQ (CSV)</button>
         </div>
+      </div>
+      <div class="wsbar">
+        <div class="seg" role="group" aria-label="Which lines to show" id="mFilter"></div>
+        <div class="tools"><span class="sub" id="mAiStatus" hidden></span><button class="btn sm" id="btnAskMap" type="button">Ask Claude about unmatched</button><button class="btn sm" id="btnStopMap" type="button" hidden>Stop</button></div>
       </div>
       <div id="mEarth"></div>
       <div id="mBatches"></div>
-      <div class="scroll"><table class="maptable">
-        <thead><tr><th>Revit group</th><th class="r">Quantity</th><th>SANS item</th><th>How</th><th><span class="sr">Actions</span></th></tr></thead>
-        <tbody id="mGroups"></tbody>
-      </table></div>
-      <div class="foot" id="mFoot"></div>
-    </section>
-    <section class="card" style="overflow:hidden" aria-labelledby="mboq-h">
-      <div class="cardhead">
-        <div><h2 class="big" id="mboq-h">BoQ preview</h2><div class="sub" id="mBoqSub"></div></div>
-        <div class="tools"><div class="seg" role="group" aria-label="What the preview shows" id="mBoqView"></div><button class="btn" id="btnBoqCopy" type="button">Copy BoQ</button><button class="btn dark" id="btnBoqCsv" type="button" hidden>Download BoQ (CSV)</button></div>
-      </div>
-      <div class="scroll"><table class="boqtable">
-        <thead><tr><th>Item</th><th>Ref</th><th>Description</th><th>Unit</th><th class="r">Quantity</th></tr></thead>
+      <div class="scroll"><table class="boqtable ws">
+        <thead><tr><th>Item</th><th>Ref</th><th>Description</th><th>Unit</th><th class="r">Quantity</th><th>Status</th><th><span class="sr">Actions</span></th></tr></thead>
         <tbody id="mBoq"></tbody>
       </table></div>
+      <div class="foot" id="mFoot"></div>
     </section>
   </div>
 
@@ -1721,7 +1721,7 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name) });
+  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records;
   state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -2197,7 +2197,8 @@ const METHOD = {
   check: ["Rule, to confirm", "p-amber"], inferred: ["Inferred, to confirm", "p-amber"], claude: ["Claude suggestion", "p-amber"], none: ["Unmatched", "p-red"], excluded: ["Left out", "p-plain"],
 };
 function mapQty(q, unit) { if (unit === "No") return `${Math.round(q)}`; if (unit === "t") return q.toFixed(2); return q.toFixed(unit === "m³" ? 2 : 1); }
-const needsDecision = (g) => !g.excluded && !g.confirmed;
+// Groups left out (existing, demolished, non-primary options, or priced in the mechanical bill) need no decision
+const needsDecision = (g) => !g.excluded && g.method !== "excluded" && !g.confirmed;
 // Groups suggested for the same reason are one decision, not one per Revit type
 const batchKey = (g) => `${g.trade}|${g.method}|${g.reason}`;
 // A suggestion with a placeholder such as [grade] isn't finished, so it isn't saved for future models
@@ -2209,17 +2210,14 @@ $("btnToMap").addEventListener("click", goMap);
 $("navReady").addEventListener("click", () => { state.view = "overview"; render(); window.scrollTo(0, 0); });
 $("btnBackReady").addEventListener("click", () => { state.view = "overview"; render(); window.scrollTo(0, 0); });
 $("mSearchIcon").replaceWith(svg(ICON.search));
-$("mSearch").addEventListener("input", (e) => { state.mQ = e.target.value; renderMapGroups(currentGroups()); });
+$("mSearch").addEventListener("input", (e) => { state.mQ = e.target.value; renderWorkspace(); });
 
 function renderMap() {
   const groups = currentGroups();
   $("mKicker").textContent = $("fProject").value.trim() || "Untitled model";
   const els = groups.reduce((s, g) => s + g.elements.length, 0);
   $("mChips").replaceChildren(h("span", { class: "chipx file" }, svg(ICON.file), state.name), h("span", { class: "chipx" }, `${plural(groups.length, "group")} from ${plural(els, "element")}`), h("span", { class: "meta" }, "Quantities trusted " + Math.round(state.result.summary.quantities * 100) + "%"));
-  renderMapCards(groups); renderEarth(); renderMapGroups(groups); renderBoq(groups);
-  const unmatched = groups.filter((g) => g.method === "none").length;
-  $("btnAskMap").disabled = !sampleFn || !unmatched;
-  $("btnAskMap").textContent = unmatched ? `Ask Claude about ${plural(unmatched, "unmatched group")}` : "Nothing unmatched";
+  renderMapCards(groups); renderEarth(); renderWorkspace(groups);
 }
 
 function renderMapCards(groups) {
@@ -2241,41 +2239,6 @@ function renderMapCards(groups) {
     h("div", { class: "sep" }, saved ? [`${plural(saved, "saved mapping")} in the “${Profiles.active().name}” profile, applied automatically to future models. `,
       h("button", { type: "button", class: "link", onclick: async () => { if (!confirm("Remove all saved mappings from this conventions profile?")) return; const p = Profiles.active(); p.mapping = []; await Profiles.save(p); rerunChecks(); renderMap(); toast("Saved mappings removed"); } }, "Remove them")]
       : "When you change a mapping, you can save it so the same Revit type and material maps automatically next time."));
-}
-
-function renderMapGroups(groups) {
-  const decide = groups.filter(needsDecision).length;
-  if (state.mFilter === "decide" && !decide) state.mFilter = "all";
-  const filters = [["decide", `Needs a decision (${decide})`], ["all", "All"], ["mapped", "Mapped"], ["excluded", "Left out"]];
-  $("mFilter").replaceChildren(...filters.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(state.mFilter === k), onclick: () => { state.mFilter = k; renderMapGroups(currentGroups()); } }, l)));
-  const q = state.mQ.trim().toLowerCase();
-  renderBatches(groups);
-  const list = groups.filter((g) => (!state.mBatch || (needsDecision(g) && batchKey(g) === state.mBatch)) && (state.mFilter === "all" || (state.mFilter === "decide" ? needsDecision(g) : state.mFilter === "mapped" ? g.confirmed && !g.excluded : g.excluded))
-    && (!q || [g.sample.Family, g.sample.Type, g.sample.Material, g.sample.Category, g.item && g.item.description].some((x) => String(x || "").toLowerCase().includes(q))));
-  const rows = [];
-  for (const g of list) {
-    const e = g.sample, m = METHOD[g.method] || METHOD.none;
-    const label = g.method === "claude" && g.confidence != null ? `${m[0]} · ${Math.round(g.confidence * 100)}%` : m[0];
-    rows.push(h("tr", {},
-      h("td", { class: "grp", style: "min-width:240px" }, h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`),
-        h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")),
-        g.issues.length ? h("span", { style: "display:block;color:var(--amber-t)" }, "Readiness: " + g.issues.slice(0, 2).join("; ")) : null),
-      h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, g.item ? `${mapQty(g.qty, g.item.unit)} ${g.item.unit}` : "–"),
-      h("td", { class: "sitem", style: "min-width:300px" }, g.item
-        ? [h("div", { class: "code" }, [g.item.section, g.item.clause, g.item.heading].filter(Boolean).join(" · ")), h("div", { class: "desc" }, g.item.description)]
-        : h("div", { class: "desc", style: "color:var(--muted)" }, g.excluded ? "Not billed" : "No SANS item yet"),
-        g.reason && !g.confirmed ? h("div", { class: "why" + (g.excluded ? " plain" : "") }, g.reason) : null,
-        (() => { if (g.confirmed || g.excluded) return null; const top = Profiles.agreement("mapping", g.key)[0]; if (!top) return null;
-          const it = top.value; return h("div", { class: "why plain", style: "margin-top:6px" }, `${plural(top.users.size, "person")}${top.profiles.size > 1 ? ` in ${top.profiles.size} profiles` : ""} mapped this to ${it.section} ${it.clause || ""} ${it.description}. `,
-            h("button", { type: "button", class: "link", onclick: () => { state.mapDecisions[g.key] = { item: it, method: "edited", confirmed: true }; Profiles.setEntry("mapping", g.key, it, "mapping", "learned"); toast("Mapping used"); } }, "Use this")); })()),
-      h("td", { style: "white-space:nowrap" }, h("span", { class: "pill " + m[1] }, label)),
-      h("td", {}, g.excluded ? null : h("div", { class: "acts2" },
-        g.item && !g.confirmed ? h("button", { type: "button", class: "btn sm dark", onclick: () => confirmGroup(g) }, g.method === "claude" ? "Accept" : "Confirm") : null,
-        h("button", { type: "button", class: "btn sm", "aria-expanded": String(state.mEdit === g.key), onclick: () => { state.mEdit = state.mEdit === g.key ? null : g.key; renderMapGroups(currentGroups()); } }, g.item ? "Change" : "Choose item")))));
-    if (state.mEdit === g.key) rows.push(editRow(g));
-  }
-  $("mGroups").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "5", class: "empty" }, state.mFilter === "decide" ? "Every group is mapped. The BoQ preview below is complete." : "No groups match."))]));
-  $("mFoot").textContent = `${plural(list.length, "group")} shown. Element IDs for each group are in the downloaded BoQ.`;
 }
 
 // A confirmed mapping goes into the profile, so the next revision of this model (and the next model) doesn't ask again
@@ -2340,7 +2303,7 @@ function renderBatches(groups) {
         h("span", { class: "r" }, plural(els, "element")),
         h("div", { class: "acts" },
           h("button", { type: "button", class: "btn sm dark", onclick: () => confirmBatch(l) }, `Confirm all ${l.length}`),
-          h("button", { type: "button", class: "btn sm", "aria-pressed": String(on), onclick: () => { state.mBatch = on ? null : k; state.mFilter = "decide"; renderMapGroups(currentGroups()); } }, on ? "Show every group" : "Show them")));
+          h("button", { type: "button", class: "btn sm", "aria-pressed": String(on), onclick: () => { state.mBatch = on ? null : k; state.wFilter = "confirm"; renderWorkspace(); } }, on ? "Show every group" : "Show them")));
     })));
 }
 
@@ -2370,7 +2333,7 @@ function editRow(g) {
   const f = { section: cur.section, clause: cur.clause, heading: cur.heading, description: cur.description, unit: cur.unit };
   const id = (n) => "ed-" + n;
   const fill = (p) => { $(id("section")).value = p.section; $(id("clause")).value = p.clause; $(id("heading")).value = p.heading; $(id("description")).value = p.description; $(id("unit")).value = p.unit; };
-  return h("tr", { class: "editrow" }, h("td", { colspan: "5" },
+  return h("tr", { class: "editrow" }, h("td", { colspan: "7" },
     h("div", { class: "sub", style: "margin-bottom:8px" }, "Quick picks"),
     h("div", { class: "picks" }, quickPicks(g).map((p) => h("button", { type: "button", onclick: () => fill(p) }, `${p.section.replace("SANS ", "")}${p.clause ? " " + p.clause : ""}: ${p.description}`))),
     h("div", { class: "editgrid" },
@@ -2388,54 +2351,133 @@ function editRow(g) {
         if ($(id("remember")).checked) Profiles.setEntry("mapping", g.key, item, "mapping");
         state.mEdit = null; toast("Mapping saved"); renderMap();
       } }, "Save mapping"),
-      h("button", { type: "button", class: "btn", onclick: () => { state.mEdit = null; renderMapGroups(currentGroups()); } }, "Cancel"))));
+      h("button", { type: "button", class: "btn", onclick: () => { state.mEdit = null; renderWorkspace(); } }, "Cancel"))));
 }
 
-// ===== BoQ preview =====
-// The BoQ preview. "Full BoQ" shows the whole bill: confirmed lines, lines still to confirm (with their quantities),
-// items the model can't quantify (still to measure), and groups not yet mapped. "Confirmed only" is the bill as decided.
-function renderBoq(groups) {
-  const full = state.boqView !== "confirmed";
-  $("mBoqView").replaceChildren(...[["full", "Full BoQ"], ["confirmed", "Confirmed only"]].map(([k, l]) =>
-    h("button", { type: "button", "aria-pressed": String((full ? "full" : "confirmed") === k), onclick: () => { state.boqView = k; renderBoq(currentGroups()); } }, l)));
-  const mapped = boqLines(groups, { full });
-  const have = new Set(mapped.map((L) => [L.section, L.clause, L.description].join("|")));
-  const expected = full ? (state.result.derived.expected || []).filter((x) => !have.has([x.section, x.clause, x.description].join("|"))).map((x) => ({ ...x, qty: null, groups: [], elements: 0, expected: true })) : [];
+// ===== The BoQ workspace: one table for the whole bill =====
+// Every line in BoQ order, with its status. A line opens to show the Revit groups it came from, where each one is
+// confirmed, changed or put to Claude. Items the model can't quantify take a quantity typed in; groups with no item
+// yet sit at the end; groups left out can be brought back.
+const lineKey = (L) => [L.section, L.clause, L.description].join("|");
+const MANUAL_KEY = "solvboq-manual-qty-v1";
+function loadManual(name) { try { return (JSON.parse(localStorage.getItem(MANUAL_KEY) || "{}") || {})[name] || {}; } catch (e) { return {}; } }
+function saveManual(name, v) { try { const all = JSON.parse(localStorage.getItem(MANUAL_KEY) || "{}") || {}; all[name] = v; localStorage.setItem(MANUAL_KEY, JSON.stringify(all)); } catch (e) {} }
+function lineStatus(L) {
+  if (L.unmapped) return ["Not mapped", "p-red"];
+  if (L.excludedGroup) return ["Left out", "p-plain"];
+  if (L.expected) return L.qty != null ? ["Entered by you", "p-green"] : ["Still to measure", "p-plain"];
+  if (!L.pending) return ["Confirmed", "p-green"];
+  const ai = L.groups.find((g) => !g.confirmed && g.method === "claude");
+  return ai ? [`Claude suggestion${ai.confidence != null ? ` · ${Math.round(ai.confidence * 100)}%` : ""}`, "p-amber"] : ["To confirm", "p-amber"];
+}
+function workspaceLines(groups) {
+  const mapped = boqLines(groups, { full: true });
+  const have = new Set(mapped.map(lineKey));
+  state.manual = state.manual || {};
+  const expected = (state.result.derived.expected || []).filter((x) => !have.has(lineKey(x)))
+    .map((x) => ({ ...x, qty: state.manual[lineKey(x)] ?? null, groups: [], elements: 0, expected: true }));
   const lines = [...mapped, ...expected].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
-  const unmapped = full ? groups.filter((g) => !g.item && !g.excluded) : [];
-  const pending = groups.filter(needsDecision), toConfirm = lines.filter((L) => L.pending).length;
-  $("mBoqSub").textContent = full
-    ? `${plural(lines.length, "line")} in BoQ order: ${lines.length - toConfirm - expected.length} confirmed, ${toConfirm} to confirm, ${expected.length} still to measure${unmapped.length ? `, and ${plural(unmapped.length, "group")} not yet mapped` : ""}.`
-    : `${plural(lines.length, "line")} from the confirmed groups, in BoQ order.` + (pending.length ? ` ${plural(pending.length, "group")} still need a decision and aren’t included yet.` : " Every group is included.");
-  const rows = []; let sec = "", head = "", n = 0;
-  for (const L of lines) {
-    if (L.section !== sec) { sec = L.section; head = ""; rows.push(h("tr", { class: "sec" }, h("td", { colspan: "5" }, `${L.section}  ${(SECTION_TITLE[L.section] || "").toUpperCase()}`))); }
-    const hk = L.clause + "|" + L.heading;
-    if (hk !== head) { head = hk; rows.push(h("tr", { class: "head" }, h("td", {}), h("td", { class: "ref" }, L.clause || ""), h("td", { colspan: "3" }, L.heading || ""))); }
-    n++;
-    const note = L.expected ? h("small", {}, h("span", { class: "pill p-plain", style: "margin-right:6px" }, "Still to measure"), L.why)
-      : h("small", {}, L.pending ? h("span", { class: "pill p-amber", style: "margin-right:6px" }, "To confirm") : null, `${L.inferred ? "Inferred from " : ""}${plural(L.elements, "element")} in ${plural(L.groups.length, "group")}`);
-    rows.push(h("tr", { class: L.expected ? "muted" : "" }, h("td", { class: "it" }, String(n)), h("td", {}), h("td", { class: "desc" }, L.description, note),
-      h("td", { style: "white-space:nowrap" }, L.unit), h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, L.qty == null ? "–" : mapQty(L.qty, L.unit))));
+  const isLeft = (g) => g.excluded || g.method === "excluded";
+  const unmapped = groups.filter((g) => !g.item && !isLeft(g)).map((g) => ({ unmapped: true, groups: [g], key: "unmapped|" + g.key, description: `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, elements: g.elements.length }));
+  const left = groups.filter(isLeft).map((g) => ({ excludedGroup: true, groups: [g], key: "left|" + g.key, description: `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, elements: g.elements.length }));
+  return { lines, unmapped, left };
+}
+function renderWorkspace(groups = currentGroups()) {
+  const { lines, unmapped, left } = workspaceLines(groups);
+  const n = { confirm: lines.filter((L) => L.pending).length, measure: lines.filter((L) => L.expected && L.qty == null).length, unmapped: unmapped.length, left: left.length };
+  const filters = [["all", "Whole bill"], ["confirm", `To confirm (${n.confirm})`], ["measure", `Still to measure (${n.measure})`], ["unmapped", `Not mapped (${n.unmapped})`], ["left", `Left out (${n.left})`]];
+  if (!filters.some(([k]) => k === state.wFilter)) state.wFilter = "all";
+  $("mFilter").replaceChildren(...filters.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(state.wFilter === k), onclick: () => { state.wFilter = k; state.mBatch = null; renderWorkspace(); } }, l)));
+  const q = (state.mQ || "").trim().toLowerCase();
+  const matchQ = (L) => !q || [L.description, L.heading, L.section, L.clause, ...L.groups.flatMap((g) => [g.sample.Family, g.sample.Type, g.sample.Material, g.sample.Category])].some((x) => String(x || "").toLowerCase().includes(q));
+  const batchOk = (L) => !state.mBatch || L.groups.some((g) => needsDecision(g) && batchKey(g) === state.mBatch);
+  const show = (L) => matchQ(L) && batchOk(L) && (state.wFilter === "all" ? !L.excludedGroup && !L.unmapped
+    : state.wFilter === "confirm" ? L.pending > 0 : state.wFilter === "measure" ? L.expected && L.qty == null : state.wFilter === "unmapped" ? L.unmapped : L.excludedGroup);
+  state.open = state.open || new Set();
+  const rows = []; let sec = "", head = "", num = 0;
+  const shown = [...lines, ...(state.wFilter === "all" || state.wFilter === "unmapped" ? unmapped : []), ...(state.wFilter === "left" ? left : [])].filter(show);
+  for (const L of shown) {
+    const secName = L.unmapped ? "NOT YET MAPPED" : L.excludedGroup ? "LEFT OUT OF THE BOQ" : `${L.section}  ${(SECTION_TITLE[L.section] || "").toUpperCase()}`;
+    if (secName !== sec) {
+      sec = secName; head = "";
+      rows.push(h("tr", { class: "sec" }, h("td", { colspan: "7" }, secName,
+        L.section === "SANS 1200 D" && state.result.derived.earthworks ? h("button", { type: "button", class: "link", style: "margin-left:12px;font-weight:500", onclick: () => { state.earthOpen = true; renderEarth(); $("mEarth").scrollIntoView({ behavior: "smooth", block: "center" }); } }, "Earthworks assumptions") : null)));
+    }
+    if (!L.unmapped && !L.excludedGroup) { const hk = L.clause + "|" + L.heading; if (hk !== head) { head = hk; rows.push(h("tr", { class: "head" }, h("td", {}), h("td", { class: "ref" }, L.clause || ""), h("td", { colspan: "5" }, L.heading || ""))); } }
+    num++;
+    const key = L.key || lineKey(L), open = state.open.has(key) || !!state.mBatch, [st, pc] = lineStatus(L);
+    const pendingGroups = L.groups.filter((g) => !g.confirmed && g.item);
+    const src = L.expected ? L.why : L.unmapped || L.excludedGroup ? `${plural(L.elements, "element")} · ${L.groups[0].reason || ""}` : `${L.inferred ? "Inferred from " : "From "}${plural(L.elements, "element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}`;
+    const toggle = () => { open ? state.open.delete(key) : state.open.add(key); renderWorkspace(); };
+    rows.push(h("tr", { class: "line" + (L.expected && L.qty == null ? " muted" : "") + (open ? " open" : "") },
+      h("td", { class: "it" }, String(num)), h("td", {}),
+      h("td", { class: "desc" }, h("button", { type: "button", class: "linkrow", "aria-expanded": String(open), onclick: toggle }, svg(ICON.chevron), L.description), h("small", {}, src)),
+      h("td", { style: "white-space:nowrap" }, L.unit || ""),
+      h("td", { class: "r", style: "white-space:nowrap;font-weight:500" }, L.qty == null || L.unmapped || L.excludedGroup ? "–" : mapQty(L.qty, L.unit)),
+      h("td", { style: "white-space:nowrap" }, h("span", { class: "pill " + pc }, st)),
+      h("td", {}, h("div", { class: "acts2" },
+        pendingGroups.length ? h("button", { type: "button", class: "btn sm dark", onclick: () => (pendingGroups.length === 1 ? confirmGroup(pendingGroups[0]) : confirmBatch(pendingGroups)) }, pendingGroups.some((g) => g.method === "claude") ? "Accept" : "Confirm") : null,
+        L.unmapped ? h("button", { type: "button", class: "btn sm dark", onclick: () => { state.mEdit = L.groups[0].key; state.open.add(key); renderWorkspace(); } }, "Choose item") : null,
+        L.unmapped && sampleFn ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude(L.groups) }, "Ask Claude") : null,
+        L.expected && L.qty == null ? h("button", { type: "button", class: "btn sm", onclick: () => { state.open.add(key); renderWorkspace(); } }, "Enter quantity") : null))));
+    if (open) rows.push(...lineDetail(L, key));
   }
-  if (unmapped.length) {
-    rows.push(h("tr", { class: "sec" }, h("td", { colspan: "5" }, "NOT YET MAPPED")));
-    for (const g of unmapped) { n++; rows.push(h("tr", { class: "muted" }, h("td", { class: "it" }, String(n)), h("td", {}),
-      h("td", { class: "desc" }, `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, h("small", {}, h("span", { class: "pill p-red", style: "margin-right:6px" }, "Not mapped"), `${plural(g.elements.length, "element")}. Choose an item for it in Mapping groups.`)),
-      h("td", {}), h("td", { class: "r" }, "–"))); }
-  }
-  $("mBoq").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "5", class: "empty" }, "Confirm some mappings to build the BoQ preview."))]));
+  $("mBoq").replaceChildren(...(rows.length ? rows : [h("tr", {}, h("td", { colspan: "7", class: "empty" }, state.wFilter === "confirm" ? "Nothing left to confirm." : state.wFilter === "unmapped" ? "Every group is mapped." : "No lines match."))]));
+  const done = lines.filter((L) => !L.pending && (!L.expected || L.qty != null)).length;
+  $("mBoqSub").textContent = `${plural(lines.length, "line")} in BoQ order: ${done} done, ${n.confirm} to confirm, ${n.measure} still to measure${n.unmapped ? `, ${plural(n.unmapped, "group")} not mapped` : ""}. Open a line to see where it comes from and change it.`;
+  $("mFoot").textContent = state.mBatch ? "Showing one batch. Choose “Whole bill” to see everything." : "Element IDs for every line are in the downloaded BoQ.";
+  const unmatched = groups.filter((g) => g.method === "none").length;
+  $("btnAskMap").hidden = !sampleFn || !unmatched; $("btnAskMap").disabled = !unmatched;
+  $("btnAskMap").textContent = `Ask Claude about ${plural(unmatched, "unmatched group")}`;
   state.boqLines = lines; state.boqUnmapped = unmapped;
+}
+// The rows under an open line: each Revit group with its reason and actions, or a quantity box for items still to measure
+function lineDetail(L, key) {
+  const out = [];
+  if (L.expected) {
+    const id = "mq-" + key.replace(/[^\w]/g, "_");
+    out.push(h("tr", { class: "detail" }, h("td", {}), h("td", {}), h("td", { colspan: "5" },
+      h("div", { class: "sub", style: "margin-bottom:8px" }, `${L.why} The model can’t give this quantity, so enter it from the drawings or specification.`),
+      h("div", { class: "tools" }, h("input", { id, type: "number", step: "0.01", min: "0", value: L.qty ?? "", placeholder: `Quantity in ${L.unit}`, class: "qtyin", "aria-label": `Quantity in ${L.unit}` }),
+        h("button", { type: "button", class: "btn sm dark", onclick: () => { const v = parseFloat($(id).value); if (!Number.isFinite(v) || v < 0) return toast("Enter a quantity of 0 or more."); state.manual[key] = v; saveManual(state.name, state.manual); toast("Quantity saved"); renderWorkspace(); } }, "Save quantity"),
+        L.qty != null ? h("button", { type: "button", class: "btn sm", onclick: () => { delete state.manual[key]; saveManual(state.name, state.manual); renderWorkspace(); } }, "Clear") : null))));
+    return out;
+  }
+  for (const g of L.groups) {
+    const e = g.sample, m = METHOD[g.method] || METHOD.none;
+    const label = g.method === "claude" && g.confidence != null ? `${m[0]} · ${Math.round(g.confidence * 100)}%` : m[0];
+    const left = g.excluded || g.method === "excluded";
+    const top = !g.confirmed && !left ? Profiles.agreement("mapping", g.key)[0] : null;
+    out.push(h("tr", { class: "detail" }, h("td", {}), h("td", {}),
+      h("td", { class: "grp" }, h("b", {}, g.inferred ? g.label : `${e.Family || "–"} : ${e.Type || "no type name"}`),
+        h("span", {}, g.inferred ? `Inferred from ${plural(g.elements.length, "element")}` : [e.Category, e.Material || "no material", plural(g.elements.length, "element")].join(" · ")),
+        g.issues.length ? h("span", { style: "display:block;color:var(--amber-t)" }, "Readiness: " + g.issues.slice(0, 2).join("; ")) : null,
+        g.reason ? h("span", { style: "display:block;margin-top:4px" }, g.reason) : null,
+        g.item && L.groups.length > 1 ? h("span", { style: "display:block" }, `${mapQty(g.qty, g.item.unit)} ${g.item.unit} of this line`) : null,
+        top ? h("span", { style: "display:block;margin-top:4px" }, `${plural(top.users.size, "person")} mapped this to ${top.value.section} ${top.value.clause || ""} ${top.value.description}. `,
+          h("button", { type: "button", class: "link", onclick: () => { state.mapDecisions[g.key] = { item: top.value, method: "edited", confirmed: true }; Profiles.setEntry("mapping", g.key, top.value, "mapping", "learned"); toast("Mapping used"); } }, "Use this")) : null),
+      h("td", {}), h("td", {}),
+      h("td", { style: "white-space:nowrap" }, h("span", { class: "pill " + m[1] }, label)),
+      h("td", {}, h("div", { class: "acts2" },
+        g.item && !g.confirmed && !left ? h("button", { type: "button", class: "btn sm dark", onclick: () => confirmGroup(g) }, g.method === "claude" ? "Accept" : "Confirm") : null,
+        // Demolished, existing and non-primary option elements can't be billed; items left for the mechanical bill can
+        g.excluded ? null : left ? h("button", { type: "button", class: "btn sm", onclick: () => { state.mEdit = g.key; renderWorkspace(); } }, "Bill it anyway")
+          : h("button", { type: "button", class: "btn sm", "aria-expanded": String(state.mEdit === g.key), onclick: () => { state.mEdit = state.mEdit === g.key ? null : g.key; renderWorkspace(); } }, g.item ? "Change" : "Choose item"),
+        !g.item && sampleFn && !left ? h("button", { type: "button", class: "btn sm", onclick: () => askClaude([g]) }, "Ask Claude") : null))));
+    if (state.mEdit === g.key) out.push(editRow(g));
+  }
+  return out;
 }
 function boqRows() {
   const out = []; let n = 0;
   for (const L of state.boqLines || []) { n++; out.push({ item: n, section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit,
-    quantity: L.qty == null ? "" : mapQty(L.qty, L.unit), status: L.expected ? "to measure" : L.pending ? "to confirm" : "confirmed", basis: L.expected ? "" : L.inferred ? "inferred" : "modelled",
+    quantity: L.qty == null ? "" : mapQty(L.qty, L.unit), status: L.expected ? (L.qty == null ? "to measure" : "entered") : L.pending ? "to confirm" : "confirmed", basis: L.expected ? (L.qty == null ? "" : "entered") : L.inferred ? "inferred" : "modelled",
     element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") }); }
-  for (const g of state.boqUnmapped || []) { n++; out.push({ item: n, section: "", clause: "", heading: "", description: `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, unit: "", quantity: "",
+  for (const L of state.boqUnmapped || []) { const g = L.groups[0]; n++; out.push({ item: n, section: "", clause: "", heading: "", description: L.description, unit: "", quantity: "",
     status: "not mapped", basis: "modelled", element_ids: g.elements.map((e) => e.Id).join(";") }); }
   return out;
 }
+
 $("btnBoqCopy").addEventListener("click", () => {
   const rows = boqRows(); if (!rows.length) return toast("The BoQ preview is empty.");
   copyText(rows.map((r) => [r.item, `${r.section} ${r.clause}`.trim(), r.heading ? `${r.heading}: ${r.description}` : r.description, r.unit, r.quantity, r.status].join("\t")).join("\n"), "BoQ copied. Paste it into Excel.");
@@ -2451,9 +2493,9 @@ useCap("downloads").then((d) => { $("btnBoqCsv").hidden = !d && !STANDALONE; });
 
 // ===== Claude for unmatched groups =====
 let mapCtl = null;
-$("btnAskMap").addEventListener("click", async () => {
-  const groups = currentGroups().filter((g) => g.method === "none");
-  if (!sampleFn || !groups.length) return;
+$("btnAskMap").addEventListener("click", () => askClaude(currentGroups().filter((g) => g.method === "none")));
+async function askClaude(groups) {
+  if (!sampleFn || !groups.length || mapCtl) return;
   mapCtl = new AbortController(); $("btnAskMap").disabled = true; $("btnStopMap").hidden = false;
   const st = $("mAiStatus"); st.hidden = false; st.textContent = "Claude is looking at the unmatched groups. This usually takes 20 to 60 seconds.";
   const list = groups.map((g, i) => `g${i + 1} | ${g.sample.Category} | ${g.sample.Family || "-"} | ${g.sample.Type || "-"} | ${g.sample.Material || "no material"} | ${g.elements.length} el. | ${g.sample.Volume ? g.sample.Volume.toFixed(2) + " m³ each" : ""}`).join("\n");
@@ -2485,7 +2527,7 @@ Reply with ONLY a JSON array, one object per group:
     const c = e && e.code;
     st.textContent = c === "cancelled" ? "Stopped." : c === "rate_limited" ? "Too many requests just now. Wait a minute, then ask again." : c === "invalid_json" ? "Claude’s answer couldn’t be read. Ask again." : c === "not_granted" ? "Claude wasn’t allowed for this page." : "Claude couldn’t answer just now. Ask again in a moment.";
   } finally { $("btnStopMap").hidden = true; mapCtl = null; renderMap(); }
-});
+}
 $("btnStopMap").addEventListener("click", () => mapCtl && mapCtl.abort());
 
 
