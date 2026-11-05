@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T16:53:49Z">
+<meta name="solvboq-build" content="2026-11-05T17:07:59Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3194,6 +3194,11 @@ function cardRules() {
   return {
     kind: "solvboq-card-rules", grades: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60], billed,
     codes: Object.fromEntries(CARDS.map((c) => [c.code, { title: c.title, cats: c.cats, grade: cardNeedsGrade(c) }])),
+    // For the add-in's “Set up SolvBoQ” command (one click: codes, labels and materials into the open model)
+    assemblyCodes: assemblyCodeFile(), sharedParameters: sharedParamFile(),
+    labels: LABELS.map((p) => ({ name: p.name, guid: p.guid, instance: p.on === "instance",
+      cats: p.name === "SolvBoQ Structure" ? billed : p.name === "SolvBoQ Top Finish" ? ["OST_Floors", "OST_StructuralFoundation"] : ["OST_Walls"] })),
+    materials: STD_MATERIALS.map((m) => ({ name: m.name, cls: m.cls, strength: m.strength })),
   };
 }
 
@@ -8369,6 +8374,8 @@ Store.onUser(() => { MB.saved = []; if (state && state.view === "master") mbList
 // ----- Standards: the modelling standard as cards, the BoQ codes for Revit, and how much of his bills it covers -----
 // The cards are data (cards.js); this page only shows them. Print gives the card pack for the modeller.
 const STD = { q: "", group: "all" };
+// The add-in zip sits beside the published page (publish.mjs); a full address, so it also works from the page Revit opens
+const ADDIN_URL = "https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip";
 
 // How much of a bill the cards cover: from a coded element, worked out from them, or never from the model.
 // With amounts (his Master BoQ), by value too.
@@ -8430,9 +8437,13 @@ function renderStandards() {
         h("p", null, "One card per thing you model. Give each Revit type its BoQ code (the type’s ", h("b", null, "Assembly Code"), "), follow its card, and SolvBoQ bills it with no decisions: the item, the grade, and what’s worked out from it (formwork, finishes, joints, reinforcement)."),
         h("p", { class: "sub" }, "Draft: the codes go into models, so confirm them with the engineer before the first model uses them. Clause numbers are shown only where confirmed from his bills or the SANS 1200 schedules.")),
       h("div", { class: "tools" },
-        h("button", { type: "button", class: "btn dark", onclick: () => saveFile("SolvBoQ Assembly Codes.txt", assemblyCodeFile()), title: "In Revit: Manage › Additional Settings › Assembly Code, then load this file" }, "Download the codes for Revit"),
+        h("a", { class: "btn dark", href: ADDIN_URL, download: "SolvBoQ-Revit2025.zip", title: "The SolvBoQ add-in for Revit 2025, the same version as this page" }, "Download the Revit add-in"),
+        h("button", { type: "button", class: "btn", onclick: () => saveFile("SolvBoQ Assembly Codes.txt", assemblyCodeFile()), title: "In Revit: Manage › Additional Settings › Assembly Code, then load this file" }, "Download the codes for Revit"),
         h("button", { type: "button", class: "btn", onclick: stdPrint }, "Print the cards")),
-      h("p", { class: "sub" }, "In Revit: Manage › Additional Settings › Assembly Code › load the file. Then, in each type’s properties, Assembly Code › pick the SolvBoQ code."),
+      h("p", { class: "sub" }, "Install: close Revit, unzip the add-in, and double-click install.cmd inside it. If Windows says it protected your PC, choose More info › Run anyway (the add-in isn’t signed yet)."),
+      h("div", { class: "edai" }, h("b", null, "Set up in one click. "), "In Revit, on the SolvBoQ tab, click ", h("b", null, "Set up SolvBoQ"),
+        ": it loads the BoQ codes, adds the four labels and creates the standard materials in the open model. It never changes an element, skips what’s already there, and one undo takes it all out. Then, in each type’s properties, Assembly Code › pick its SolvBoQ code."),
+      h("p", { class: "sub" }, "By hand instead (if Set up can’t load the codes): download the codes, then Manage › Additional Settings › Assembly Code › load the file."),
       h("div", { class: "stdcovs" },
         ms ? h("div", { class: "stdcov" }, h("b", null, `This model: ${cleanName(state.name)}`),
           h("span", { class: "sub" }, ms.coded ? `${ms.coded} of ${plural(ms.types, "billed type")} carry a SolvBoQ code${ms.unknown ? `; ${ms.unknown} carry a code SolvBoQ doesn’t know` : ""}.` : "No SolvBoQ codes yet. Codes are read by the add-in from 5 Nov 2026 on; older extracts have none.")) : null,
@@ -8451,11 +8462,9 @@ function renderStandards() {
       h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: () => saveFile("SolvBoQ shared parameters.txt", sharedParamFile()) }, "Download the labels for Revit")),
       h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Parameter"), h("th", null, "On"), h("th", null, "Categories"), h("th", null, "Values"), h("th", null, "What it settles"))),
         h("tbody", null, LABELS.map((p) => h("tr", null, h("td", null, h("b", null, p.name)), h("td", null, p.on), h("td", null, p.cats), h("td", null, p.values), h("td", null, p.why))))),
-      h("ol", { class: "stdsteps" },
-        h("li", null, "In Revit: Manage › Shared Parameters › Browse, and pick the downloaded file."),
-        h("li", null, "Manage › Project Parameters › Add › Shared parameter › Select, pick each SolvBoQ parameter, choose Type or Instance as the table says, and tick its categories. Text parameters, group them under Identity Data."),
-        h("li", null, "Fill them in on the types (finishes) and the elements (structure). Save the template, so every new model has them.")),
-      h("p", { class: "sub" }, "Not yet tried in Revit 2025: check the file loads on the first model.")),
+      h("p", null, h("b", null, "Set up SolvBoQ"), " adds all four. Fill them in on the types (finishes) and the elements (structure), and save the model as your template so every new model has them."),
+      h("p", { class: "sub" }, "By hand instead: Manage › Shared Parameters › Browse and pick the downloaded file; then Manage › Project Parameters › Add › Shared parameter, pick each one, choose Type or Instance as the table says, and tick its categories."),
+      h("p", { class: "sub" }, "Set up hasn’t been run in Revit 2025 yet: check what it reports on the first model.")),
     h("section", { class: "card stdbody stdmats stdlive" },
       h("div", { class: "stdintro" }, h("h2", null, "Checking as you model"),
         h("p", { class: "sub" }, "Three layers, from instant to thorough. Nothing here changes the model.")),
