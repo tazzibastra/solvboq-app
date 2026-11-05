@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-04T15:58:24Z">
+<meta name="solvboq-build" content="2026-11-05T06:43:28Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -666,6 +666,18 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .savestate.wait{background:var(--chip);color:var(--muted)}
 .savepanel{position:absolute;top:30px;left:0;z-index:40;width:min(440px,90vw);display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 32px rgba(16,24,40,.14);font-size:13px}
 .savepanel .edrow b{font-weight:600;text-align:right;overflow-wrap:anywhere}
+/* Master BoQ: the line editor and the overview as a dialog, so the bill keeps the whole width */
+.mbdlg{width:min(1180px,96vw);max-width:none;max-height:92vh;padding:0;border:0;border-radius:28px;background:var(--card);color:var(--ink);overflow:hidden;box-shadow:0 24px 64px rgba(16,24,40,.25)}
+.mbdlg[open]{display:flex;flex-direction:column}
+.mbdlg.ov{width:min(760px,96vw)}
+.mbdlg::backdrop{background:rgba(16,24,40,.45)}
+.mbdlg .edbody{min-height:0;overflow:auto;padding:22px 26px}
+.mbdlg .edhead h2{font-size:20px}
+.mbdcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start}
+.mbdcol{display:flex;flex-direction:column;gap:18px;min-width:0}
+.mbdlg .edelscroll,.mbdlg .mbels{max-height:min(420px,45vh)}
+@media (max-width:900px){.mbdcols{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:640px){.mbdlg,.mbdlg.ov{width:100vw;max-height:100dvh;height:100dvh;border-radius:0;margin:0}.mbdlg .edbody{padding:16px}}
 </style>
 </head>
 <body>
@@ -5436,7 +5448,7 @@ function impactLines(iss) {
 }
 const pctClass = (p) => (p >= 90 ? "green" : p >= 60 ? "amber" : "red");
 const useCap = (n) => (window.claude && typeof window.claude.use === "function") ? window.claude.use(n).catch(() => null) : Promise.resolve(null);
-function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1900); }
+function toast(msg) { const t = (toast.el ||= $("toast")); (document.querySelector("dialog[open]") || document.body).append(t); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1900); }
 async function copyText(text, msg) {
   try { await navigator.clipboard.writeText(text); toast(msg); return; } catch (e) {}
   const ta = h("textarea", { style: "position:fixed;opacity:0" }); ta.value = text; document.body.append(ta); ta.select();
@@ -5567,6 +5579,7 @@ function scoreWithout(key, quantities) {
 
 // ===== Render: overview =====
 function render() {
+  if (state.view !== "master" && $("mbDlg")?.open) { MB.sel = null; MB.ov = false; $("mbDlg").close(); }
   $("viewOverview").hidden = state.view !== "overview";
   $("viewDetail").hidden = state.view !== "detail";
   $("viewMap").hidden = state.view !== "map";
@@ -7174,7 +7187,7 @@ function renderMaster() {
   MB.claims = mbClaims(lines);
   if (MB.coll === null) { MB.coll = new Set(); for (const sec of new Set(lines.map((L) => L.section))) if (!lines.some((L) => L.section === sec && MB_OPEN.has(L.status))) MB.coll.add(sec); }
   if (MB.sel && !lines.some((L) => L.key === MB.sel)) MB.sel = null;
-  const tree = h("div", { id: "mbTree" }), editor = h("aside", { class: "editor", id: "mbEditor", "aria-label": "Line editor" });
+  const tree = h("div", { id: "mbTree" });
   const n = (f) => lines.filter(f).length;
   // One filter per status the bill has (Suggested, Matches, Differs…), in the order of MB_ST
   const filters = [["all", "All", lines.length], ...Object.keys(MB_ST).map((k) => [k, MB_ST[k][0], n((L) => L.status === k)]).filter(([, , c]) => c > 0)];
@@ -7189,14 +7202,14 @@ function renderMaster() {
         h("div", { class: "seg", role: "group", "aria-label": "Show" }, filters.map(([k, l, c]) => h("button", { type: "button", "aria-pressed": String(MB.filter === k), onclick: () => { MB.filter = k; renderMaster(); } }, l, h("span", { class: "segn" }, String(c))))),
         h("div", { class: "search" }, h("label", { class: "sr", for: "mbSearch" }, "Search the bill"), svg(ICON.search), (search.id = "mbSearch", search)),
         mbCertPicker(),
+        h("button", { type: "button", class: "btn sm dark", onclick: () => { MB.ov = true; renderMaster(); } }, "Overview and bulk actions"),
         h("button", { type: "button", class: "btn sm", "aria-pressed": String(MB.wrap), title: "Show each item’s whole description", onclick: () => { MB.wrap = !MB.wrap; mbPref("wrap", MB.wrap); renderMaster(); } }, MB.wrap ? "Short text" : "Full text")),
       h("div", { class: "mtree" + (MB.itemW ? " mbwide" : "") + (MB.wrap ? " mbwrap" : ""), style: MB.itemW ? `--mbItem:${MB.itemW}px` : null },
         h("div", { class: "mrow mth m5" + (MB.claims ? " mc" : "") }, h("span", { class: "mbitemh" }, "Item", mbGrip()), h("span", null, "Unit"), h("span", { class: "r" }, "Yours"), h("span", { class: "r" }, "Model"), h("span", { class: "r", title: "Claude’s figure for the elements it suggests, where Claude has answered" }, "Claude"),
           MB.claims ? [h("span", { class: "r", title: "Claimed to date on the certificate chosen above" }, "Claimed"), h("span", { class: "r", title: "Claimed this month on that certificate" }, "Month")] : null, h("span", null, "Status")), tree),
-      h("div", { class: "mfoot" }, MB.claims ? (MB.claims.bill ? `Claims: bill ${MB.claims.bill} of ${certLabel(MB.cert.cert.meta)}${MB.claims.notInBoQ ? `, with ${plural(MB.claims.notInBoQ, "line")} not in your BoQ (see Claims)` : ""}. ` : `${certLabel(MB.cert.cert.meta)} has no bill for this BoQ yet. `) : "", `Your quantity: ${MB.master.cols.find((c) => c.letter === MB.master.qtyCol)?.label || MB.master.qtyCol} (column ${MB.master.qtyCol}). Model: ${cleanName(state.name)}. `, h("span", { id: "mbSaved" }, MB.savedMsg))),
-    editor);
+      h("div", { class: "mfoot" }, MB.claims ? (MB.claims.bill ? `Claims: bill ${MB.claims.bill} of ${certLabel(MB.cert.cert.meta)}${MB.claims.notInBoQ ? `, with ${plural(MB.claims.notInBoQ, "line")} not in your BoQ (see Claims)` : ""}. ` : `${certLabel(MB.cert.cert.meta)} has no bill for this BoQ yet. `) : "", `Your quantity: ${MB.master.cols.find((c) => c.letter === MB.master.qtyCol)?.label || MB.master.qtyCol} (column ${MB.master.qtyCol}). Model: ${cleanName(state.name)}. `, h("span", { id: "mbSaved" }, MB.savedMsg))));
   mbTree(lines, tree);
-  editor.replaceChildren(...(MB.sel ? mbEditor(lines.find((L) => L.key === MB.sel), lines) : mbOverview(lines)));
+  mbShowDialog(lines);
 }
 
 // ----- Claims from a payment certificate, line by line -----
@@ -7387,9 +7400,10 @@ function mbEditor(L, lines) {
   if (L.status === "missing") body.push(h("div", { class: "edprob" }, h("span", null, h("b", null, "Not in this model. "), "None of the elements mapped to this line are in the model in the header. Map it again, or load the model it was mapped on.")));
   if (L.status === "na" || L.status === "nil") body.push(h("p", { class: "edtext" }, L.status === "na" ? `Billed as ${L.unitText || L.unit}, which the model can’t measure. Your figure stands.` : "No quantity in your column. Map it anyway if you want to know which elements it covers."));
   // The elements, by Revit type: tick any in or out
+  const side = [];
   if (!manual) {
     const parts = L.lq?.parts || [];
-    body.push(h("div", { class: "edfield" },
+    side.push(h("div", { class: "edfield" },
       h("span", { class: "edlabel" }, "Model elements"),
       parts.length ? h("div", { class: "mblinks" }, parts.map((p) => {
         const on = new Set(p.els.map((e) => String(e.Id))), open = MB.open.has(p.s.key), q = L.direct ? elQty(p.els, L.unit) : null;
@@ -7412,7 +7426,7 @@ function mbEditor(L, lines) {
   }
   const note = h("textarea", { class: "edinput cltext", rows: "2", placeholder: "Note (how you measured it, why it differs)" }); note.value = m.links[L.key]?.note || "";
   note.addEventListener("change", () => { if (m.links[L.key]) { m.links[L.key].note = note.value; mbSave(); } else if (L.link) mbEdit(L, { note: note.value }); });
-  body.push(h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Note"), note));
+  side.push(h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Note"), note));
   const foot = [], saved = m.links[L.key];
   // With Claude's answer beside the original: confirm either one
   if (L.ai?.add.length && L.link?.status === "suggested") foot.push(
@@ -7424,7 +7438,30 @@ function mbEditor(L, lines) {
   if (L.his > 0 && !["manual", "accepted"].includes(L.status)) foot.push(h("button", { type: "button", class: "btn" + (L.status === "differs" ? " dark" : ""), onclick: () => mbAcceptHis(L, lines, note.value) }, `Accept your figure (${mbQ(L.his, L.unit)} ${L.unit})`));
   if (!saved || saved.status !== "manual") foot.push(h("button", { type: "button", class: "btn", onclick: () => { mbSetLink(L, { groups: [], drop: [], add: [], status: "manual", note: note.value }); toast("Your figure stands for this line"); mbSelect(mbNext(L, lines)); } }, "Not from the model"));
   if (saved) foot.push(h("button", { type: "button", class: "btn", onclick: () => { mbSetLink(L, null); toast("Back to the suggestion"); renderMaster(); } }, "Undo"));
-  return [head, h("div", { class: "edbody" }, ...body), h("div", { class: "edfoot" }, ...foot)];
+  return [head, h("div", { class: "edbody" }, h("div", { class: "mbdcols" }, h("div", { class: "mbdcol" }, ...body), h("div", { class: "mbdcol" }, ...side))), h("div", { class: "edfoot" }, ...foot)];
+}
+
+// ----- The line editor and the overview open in a dialog, so the bill keeps the whole width -----
+// One <dialog> for the page, filled again on every render; its scroll is kept while the same line stays open.
+MB.ov = false;
+function mbDialog() {
+  let d = $("mbDlg"); if (d) return d;
+  d = h("dialog", { id: "mbDlg", class: "mbdlg", "aria-label": "Line editor" });
+  d.addEventListener("close", () => { if (toast.el?.parentElement === d) document.body.append(toast.el); if (MB.sel || MB.ov) { MB.sel = null; MB.ov = false; MB.adding = false; if (state.view === "master") renderMaster(); } });
+  d.addEventListener("click", (e) => { if (e.target === d) d.close(); });   // a click on the backdrop
+  document.body.append(d); return d;
+}
+function mbShowDialog(lines) {
+  const d = mbDialog(), L = MB.sel && lines.find((x) => x.key === MB.sel), k = L ? "line:" + L.key : MB.ov ? "ov" : "";
+  if (!k || state.view !== "master") { if (d.open) { MB.sel = null; MB.ov = false; d.close(); } return; }
+  const same = d.dataset.k === k && d.open, top = same ? d.querySelector(".edbody")?.scrollTop || 0 : 0;
+  const closeBtn = h("button", { type: "button", class: "ibtn", "aria-label": "Close", title: "Close", onclick: () => d.close() }, svg('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'));
+  const t = (toast.el ||= $("toast")), had = t.parentElement === d;
+  d.replaceChildren(...(L ? mbEditor(L, lines) : [h("div", { class: "edhead" }, h("div", { class: "edpath" }, h("span", null, MB.master.name), closeBtn)), ...mbOverview(lines)]));
+  d.classList.toggle("ov", !L); d.setAttribute("aria-label", L ? "Line editor" : "Overview and bulk actions"); d.dataset.k = k;
+  if (had) d.append(t);
+  if (!d.open) d.showModal();
+  if (top) { const b = d.querySelector(".edbody"); if (b) b.scrollTop = top; }
 }
 
 // Revit types to add, best first: the same kind of work and unit, then shared words and how close the measure is.
