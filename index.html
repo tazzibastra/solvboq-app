@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T16:16:15Z">
+<meta name="solvboq-build" content="2026-11-05T16:53:49Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -715,7 +715,14 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 @media (max-width:860px){.stdmats{padding:20px 16px;overflow-x:auto}}
 .stdwrap > *{min-width:0;max-width:100%}
 @media (max-width:860px){.stdmats .stdtable td,.stdmats .stdtable th{white-space:normal}.stdmats .stdtable{min-width:0}}
+.stdlabels .tools{margin:4px 0 12px}
 .stdsteps{margin:4px 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55;max-width:100ch}.stdsteps ul{margin:6px 0 0;padding-left:18px;font-size:13px}
+/* On a phone the header never widens the page: the save status shortens with an ellipsis */
+@media (max-width:640px){.phead{min-width:0;max-width:100%}.ptitle{max-width:100%}.projpick select{max-width:52vw}.savewrap{flex:1 1 100%;min-width:0}.savestate{display:block;width:100%;max-width:calc(100vw - 40px)}.savepanel{left:0;right:auto;max-width:calc(100vw - 32px)}}
+@media (max-width:640px){.ptitle,.headpicks,.projpick{max-width:calc(100vw - 32px)}.savewrap{flex:0 1 auto;max-width:calc(100vw - 32px)}}
+.stdlabels .stdtable td,.stdlabels .stdtable th{white-space:normal}
+@media (max-width:640px){.stdlabels .stdtable td,.stdlabels .stdtable th{overflow-wrap:anywhere}}
+.stdlabels,.stdmats{overflow-x:auto}
 </style>
 </head>
 <body>
@@ -2746,7 +2753,7 @@ const DEFAULT_REBAR = { civil: 115, building: 130, mildShare: 0.05 };
 // excavation, working space in m³ per metre of perimeter. Buildings (his Incinerator BoQ): excavation depth, working
 // space width and imported fill thickness (m).
 const DEFAULT_EARTHWORKS = { replacementDepth: 3.73, g5Share: 0.5, pioneerThickness: 0.5, rockShare: 0.2, handShare: 0.2, stockShare: 0.9, wsPerMetre: 0.66,
-  buildingDepth: 1.5, workingSpace: 1, fillThickness: 1.5 };
+  buildingDepth: 1.5, fillThickness: 1.5 };
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -2765,6 +2772,8 @@ const ROLES = {
   pipe: { label: "Pipe", trade: "pipes" }, fitting: { label: "Pipe fitting", trade: "fittings" },
   opening: { label: "Door or window", trade: "openings" }, other: { label: "Other item", trade: "other" },
   mechElec: { label: "Mechanical or electrical item (own bill)", trade: "other" },
+  precast: { label: "Precast concrete item", trade: "other" }, cover: { label: "Manhole frame and cover", trade: "other" },
+  channel: { label: "Channel formed in benching", trade: "other" },
   notBuilt: { label: "Not built (placeholder)", trade: null },
 };
 
@@ -2817,7 +2826,7 @@ let CONV = compileConventions(null);
 
 const CARD_SECTIONS = [
   ["G", "SANS 1200 G", "Concrete (structural)"], ["H", "SANS 1200 H", "Structural steelwork"], ["HB", "SANS 1200 HB", "Cladding and sheeting"],
-  ["LE", "SANS 1200 LE", "Stormwater drainage"], ["L", "SANS 1200 L", "Pipelines"], ["MK", "SANS 1200 MK", "Kerbs"],
+  ["LE", "SANS 1200 LE", "Stormwater drainage"], ["LD", "SANS 1200 LD", "Sewers"], ["L", "SANS 1200 L", "Pipelines"], ["MK", "SANS 1200 MK", "Kerbs"],
   ["PD", "PD", "Building work (particular specification)"], ["D", "SANS 1200 D", "Earthworks"], ["X", "", "Not billed in this BoQ"],
 ];
 
@@ -3030,6 +3039,30 @@ const CARDS = [
     model: ["Model as a Pipe (preferred: the length is read directly) or a line-based family along the drain’s path.", "As a Floor, the length is taken as half its perimeter (GT: 47.75 vs his 48 m), which only works for a narrow ring."],
     bills: [["Supply and install subsoil drains complete, [cross-section]", "m", "LE 8.2.14"]],
     avoid: [["142.25 m claimed against 48 m: a modelled length settles it.", "Certificate 14."]], checks: ["codecat"], his: ["GT: subsurface drains 300x600 stone, 110 uPVC"] },
+  // ----- Manholes: precast parts (SANS 1200 LD; clause numbers blank until his bill confirms them). In-situ manholes use
+  // the concrete cards (G.SLAB.GB.WT base, G.WALL.WT walls, G.SLAB.SUS cover slab, G.BENCH benching) with LD.COVER on top.
+  { code: "LD.MH", group: "LD", title: "Precast manholes, complete", role: "precast", cats: ["OST_GenericModel", "OST_SpecialityEquipment", "OST_StructuralFoundation"],
+    type: "Precast Manhole 1000 ID", material: "Material: precast concrete (for example “Precast concrete 40 MPa”).",
+    model: ["One loadable family per manhole, the internal diameter in the type name (1000 ID, 1250 ID).", "Its height runs from the top of the cover to the underside of the base: SolvBoQ reads the depth from it and bills each manhole by depth band (0.5 m).", "Or model the parts instead (LD.RING, LD.SLAB, LD.COVER), not both."],
+    bills: [["Precast concrete manhole complete, [internal diameter], depth not exceeding [band] m", "No", ""], ["Excavation and working space for the manhole (see Manholes)", "m³", "D 8.3.3, 8.3.5"]],
+    avoid: [], checks: ["codecat"], his: [] },
+  { code: "LD.RING", group: "LD", title: "Precast manhole rings and chamber sections", role: "precast", cats: ["OST_GenericModel", "OST_SpecialityEquipment", "OST_StructuralFoundation"],
+    type: "Precast Ring 1000 ID x 500", material: "Material: precast concrete.",
+    model: ["One loadable family per ring size, the internal diameter and height in the type name.", "Stack the rings at their real levels, from the base to the cover slab."],
+    bills: [["Precast concrete manhole rings, [internal diameter] × [height]", "No", ""]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "LD.SLAB", group: "LD", title: "Precast cover slabs and bases", role: "precast", cats: ["OST_GenericModel", "OST_SpecialityEquipment", "OST_StructuralFoundation", "OST_Floors"],
+    type: "Precast Cover Slab 1000 ID", material: "Material: precast concrete.",
+    model: ["One loadable family per slab type (heavy or light duty cover slab, base unit), the size in the type name."],
+    bills: [["Precast concrete cover slabs and base units, [type]", "No", ""]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "LD.CHANNEL", group: "LD", title: "Channels formed in benching", role: "channel", cats: ["OST_GenericModel"],
+    type: "Half-round Channel 160", material: "",
+    model: ["A line-based Generic Model family, drawn along each channel’s flow path through the benching, the pipe size in the type name (it’s billed by size).", "Model the benching as usual (G.BENCH); the channel family only carries the length."],
+    bills: [["Half-round channels formed in benching, [size]", "m", ""]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "LD.COVER", group: "LD", title: "Manhole frames and covers", role: "cover", cats: ["OST_GenericModel", "OST_SpecialityEquipment", "OST_PlumbingFixtures"],
+    type: "Manhole Cover 600 Heavy Duty Ductile Iron", material: "",
+    model: ["One loadable family per cover type, the size, duty (light, medium, heavy) and material in the type name.", "Place it on the cover slab or roof slab, at ground level: its top is taken as the ground level for the manhole’s excavation."],
+    bills: [["Manhole frame and cover, [type]", "No", ""]], avoid: [], checks: ["codecat"], his: [] },
+
   { code: "L.PIPE", group: "L", title: "Pipes", role: "pipe", cats: ["OST_PipeCurves"],
     type: "uPVC Class 34 160", material: "Material: the pipe material and class.",
     model: ["Pipes with a pipe type naming the material, class and standard; the diameter from the pipe size.", "Code X.MECH where pipework is in the mechanical bill."],
@@ -3107,6 +3140,13 @@ const WORKED = [
     needs: ["Doors and windows hosted in the brick walls (lintels are worked out from their widths).", "Brick types naming face and common skins (plaster and paint follow them)."],
     bills: [["Lintels", "m", "PD 10.1"], ["Plaster", "m²", "PD 10.2"], ["Paint", "m²", "PD 10.7"], ["DPC, DPM, ant poison", "m²", "PD 10.8"]],
     his: ["Incinerator: all within his ratios"] },
+  { id: "manhole", group: "LD", title: "Manholes: in-situ or precast", from: ["LD.MH", "LD.RING", "LD.SLAB", "LD.COVER", "G.SLAB.GB.WT", "G.WALL.WT", "G.SLAB.SUS", "G.BENCH", "G.BLIND"],
+    needs: ["In-situ: base G.SLAB.GB.WT, walls G.WALL.WT standing on the base (curved walls as arcs), cover slab G.SLAB.SUS with the access opening as a Revit opening (it gives the box-out), benching G.BENCH, blinding G.BLIND, frame and cover LD.COVER.",
+      "Precast: either one LD.MH family per manhole, or the parts (LD.RING, LD.SLAB, LD.COVER) on a modelled base. Not both.",
+      "The top of the frame and cover (or of the highest part) is taken as ground level; the underside of the blinding or base is the bottom of the excavation."],
+    bills: [["Restricted excavation, including backfilling: the outline of the concrete (the blinding or base) × depth from ground level to its underside", "m³", "D 8.3.3"],
+      ["Working space: outer perimeter × depth. SANS 1200 D measures it by area; the width is in the rate", "m²", "D 8.3.5"]],
+    his: ["The first model built to the standard: he measures it by hand to check SolvBoQ"] },
   { id: "never", group: "X", title: "Never from the model", from: [],
     needs: ["Priced from the specification or as provisional sums: preliminaries and general, dayworks, contingencies, watertightness testing (Sum), provisional earthworks quantities."],
     bills: [["Kept as his figures in the Master BoQ", "", ""]], his: ["GT: Watertightness testing"] },
@@ -3125,6 +3165,30 @@ const cardNeedsGrade = (c) => c.group === "G" && !NO_GRADE.has(c.code);
 // The rules the Revit add-in checks live, while he models (SolvBoQ.Readiness/Live). Written by build.mjs into
 // SolvBoQ.Readiness/Web/card-rules.json, which the add-in carries, so a live warning and the card can't disagree.
 // Only per-element rules: whole-model checks (overlaps, twins, ground level) stay in the engine, run by the button.
+// The labels (Revit shared parameters) that take the last guesses out: which faces are rough or smooth, which tops are
+// floated, and which structure an element belongs to. sharedParamFile() writes Revit's shared parameter file; the GUIDs
+// are fixed, so the same parameter means the same thing in every model. The add-in reads them by name.
+const LABELS = [
+  { name: "SolvBoQ Outer Finish", guid: "5b6f2a10-3c41-4e7a-9d0b-1a2c3d4e5f01", on: "type", cats: "Walls",
+    values: "Rough, Smooth or None", why: "The formwork to a wall’s outer face: Rough (buried or hidden), Smooth (exposed), None (cast against the ground or another pour). Without it, SolvBoQ goes by position." },
+  { name: "SolvBoQ Inner Finish", guid: "5b6f2a10-3c41-4e7a-9d0b-1a2c3d4e5f02", on: "type", cats: "Walls",
+    values: "Rough, Smooth or None", why: "The same for the inner face. Without it, inside faces are smooth in manholes and tanks above the floor." },
+  { name: "SolvBoQ Top Finish", guid: "5b6f2a10-3c41-4e7a-9d0b-1a2c3d4e5f03", on: "type", cats: "Floors, Structural Foundations",
+    values: "Wood-floated, Steel-floated or None", why: "The finish to a slab’s top. Without it: wood-floated for ground slabs in tanks, steel-floated for suspended slabs and buildings." },
+  { name: "SolvBoQ Structure", guid: "5b6f2a10-3c41-4e7a-9d0b-1a2c3d4e5f04", on: "instance", cats: "every category a card names",
+    values: "The structure’s name, for example MH1", why: "Which structure each element belongs to. SANS 1200 D schedules separate items for separate structures: excavation, concrete and the watertightness test are billed per structure." },
+];
+function sharedParamFile() {
+  const T = String.fromCharCode(9), rows = ["# This is a Revit shared parameter file.", "# Do not edit manually.",
+    ["*META", "VERSION", "MINVERSION"].join(T), ["META", "2", "1"].join(T),
+    ["*GROUP", "ID", "NAME"].join(T), ["GROUP", "1", "SolvBoQ"].join(T),
+    ["*PARAM", "GUID", "NAME", "DATATYPE", "DATACATEGORY", "GROUP", "VISIBLE", "DESCRIPTION", "USERMODIFIABLE", "HIDEWHENNOVALUE"].join(T)];
+  const ascii = (s) => String(s).replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/[^\x20-\x7E]/g, "");
+  for (const p of LABELS) rows.push(["PARAM", p.guid, p.name, "TEXT", "", "1", "1", ascii(p.values + ". " + p.why), "1", "0"].join(T));
+  return rows.join(CRLF_) + CRLF_;
+}
+const CRLF_ = String.fromCharCode(13, 10);
+
 function cardRules() {
   const billed = [...new Set(CARDS.flatMap((c) => c.cats))].sort();
   return {
@@ -3151,9 +3215,17 @@ function assemblyCodeFile() {
 // { code } for a modelled card, { worked } for a worked-out one, { never: true } for items the model never gives.
 function coverLine(desc, unit, section) {
   const d = String(desc || "").toLowerCase(), s = String(section || ""), u = String(unit || "").toLowerCase();
-  const sec = /1200 d|earthworks/i.test(s) ? "D" : /1200 hb|cladding/i.test(s) ? "HB" : /1200 h\b|structural steel/i.test(s) ? "H" : /1200 le|stormwater/i.test(s) ? "LE" : /1200 l\b|pipe/i.test(s) ? "L" : /\bpd\b|particular|building work/i.test(s) ? "PD" : "G";
+  const sec = /1200 ld|sewer/i.test(s) ? "LD" : /1200 d|earthworks/i.test(s) ? "D" : /1200 hb|cladding/i.test(s) ? "HB" : /1200 h\b|structural steel/i.test(s) ? "H" : /1200 le|stormwater/i.test(s) ? "LE" : /1200 l\b|pipe/i.test(s) ? "L" : /\bpd\b|particular|building work/i.test(s) ? "PD" : "G";
   if (/^sum$/.test(u) || /watertight(ness)? test|provisional|daywork|contingenc|preliminar/.test(d)) return { never: true };
   if (sec === "D") return /hard rock|hand excavation/.test(d) ? { worked: "earthworks", provisional: true } : { worked: "earthworks" };
+  if (sec === "LD" || /manhole/.test(d)) {
+    if (/cover slab|base unit|base slab/.test(d)) return { code: /precast/.test(d) || sec === "LD" ? "LD.SLAB" : "G.SLAB.SUS" };
+    if (/channel/.test(d)) return { code: "LD.CHANNEL" };
+    if (/frame|\bcovers?\b/.test(d)) return { code: "LD.COVER" };
+    if (/\brings?\b|chamber section/.test(d)) return { code: "LD.RING" };
+    if (/excavat|backfill|working space/.test(d)) return { worked: "manhole" };
+    if (/manhole/.test(d) && (u === "no" || /complete/.test(d))) return { code: "LD.MH" };
+  }
   if (sec === "LE") return /subs(oil|urface) drain/.test(d) ? { code: "LE.SUBSOIL" } : { code: "L.PIPE" };
   if (sec === "HB") return /flashing|ridge|closure|barge|apron flash|valley/.test(d) || u === "m" ? { code: "HB.FLASH" } : /side|wall cladding/.test(d) ? { code: "HB.CLAD" } : { code: "HB.ROOF" };
   if (sec === "H") return /handrail|balustrad/.test(d) ? { code: "H.RAIL" } : /grat|grid floor/.test(d) ? { code: "H.GRATE" } : /ladder|step iron/.test(d) ? { code: "H.LADDER" } : { code: "H.STEEL" };
@@ -3181,6 +3253,7 @@ function coverLine(desc, unit, section) {
   if (/no.fines?/.test(d)) return { code: "G.NOFINES" };
   if (/screed/.test(d)) return { code: "G.SCREED" };
   if (/casting items|cast into|puddle|sleeve|duct pipe/.test(d)) return { code: "G.CASTIN" };
+  if (/channel/.test(d) && /bench/.test(d)) return { code: "LD.CHANNEL" };
   if (/benching/.test(d)) return { code: "G.BENCH" };
   if (/encasement/.test(d)) return { code: "G.ENCASE" };
   if (/apron|ramp/.test(d)) return { code: "G.APRON" };
@@ -3233,6 +3306,9 @@ const TIERS = [
 const STD_GRADES = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 const gradeInText = (t) => { const a = String(t || "").match(/(\d{2})\s*mpa/i); if (a) return +a[1]; const b = String(t || "").match(/\b(\d{2})\s*\/\s*(\d{1,2})\b/); return b ? +b[1] : null; };
 const stoneInText = (t) => { const m = String(t || "").match(/\b\d{2}\s*(?:mpa)?\s*\/\s*(\d{1,2})\s*mm\b/i); return m ? +m[1] : null; };
+// The labels (shared parameters SolvBoQ Outer/Inner/Top Finish), read leniently; null when not set or not understood
+const faceFinish = (v) => { const t = String(v || "").trim().toLowerCase(); return !t ? null : /^none|no form|cast against/.test(t) ? "none" : /rough|^f1\b|class\s*1/.test(t) ? "rough" : /smooth|fair|^f[23]\b|class\s*[23]/.test(t) ? "smooth" : null; };
+const topFinish = (v) => { const t = String(v || "").trim().toLowerCase(); return !t ? null : /^none|no finish/.test(t) ? "none" : /wood/.test(t) ? "wood" : /steel|trowel|power/.test(t) ? "steel" : null; };
 function materialGrade(e) {
   const name = e.Material || "", d = (e.MaterialDetails || []).find((m) => m.Name === name) || null, desc = d ? d.Description : "";
   let g = gradeInText(name), source = g != null ? "name" : "";
@@ -3794,7 +3870,8 @@ function deriveItems(r, opts = {}) {
     item({ key: "floorfinish", label: "Floor finishes (for example resin or quartz)", ref: "1200 G 8.23", unit: "m²", qty: allSlabArea, status: slabs.length ? "partly" : "none", note: "The area comes from the slabs. Which finish goes where comes from the finishes schedule." });
   }
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
-  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar });
+  const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || ""));
+  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
   const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
@@ -3819,13 +3896,19 @@ function deriveItems(r, opts = {}) {
   }
 
   // Earthworks: inferred from the lowest parts of the structure and stated assumptions (inferEarthworks)
-  const earth = withBoxes ? inferEarthworks(r, { live, ground }, opts) : { lines: [], assumptions: null };
+  // A precast-only manhole has no concrete slabs, but its parts have positions: it still gets its earthworks
+  const manholeOnly = !withBoxes && typeof cardOf === "function" && live.some((e) => e.Box && /^LD\./.test(cardOf(e)?.code || ""));
+  const earth = withBoxes || manholeOnly ? inferEarthworks(r, { live, ground }, opts) : { lines: [], assumptions: null };
   const eTotal = (k) => earth.lines.find((l) => l.key === "earth|" + k)?.qty;
-  if (earth.assumptions) {
+  if (earth.assumptions?.manhole) {
+    const a = earth.assumptions;
+    item({ key: "excavation", label: "Excavation", ref: "1200 D 8.3.3", unit: "m³", qty: eTotal("exc") ?? 0, status: "partly", note: `Manhole: footprint × ${fmt2(a.depth)} m, from ground level (the top of the cover) to the underside of the lowest part.` });
+    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m²", qty: eTotal("ws") ?? 0, status: "partly", note: "Outer perimeter × depth: SANS 1200 D measures working space by area, the width is in the rate." });
+  } else if (earth.assumptions) {
     const a = earth.assumptions;
     item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: eTotal("exc") ?? 0, status: "partly",
       note: a.civil ? `Tank: footprint × ${fmt2(a.replacementDepth)} m replacement depth, his tender rule. Set the depth from the geotechnical report under Earthworks in Map to SANS.` : `Building: footprint × ${fmt2(a.buildingDepth)} m.` });
-    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m³", qty: eTotal("ws") ?? 0, status: "partly", note: a.civil ? `${fmt2(a.wsPerMetre)} m³ per metre of perimeter.` : `Outer perimeter × ${fmt2(a.workingSpace)} m wide × the excavation depth.` });
+    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: a.civil ? "m³" : "m²", qty: eTotal("ws") ?? 0, status: "partly", note: a.civil ? `${fmt2(a.wsPerMetre)} m³ per metre of perimeter, his Gravity Thickeners tender rule.` : `Outer perimeter × ${fmt2(a.buildingDepth)} m deep: SANS 1200 D measures working space by area, the width is in the rate.` });
     item({ key: "fill", label: "Imported fill under floors and foundations", ref: "1200 D 8.3.16", unit: "m³", qty: (eTotal("g5") ?? 0) + (eTotal("g6") ?? 0) + (eTotal("pioneer") ?? 0), status: "partly",
       note: a.civil ? `G5 and G6 replace the excavated ground (${Math.round(a.g5Share * 100)}% G5), on a ${Math.round(a.pioneerThickness * 1000)} mm pioneer layer.` : `Footprint × ${fmt2(a.fillThickness)} m (assumed). The geotechnical report gives the real layers.` });
   } else if (slabs.length) item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: null, status: "none", note: "The data has no element positions, so footprints and depths can’t be worked out." });
@@ -3873,7 +3956,7 @@ const CAT_TO_BIC = { "floors": "OST_Floors", "walls": "OST_Walls", "structural f
   "doors": "OST_Doors", "windows": "OST_Windows" };
 const FIELDS = ["Id", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
   "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Openings", "Stair",
-  "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails"];
+  "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails", "Structure", "FinishOuter", "FinishInner", "FinishTop"];
 
 function normaliseRecord(raw) {
   const lower = {}; for (const [k, v] of Object.entries(raw || {})) lower[k.toLowerCase()] = v;
@@ -3881,7 +3964,7 @@ function normaliseRecord(raw) {
   r.Id = r.Id != null ? String(r.Id) : "";
   r.Category = r.Category || "";
   r.Bic = r.Bic || CAT_TO_BIC[r.Category.toLowerCase()] || "";
-  ["Family", "Type", "Level", "LevelMethod", "Material", "PhaseCreated", "DesignOption", "SystemName", "AssemblyCode", "Keynote", "TypeMark"].forEach((k) => (r[k] = r[k] == null ? "" : String(r[k])));
+  ["Family", "Type", "Level", "LevelMethod", "Material", "PhaseCreated", "DesignOption", "SystemName", "AssemblyCode", "Keynote", "TypeMark", "Structure", "FinishOuter", "FinishInner", "FinishTop"].forEach((k) => (r[k] = r[k] == null ? "" : String(r[k]).trim()));
   ["Volume", "Area"].forEach((k) => (r[k] = Number(r[k]) || 0));
   ["LevelElevation", "Perimeter", "Thickness", "Length", "Diameter"].forEach((k) => (r[k] = r[k] == null || r[k] === "" || !isFinite(Number(r[k])) ? null : Number(r[k])));
   r.LevelInferred = !!r.LevelInferred; r.IsDemolished = !!r.IsDemolished; r.InPlace = !!r.InPlace;
@@ -3981,11 +4064,29 @@ function inferLines(r, ctx) {
     for (const [a, b] of bands) if (b > end) { h += b - Math.max(a, end); end = b; }
     return h;
   };
+  // A manhole is in the ground up to its cover: the outer face of its walls is buried (rough), the inner face smooth
+  const mhTop = ctx.manhole ? Math.max(...live.filter((e) => e.Box).map((e) => e.Box[5])) : null;
   for (const e of conc.filter((e) => e.Bic === "OST_Walls" && e.Area > 0 && (e.Thickness == null || e.Thickness >= 0.1))) {
     const curved = e.Length > 0 && e.Box && e.Length > 1.1 * Math.hypot(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]);
     const rough = buried(e), h = height(e);
     const faces = curved && h > 0 ? 2 * Math.min(e.Area, e.Length * h) : 2 * e.Area;
     const cut = e.Box && h > 0 ? castAgainst(e) : 0;
+    const inManhole = mhTop != null && e.Box && e.Box[5] <= mhTop + 0.05, fo = faceFinish(e.FinishOuter), fi = faceFinish(e.FinishInner);
+    if (inManhole || fo || fi) {
+      const outer = Math.max(0, Math.min(e.Area, faces) - (cut * e.Area) / (h || 1)), inner = Math.max(0, faces - Math.min(e.Area, faces));
+      const what = inManhole ? "manhole walls" : "walls";
+      const face = (side, kind, set, qty) => {
+        if (kind === "none") return;
+        const r2 = kind === "rough";
+        add(`fwwalls|${typeKey(e)}|${r2 ? "r" : "s"}|${curved ? "c" : ""}|${side}`, item(r2, `Vertical formwork to ${side === "out" ? "outer" : "inner"} faces of ${what}${curved ? ", curved on plan" : ""} (${typeName(e)})`),
+          set ? `Inferred: the ${side === "out" ? "outer" : "inner"} face of each wall, ${kind} as its type’s SolvBoQ ${side === "out" ? "Outer" : "Inner"} Finish says.`
+            : side === "out" ? (inManhole ? "Inferred: the outer face of each manhole wall, in the ground below the cover, so rough. Revit’s wall area is the outer face." : `Inferred: the outer face, ${kind} from its position.`)
+            : (inManhole ? "Inferred: the inner face of each manhole wall, taken as smooth. Set SolvBoQ Inner Finish on the type to say otherwise." : `Inferred: the inner face, ${kind} from its position.`), e, qty);
+      };
+      face("out", fo || (inManhole || rough ? "rough" : "smooth"), !!fo, outer);
+      face("in", fi || (inManhole ? "smooth" : rough ? "rough" : "smooth"), !!fi, inner);
+      continue;
+    }
     add(`fwwalls|${typeKey(e)}|${rough ? "r" : "s"}|${curved ? "c" : ""}`, item(rough, `Vertical formwork to sides of walls${curved ? ", curved on plan" : ""} (${typeName(e)})`),
       `Inferred: both faces of each wall${curved ? "; on curved walls, centreline length × height for each face, because the inner face is shorter" : ""}. The band of the outer face that a surrounding slab is cast against isn’t formed. ${finishNote}`,
       e, Math.max(0, faces - (cut * e.Area) / (h || 1)));
@@ -4006,10 +4107,14 @@ function inferLines(r, ctx) {
     const [b, hgt] = d[0] < d[1] ? d : [d[1], d[0]];
     add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, (2 * hgt + b) * len);
   }
-  // Soffits of suspended slabs
+  // Soffits of suspended slabs. A manhole cover slab sits on the wall tops, so that ring isn’t formed and is deducted. Elsewhere the
+  // full soffit, as his GT take-off measures it: the bridge platform cast with its beams was billed at its whole area (58.49 m²).
+  const props = !ctx.manhole ? [] : live.filter((p) => p.Box && ["OST_Walls", "OST_StructuralColumns"].includes(p.Bic) && p.Volume > 0);
   for (const e of suspended.filter((e) => conc.includes(e))) {
+    const under = e.Box ? props.filter((p) => p !== e && Math.abs(p.Box[5] - e.Box[2]) <= 0.05 && p.Box[0] >= e.Box[0] - 0.05 && p.Box[1] >= e.Box[1] - 0.05 && p.Box[3] <= e.Box[3] + 0.05 && p.Box[4] <= e.Box[4] + 0.05) : [];
+    const bearing = under.reduce((s, p) => s + p.Volume / Math.max(p.Box[5] - p.Box[2], 0.01), 0);
     add(`fwsoffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of suspended slabs (${typeName(e)})`),
-      "Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it). Sloping soffits aren’t told apart from flat ones.", e, e.Area || 0);
+      `Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it)${bearing > 0 ? ", less the tops of the walls and columns it bears on" : ""}. Sloping soffits aren’t told apart from flat ones.`, e, Math.max(0, (e.Area || 0) - bearing));
   }
   // Edges of slabs and foundations: only the outer edge, and only where nothing is cast against it at the same height
   const solid = conc.filter((e) => e.Box && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls"].includes(e.Bic));
@@ -4134,6 +4239,8 @@ function outerEdge(e) {
 function inferEarthworks(r, ctx, opts) {
   const { live, ground } = ctx;
   const A = { ...CONV.earthworks, ...(opts.earthworks || {}) };
+  const mhCode = (e) => (typeof cardOf === "function" && cardOf(e)?.code) || "";
+  if (live.some((e) => /^LD\./.test(mhCode(e))) || /manhole/i.test(String(opts.title || ""))) return manholeEarthworks(r, live, A);
   const civil = r.structure === "civil";
   const base = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_StructuralFoundation" || ground.includes(e)));
   if (!base.length) return { lines: [], assumptions: null };
@@ -4152,7 +4259,7 @@ function inferEarthworks(r, ctx, opts) {
     const exc = civil ? fp * A.replacementDepth : fp * A.buildingDepth;
     const q = civil
       ? { exc, rock: exc * A.rockShare, hand: exc * A.handShare, ws: perim * A.wsPerMetre, stock: exc * A.stockShare, g5: exc * A.g5Share, g6: exc * (1 - A.g5Share), pioneer: fp * A.pioneerThickness }
-      : { exc, ws: perim * A.workingSpace * A.buildingDepth, stock: exc, g5: fp * A.fillThickness };
+      : { exc, ws: perim * A.buildingDepth, stock: exc, g5: fp * A.fillThickness };
     for (const [k, v] of Object.entries(q)) tot[k] = (tot[k] || 0) + v;
     tot.area = (tot.area || 0) + fp; tot.perim = (tot.perim || 0) + perim;
     els.push(root); per.set(root.Id, q);
@@ -4174,12 +4281,89 @@ function inferEarthworks(r, ctx, opts) {
     line("pioneer", item("8.3.16", FILL, `(j) ${Math.round(A.pioneerThickness * 1000)} mm compacted pioneer layer of 100 mm to 300 mm boulders`), `footprint × ${fmt2(A.pioneerThickness)} m.`),
   ] : [
     line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for structures"), `footprint × ${fmt2(A.buildingDepth)} m (${fp}), from his Incinerator building BoQ. Change it under Earthworks.`),
-    line("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), `outer perimeter × ${fmt2(A.workingSpace)} m wide × ${fmt2(A.buildingDepth)} m deep.`),
+    line("ws", { ...item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), unit: "m²" }, `outer perimeter × ${fmt2(A.buildingDepth)} m deep. SANS 1200 D measures working space by area (perimeter × average depth); the width is in the rate.`),
     line("stock", item("8.3.14", "Stockpiling", "Extra over item 8.3.3 for temporary stockpiling"), "the same volume as the excavation."),
     line("g5", item("8.3.16", FILL, `(b) G5 compacted to 98% Mod. AASHTO in 150 mm layers, ${Math.round(A.fillThickness * 1000)} mm thick (assumed)`),
       `footprint × ${fmt2(A.fillThickness)} m. The layers come from the geotechnical report; replace this when it’s available.`),
   ];
   return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil, footprints: els.length, area: tot.area || 0, perimeter: tot.perim || 0 } };
+}
+
+// A manhole is dug from ground level to the underside of its lowest part (the blinding, or the base). Its frame and cover
+// sit at ground level, so the top of the highest part is taken as ground level. Excavation = footprint × depth; working
+// space = outer perimeter × an assumed width (0.5 m) × depth. Round parts are measured as circles: concrete from their
+// perimeter (outlineArea), precast parts when they're square in plan and their name says they're round (ring, ID, Ø).
+function manholeEarthworks(r, live, A) {
+  const SOLID = ["OST_Floors", "OST_Walls", "OST_StructuralFoundation", "OST_GenericModel", "OST_SpecialityEquipment", "OST_PlumbingFixtures", "OST_StructuralColumns"];
+  const parts = live.filter((e) => e.Box && SOLID.includes(e.Bic));
+  if (!parts.length) return { lines: [], assumptions: null };
+  const roundName = (e) => /ring|manhole|\bid\b|ø|dia|round|circ/i.test(`${e.Family} ${e.Type}`);
+  const plan = (e) => {
+    const w = e.Box[3] - e.Box[0], d = e.Box[4] - e.Box[1], square = Math.abs(w - d) <= 0.03 * Math.max(w, d);
+    if (r.tradeOfId[e.Id] === "concrete" && e.Perimeter > 0) return { area: outlineArea(e), perim: outerEdge(e).len };
+    return square && roundName(e) ? { area: (Math.PI * w * w) / 4, perim: Math.PI * w } : { area: w * d, perim: 2 * (w + d) };
+  };
+  // Each manhole on its own: parts that overlap in plan belong together (a model may hold several manholes)
+  const overlaps = (a, b) => a.Box[0] < b.Box[3] && b.Box[0] < a.Box[3] && a.Box[1] < b.Box[4] && b.Box[1] < a.Box[4];
+  const groups = [];
+  for (const e of parts) {
+    const hit = groups.filter((g) => g.some((x) => overlaps(x, e)));
+    const merged = [e, ...hit.flat()];
+    for (const g of hit) groups.splice(groups.indexOf(g), 1);
+    groups.push(merged);
+  }
+  // Per manhole: ground level is the top of its highest part (the cover), the bottom the underside of its lowest (the
+  // blinding or base), and the footprint the biggest part in its lowest 0.3 m
+  const holes = groups.map((g) => {
+    const top = Math.max(...g.map((e) => e.Box[5])), bottom = Math.min(...g.map((e) => e.Box[2]));
+    const fp = g.filter((e) => e.Box[2] <= bottom + 0.3).map((e) => ({ e, ...plan(e) })).sort((a, b) => b.area - a.area)[0];
+    const depth = top - bottom;
+    return fp && depth > 0 ? { fp, top, bottom, depth, exc: fp.area * depth, ws: fp.perim * depth } : null;
+  }).filter(Boolean);
+  if (!holes.length) return { lines: [], assumptions: null };
+  const sum = (k) => holes.reduce((s, x) => s + x[k], 0);
+  const item = (clause, heading, description, unit = "m³") => ({ section: "SANS 1200 D", clause, heading, description, unit });
+  const line = (key, it, reason) => ({ key: "earth|" + key, kind: "earth", item: it, reason: `Inferred: ${reason}`, check: "", qty: sum(key), elements: holes.map((x) => x.fp.e), parts: holes.map((x) => ({ id: x.fp.e.Id, qty: x[key] })) });
+  const one = holes.length === 1 ? holes[0] : null;
+  const how = one ? `footprint ${fmt2(one.fp.area)} m² (“${one.fp.e.Type || one.fp.e.Family}”) × ${fmt2(one.depth)} m deep: ground level taken as the top of the highest part, ${fmt2(one.top)} m; the bottom is the underside of the lowest, ${fmt2(one.bottom)} m`
+    : `${holes.length} manholes, each its footprint × its depth from the top of its cover to the underside of its lowest part (${holes.map((x) => fmt2(x.depth) + " m").join(", ")})`;
+  const lines = [
+    line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for manholes, and use as compacted backfill"), `${how}.`),
+    line("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around manholes", "m²"),
+      `outer perimeter × depth${one ? ` (${fmt2(one.fp.perim)} m × ${fmt2(one.depth)} m)` : ", per manhole"}. SANS 1200 D measures working space by area: the perimeter of the structure × the average depth of excavation on it; the width is in the rate.`),
+  ];
+  // With structure labels (SolvBoQ Structure: MH1, MH2…), each manhole's excavation and working space is its own line, as
+  // SANS 1200 D asks: separate items for separate structures
+  const label = (x) => { const g = groups.find((gg) => gg.includes(x.fp.e)) || []; const n = {}; for (const e of g) if (e.Structure) n[e.Structure] = (n[e.Structure] || 0) + 1; return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || ""; };
+  if (holes.some((x) => label(x))) {
+    lines.length = 0;
+    for (const x of holes) {
+      const nm = label(x) || "unnamed manhole";
+      const per = (key, it, reason) => ({ key: `earth|${key}|${nm}`, kind: "earth", item: { ...it, description: `${it.description} (${nm})` }, reason: `Inferred: ${reason}`, check: label(x) ? "" : "These parts have no SolvBoQ Structure label.", qty: x[key], elements: [x.fp.e], parts: [{ id: x.fp.e.Id, qty: x[key] }] });
+      lines.push(per("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for manholes, and use as compacted backfill"), `footprint ${fmt2(x.fp.area)} m² × ${fmt2(x.depth)} m deep, from the top of its cover to the underside of its lowest part.`));
+      lines.push(per("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around manholes", "m²"), `outer perimeter ${fmt2(x.fp.perim)} m × ${fmt2(x.depth)} m deep (SANS 1200 D: by area; the width is in the rate).`));
+    }
+  }
+  // Joints between precast sections: each ring or slab that sits on another part of the same manhole is one joint to seal
+  const isPre = (e) => ["LD.RING", "LD.SLAB", "LD.MH"].includes((typeof cardOf === "function" && cardOf(e)?.code) || "");
+  for (const g of groups) {
+    const joints = g.filter((e) => isPre(e) && g.some((p) => p !== e && Math.abs(p.Box[5] - e.Box[2]) <= 0.03));
+    if (!joints.length) continue;
+    const nm = g.map((e) => e.Structure).find(Boolean);
+    lines.push({ key: `precastjoint|${nm || g[0].Id}`, kind: "precast", item: { section: "SANS 1200 LD", clause: "", heading: "Manholes", description: `Sealing joints between precast manhole sections${nm ? ` (${nm})` : ""}`, unit: "No" },
+      reason: "Inferred: one joint under each precast ring or slab that sits on another part of the manhole.", check: "", qty: joints.length, elements: joints, parts: joints.map((e) => ({ id: e.Id, qty: 1 })) });
+  }
+  // The watertightness test: one per manhole with watertight concrete in it
+  const wt = (e) => r.concretePart?.[e.Id]?.wt || /\.WT$/.test((typeof cardOf === "function" && cardOf(e)?.code) || "");
+  for (const g of groups) {
+    const w = g.filter(wt);
+    if (!w.length) continue;
+    const nm = g.map((e) => e.Structure).find(Boolean);
+    lines.push({ key: `wttest|${nm || g[0].Id}`, kind: "test", item: { section: "SANS 1200 G", clause: "8.21", heading: "Watertightness testing", description: `Watertightness test${nm ? `: ${nm}` : " of the manhole"}`, unit: "Sum" },
+      reason: "Inferred: one test for each manhole with watertight concrete in it.", check: "", qty: 1, elements: w, parts: w.map((e) => ({ id: e.Id, qty: 1 / w.length })) });
+  }
+  const deep = holes.reduce((a, b) => (b.depth > a.depth ? b : a));
+  return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil: false, manhole: true, depth: deep.depth, top: deep.top, bottom: deep.bottom, footprints: holes.length, area: sum("exc") / Math.max(deep.depth, 1e-9), perimeter: holes.reduce((s, x) => s + x.fp.perim, 0) } };
 }
 
 // ===== More inferred lines: finishes, brickwork sundries, joints and steelwork items =====
@@ -4220,6 +4404,10 @@ function inferMore(r, ctx) {
   for (const e of flats) {
     const a = topArea(e, flats);
     if (!(a > 0) || covered(e, a)) continue;
+    const tf = topFinish(e.FinishTop);
+    if (tf === "none") continue;
+    if (tf) { add(`float|${tf}`, "finish", G("8.4.4", FIN, tf === "wood" ? "Wood-floated finish to top of floor slabs and footings" : "Steel-floated finish to top of slabs", "m²"),
+      `Inferred: top area of each slab, less any part with concrete cast on it; ${tf === "wood" ? "wood" : "steel"}-floated as its type’s SolvBoQ Top Finish says.`, e, a); continue; }
     if (suspended.includes(e)) add("float|steel", "finish", G("8.4.4", FIN, "Steel-floated finish to top of suspended slabs", "m²"),
       "Inferred: top area of each suspended slab, landing and platform, less any part with concrete cast on it.", e, a);
     else if (civil) add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"),
@@ -4340,7 +4528,7 @@ function expectedItems(r, lines) {
     if (!lines.some((l) => l.key.startsWith("fwboxout|"))) add("SANS 1200 G", "8.2.6", "Box out holes / form voids", "Box-outs and voids for pipes and openings, by size and depth", "No", "Sizes and depths from the drawings.");
     if (live.some((e) => e.Bic === "OST_Stairs" && !e.Stair?.Runs.length)) add("SANS 1200 G", "8.2.5", "Narrow widths", "Formwork to staircase risers, up to 200 mm", "m", "Riser lengths from the stair drawings.");
     if (civil) {
-      add("SANS 1200 G", "8.21", "Watertightness testing", "Watertightness test of each water-retaining structure", "Sum", "One per structure, as the specification describes.");
+      if (!lines.some((l) => l.key.startsWith("wttest|"))) add("SANS 1200 G", "8.21", "Watertightness testing", "Watertightness test of each water-retaining structure", "Sum", "One per structure, as the specification describes.");
       add("SANS 1200 G", "8.23", "Concrete protection", "Protective coating to wetted concrete faces, as specified", "m²", "Which faces get it is in the specification.");
     } else {
       add("SANS 1200 G", "8.5", "Joints", "Isolation joints, 10 mm thick, with sealant", "m", "Around columns, plinths and walls, from the joint layout.");
@@ -4354,8 +4542,8 @@ function expectedItems(r, lines) {
 
 
 // ===== Map to SANS: group elements by Revit type and material, then map each group to a BoQ item =====
-const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
-const SECTION_TITLE = { "SANS 1200 D": "Earthworks", "SANS 1200 G": "Concrete (structural)", "SANS 1200 LE": "Stormwater drainage", "SANS 1200 H": "Structural steelwork", "SANS 1200 HB": "Cladding and sheeting",
+const SECTION_ORDER = ["SANS 1200 D", "SANS 1200 G", "SANS 1200 LE", "SANS 1200 LD", "SANS 1200 H", "SANS 1200 HB", "SANS 1200 L", "SANS 1200 MK", "PD"];
+const SECTION_TITLE = { "SANS 1200 D": "Earthworks", "SANS 1200 G": "Concrete (structural)", "SANS 1200 LE": "Stormwater drainage", "SANS 1200 LD": "Sewers", "SANS 1200 H": "Structural steelwork", "SANS 1200 HB": "Cladding and sheeting",
   "SANS 1200 L": "Medium-pressure pipelines", "SANS 1200 MK": "Kerbing and channelling", "PD": "Particular specification PD: building work" };
 const UNITS = ["m³", "m²", "m", "t", "No"];
 const sectionRank = (s) => { const i = SECTION_ORDER.indexOf(s); return i < 0 ? 99 : i; };
@@ -4391,6 +4579,11 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
   // A BoQ code on the type settles items its role alone can't (a cast-in item whose name doesn't say "puddle")
   const card = typeof cardOf === "function" ? cardOf(e) : null;
   if (card?.code === "G.CASTIN") return it("SANS 1200 G", "8.13", "Casting items in concrete", `Casting items in concrete: ${e.Type || e.Family}${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN");
+  if (card?.code === "LD.MH") { const b = manholeBand(e); return it("SANS 1200 LD", "", "Manholes", `Precast concrete manhole complete, ${e.Type || e.Family}${b ? `, depth not exceeding ${b.toFixed(1)} m` : ""}`, "No", "LD-MH", b ? "" : "No height in the data, so the depth band is unknown."); }
+  if (card?.code === "LD.RING") return it("SANS 1200 LD", "", "Manholes", `Precast concrete manhole rings, ${e.Type || e.Family}`, "No", "LD-RING");
+  if (card?.code === "LD.SLAB") return it("SANS 1200 LD", "", "Manholes", `Precast concrete cover slabs and base units, ${e.Type || e.Family}`, "No", "LD-SLAB");
+  if (card?.code === "LD.CHANNEL") return it("SANS 1200 LD", "", "Manholes", `Half-round channels formed in benching, ${e.Type || e.Family}`, "m", "LD-CHANNEL", !(e.Length > 0) ? "No length in the data: draw the channel as a line-based family." : "");
+  if (card?.code === "LD.COVER") return it("SANS 1200 LD", "", "Manholes", `Manhole frame and cover, ${e.Type || e.Family}`, "No", "LD-COVER");
   if (role === "noFines") return it("SANS 1200 G", "8.10", "No-fines concrete", `No-fines concrete layer, ${mm || "[thickness]"} mm thick`, "m³", "G-NOFINES");
   if (role === "subsoilDrain") return it("SANS 1200 LE", "8.2.14", "Subsoil drains", `Supply and install subsoil drains complete${mat ? ` (${mat})` : ""}`, "m", "LE-SUBSOIL",
     e.Bic === "OST_Floors" && !(e.Length > 0) ? "Modelled as a floor, so the length is taken as half its perimeter. Check it against the drawings." : "");
@@ -4500,7 +4693,9 @@ function explainRule(g, result) {
 
 // A railing that rises more than 1.3 m overall follows a stair, and the BoQ bills sloping handrails separately
 const railSloped = (e) => e.Bic === "OST_StairsRailing" && !!e.Box && e.Box[5] - e.Box[2] > 1.3;
-const groupKey = (e, part) => [e.Bic, e.Family, e.Type, e.Material].map((x) => String(x || "").trim().toLowerCase()).join("|") + (railSloped(e) ? "|sloping" : "")
+// A precast manhole's depth band: its height (top of cover to underside of base), rounded up to 0.5 m
+const manholeBand = (e) => (e.Box ? Math.ceil(Math.round((e.Box[5] - e.Box[2]) * 1000) / 500) / 2 : null);
+const groupKey = (e, part) => (e.Structure ? "s:" + String(e.Structure).trim().toLowerCase() + "|" : "") + (typeof cardOf === "function" && cardOf(e)?.code === "LD.MH" ? "mh" + manholeBand(e) + "|" : "") + [e.Bic, e.Family, e.Type, e.Material].map((x) => String(x || "").trim().toLowerCase()).join("|") + (railSloped(e) ? "|sloping" : "")
   + (part ? `|${part.wt ? "watertight" : "non-watertight"}${part.as ? "|" + part.as : ""}` : "");
 
 const LEARN_KEY = "solvboq-mapping-rules-v1";
@@ -4541,6 +4736,8 @@ function buildGroups(result, decisions, learned) {
       if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = r.check || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : ""); }
       else reason = "No rule matches this category, family and material.";
     }
+    // A structure label (SolvBoQ Structure, for example MH1) names the structure on its line: separate items for separate structures
+    if (item && e.Structure && !item.description.includes(`(${e.Structure})`)) item = { ...item, description: `${item.description} (${String(e.Structure).trim()})` };
     const unit = item ? item.unit : null;
     const qty = unit ? g.elements.filter((x) => result.status[x.Id] !== "excluded").reduce((s, x) => s + basisQty(x, unit), 0) : 0;
     if (method === "rule" && unit && unit !== "No" && !(qty > 0)) { method = "check"; confirmed = false; reason = "The model gives no quantity for these elements. Measure them from the drawings."; }
@@ -6777,11 +6974,11 @@ function editorFor(L, lines) {
   if (kind === "earth" && state.result.derived.earthworks) {
     const a = state.result.derived.earthworks, shared = lines.filter((x) => x.groups.some((g) => g.ruleId === "INFER-earth")).map((x) => x.n);
     body.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Earthworks assumptions ", h("span", { class: "edsub" }, `· shared by items ${shared.join(", ")}`)),
-      ...(a.civil ? [num("replacementDepth", "Replacement depth", "m", a.replacementDepth), num("pioneerThickness", "Pioneer layer", "mm", a.pioneerThickness, 1000),
+      ...(a.manhole ? [] : a.civil ? [num("replacementDepth", "Replacement depth", "m", a.replacementDepth), num("pioneerThickness", "Pioneer layer", "mm", a.pioneerThickness, 1000),
         num("g5Share", "G5 share of the fill", "%", a.g5Share, 100), num("rockShare", "Hard rock", "%", a.rockShare, 100), num("handShare", "Hand excavation", "%", a.handShare, 100),
         num("stockShare", "Stockpiling", "%", a.stockShare, 100), num("wsPerMetre", "Working space per metre", "m³", a.wsPerMetre)]
-        : [num("buildingDepth", "Excavation depth", "m", a.buildingDepth), num("workingSpace", "Working space", "m", a.workingSpace), num("fillThickness", "Fill thickness", "mm", a.fillThickness, 1000)]),
-      h("span", { class: "edsub" }, a.civil ? "His tender rule from Gravity Thickeners. The replacement depth comes from the geotechnical report for each site." : "His rule from the Incinerator building BoQ.")));
+        : [num("buildingDepth", "Excavation depth", "m", a.buildingDepth), num("fillThickness", "Fill thickness", "mm", a.fillThickness, 1000)]),
+      h("span", { class: "edsub" }, a.manhole ? `Manhole: dug from ground level (the top of the cover, ${fmt2(a.top)} m) to the underside of the lowest part (${fmt2(a.bottom)} m), ${fmt2(a.depth)} m deep.` : a.civil ? "His tender rule from Gravity Thickeners. The replacement depth comes from the geotechnical report for each site." : "His rule from the Incinerator building BoQ.")));
   }
   if (kind === "rebar") {
     const rc = L.groups[0].elements.reduce((s, e) => s + (e.Volume || 0), 0), e = state.earth || {};
@@ -8248,6 +8445,17 @@ function renderStandards() {
           h("button", { type: "button", "aria-pressed": String(STD.group === k), onclick: () => { STD.group = k; renderStandards(); } }, l))),
         h("div", { class: "search" }, h("label", { class: "sr", for: "stdSearch" }, "Search the cards"), svg(ICON.search), (search.id = "stdSearch", search))),
       list),
+    h("section", { class: "card stdbody stdmats stdlabels" },
+      h("div", { class: "stdintro" }, h("h2", null, "Labels: four parameters that take out the last guesses"),
+        h("p", { class: "sub" }, "Revit shared parameters, added once to the template. Without them SolvBoQ goes by position; with them it bills exactly what they say.")),
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: () => saveFile("SolvBoQ shared parameters.txt", sharedParamFile()) }, "Download the labels for Revit")),
+      h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Parameter"), h("th", null, "On"), h("th", null, "Categories"), h("th", null, "Values"), h("th", null, "What it settles"))),
+        h("tbody", null, LABELS.map((p) => h("tr", null, h("td", null, h("b", null, p.name)), h("td", null, p.on), h("td", null, p.cats), h("td", null, p.values), h("td", null, p.why))))),
+      h("ol", { class: "stdsteps" },
+        h("li", null, "In Revit: Manage › Shared Parameters › Browse, and pick the downloaded file."),
+        h("li", null, "Manage › Project Parameters › Add › Shared parameter › Select, pick each SolvBoQ parameter, choose Type or Instance as the table says, and tick its categories. Text parameters, group them under Identity Data."),
+        h("li", null, "Fill them in on the types (finishes) and the elements (structure). Save the template, so every new model has them.")),
+      h("p", { class: "sub" }, "Not yet tried in Revit 2025: check the file loads on the first model.")),
     h("section", { class: "card stdbody stdmats stdlive" },
       h("div", { class: "stdintro" }, h("h2", null, "Checking as you model"),
         h("p", { class: "sub" }, "Three layers, from instant to thorough. Nothing here changes the model.")),
