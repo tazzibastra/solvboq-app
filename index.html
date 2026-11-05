@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T06:43:28Z">
+<meta name="solvboq-build" content="2026-11-05T07:02:04Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -649,14 +649,14 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .clswitch .ibtn[disabled]{opacity:.3;cursor:default}
 .clnote{padding:12px 16px;border-radius:12px;background:var(--green-s);color:var(--green-t);font-size:14px}
 /* Master BoQ: claim columns from a payment certificate */
-.mrow.m5.mc{grid-template-columns:minmax(0,1fr) 48px 84px 84px 84px 84px 72px 132px}
-.mtree.mbwide .mrow.m5.mc{grid-template-columns:minmax(var(--mbItem,0px),1fr) 48px 84px 84px 84px 84px 72px 132px;width:max(100%, calc(var(--mbItem,0px) + 712px))}
+.mrow.m5.mc{grid-template-columns:minmax(0,1fr) 48px 84px 84px 84px 84px 72px 88px 132px}
+.mtree.mbwide .mrow.m5.mc{grid-template-columns:minmax(var(--mbItem,0px),1fr) 48px 84px 84px 84px 84px 72px 88px 132px;width:max(100%, calc(var(--mbItem,0px) + 800px))}
 .lqty.mbclaim{font-weight:600}
 .lqty.mbclaim.over{color:var(--red-t);background:var(--red-s);border-radius:6px;padding:2px 6px;margin:-2px -6px}
 .mbcertpick{display:flex;align-items:center;gap:6px}
 .mbcertpick .clbill{max-width:240px}
 .mbnocert{font-size:12px}
-@media (max-width:760px){.mrow.m5.mc{grid-template-columns:minmax(0,1fr) 64px 64px 64px}.mrow.m5.mc > :nth-child(7),.mrow.m5.mc > :nth-child(8){display:none}.mrow.m5.mc > :nth-child(6){display:block}.mtree.mbwide .mrow.m5.mc{grid-template-columns:minmax(var(--mbItem,0px),1fr) 64px 64px 64px}}
+@media (max-width:760px){.mrow.m5.mc{grid-template-columns:minmax(0,1fr) 64px 64px 64px}.mrow.m5.mc > :nth-child(7),.mrow.m5.mc > :nth-child(8),.mrow.m5.mc > :nth-child(9){display:none}.mrow.m5.mc > :nth-child(6){display:block}.mtree.mbwide .mrow.m5.mc{grid-template-columns:minmax(var(--mbItem,0px),1fr) 64px 64px 64px}}
 /* The save status in the header */
 .savewrap{position:relative}
 .savestate{min-height:24px;padding:0 10px;border-radius:999px;border:1px solid transparent;font-size:12px;font-weight:600;cursor:pointer;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -678,6 +678,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .mbdlg .edelscroll,.mbdlg .mbels{max-height:min(420px,45vh)}
 @media (max-width:900px){.mbdcols{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:640px){.mbdlg,.mbdlg.ov{width:100vw;max-height:100dvh;height:100dvh;border-radius:0;margin:0}.mbdlg .edbody{padding:16px}}
+.lqty.mbleft.neg{color:var(--red-t);font-weight:600}
+.edrow b.warn{color:var(--red-t)}
 </style>
 </head>
 <body>
@@ -7206,8 +7208,8 @@ function renderMaster() {
         h("button", { type: "button", class: "btn sm", "aria-pressed": String(MB.wrap), title: "Show each item’s whole description", onclick: () => { MB.wrap = !MB.wrap; mbPref("wrap", MB.wrap); renderMaster(); } }, MB.wrap ? "Short text" : "Full text")),
       h("div", { class: "mtree" + (MB.itemW ? " mbwide" : "") + (MB.wrap ? " mbwrap" : ""), style: MB.itemW ? `--mbItem:${MB.itemW}px` : null },
         h("div", { class: "mrow mth m5" + (MB.claims ? " mc" : "") }, h("span", { class: "mbitemh" }, "Item", mbGrip()), h("span", null, "Unit"), h("span", { class: "r" }, "Yours"), h("span", { class: "r" }, "Model"), h("span", { class: "r", title: "Claude’s figure for the elements it suggests, where Claude has answered" }, "Claude"),
-          MB.claims ? [h("span", { class: "r", title: "Claimed to date on the certificate chosen above" }, "Claimed"), h("span", { class: "r", title: "Claimed this month on that certificate" }, "Month")] : null, h("span", null, "Status")), tree),
-      h("div", { class: "mfoot" }, MB.claims ? (MB.claims.bill ? `Claims: bill ${MB.claims.bill} of ${certLabel(MB.cert.cert.meta)}${MB.claims.notInBoQ ? `, with ${plural(MB.claims.notInBoQ, "line")} not in your BoQ (see Claims)` : ""}. ` : `${certLabel(MB.cert.cert.meta)} has no bill for this BoQ yet. `) : "", `Your quantity: ${MB.master.cols.find((c) => c.letter === MB.master.qtyCol)?.label || MB.master.qtyCol} (column ${MB.master.qtyCol}). Model: ${cleanName(state.name)}. `, h("span", { id: "mbSaved" }, MB.savedMsg))));
+          MB.claims ? [h("span", { class: "r", title: "Claimed to date on the certificate chosen above" }, "Claimed"), h("span", { class: "r", title: "Claimed this month on that certificate" }, "Month"), h("span", { class: "r", title: "Your quantity less what’s claimed to date; red where the claim is already over yours" }, "Remaining")] : null, h("span", null, "Status")), tree),
+      h("div", { class: "mfoot" }, MB.claims ? (MB.claims.bill ? `Claims: bill ${MB.claims.bill} of ${certLabel(MB.cert.cert.meta)}, ${money(mbLeftTotal(lines))} remaining to claim at your rates${MB.claims.notInBoQ ? `, with ${plural(MB.claims.notInBoQ, "line")} not in your BoQ (see Claims)` : ""}. ` : `${certLabel(MB.cert.cert.meta)} has no bill for this BoQ yet. `) : "", `Your quantity: ${MB.master.cols.find((c) => c.letter === MB.master.qtyCol)?.label || MB.master.qtyCol} (column ${MB.master.qtyCol}). Model: ${cleanName(state.name)}. `, h("span", { id: "mbSaved" }, MB.savedMsg))));
   mbTree(lines, tree);
   mbShowDialog(lines);
 }
@@ -7264,15 +7266,34 @@ function mbCertPicker() {
     MB.certLoading ? h("span", { class: "sub" }, "Loading…") : null);
 }
 
+// What's left to claim on a line: his quantity less the claim to date, in his unit; the rands at his rate on hover
+const mbLeft = (L, toDate) => (L.his > 0 || toDate > 0 ? (L.his || 0) - toDate : null);
+function mbLeftRow(L, toDate) {
+  const r = mbLeft(L, toDate); if (r == null) return null;
+  const neg = r < -0.0005, rr = L.rate ? money(Math.abs(r) * L.rate) : "";
+  return h("div", { class: "edrow" }, h("span", null, "Remaining to claim"), h("b", { class: neg ? "warn" : "" }, neg ? `None: ${mbQ(-r, L.unit)} ${L.unit} over yours` : `${mbQ(r, L.unit)} of ${mbQ(L.his, L.unit)} ${L.unit}${rr ? " · " + rr : ""}`));
+}
+// The bill's remaining in rands: his quantities less the claims to date, at his rates (over-claims count as nothing left)
+function mbLeftTotal(lines) {
+  let t = 0; for (const L of lines) { if (!(L.his > 0) || !L.rate) continue; const a = MB.claims.byKey.get(L.key); t += Math.max(0, L.his - (a?.toDate || 0)) * L.rate; }
+  return t;
+}
+function mbLeftCell(L, toDate, bill) {
+  const r = bill ? mbLeft(L, toDate) : null;
+  if (r == null) return h("span", { class: "r lqty none" }, bill ? "—" : "");
+  const neg = r < -0.0005, money_ = L.rate ? money(Math.abs(r) * L.rate) : "";
+  return h("span", { class: "r lqty mbleft" + (neg ? " neg" : Math.abs(r) < 0.0005 ? " none" : ""), title: neg ? `Claimed ${mbQ(-r, L.unit)} ${L.unit} more than your ${mbQ(L.his, L.unit)}${money_ ? " (" + money_ + ")" : ""}` : `${mbQ(r, L.unit)} ${L.unit} of your ${mbQ(L.his, L.unit)} still to claim${money_ ? ", " + money_ : ""}` },
+    (neg ? "−" : "") + mbQ(Math.abs(r), L.unit));
+}
 function mbTree(lines, tree) {
   const cl = MB.claims, claimCells = (L) => {
     if (!cl) return [];
     const a = cl.byKey.get(L.key);
-    if (!a) return [h("span", { class: "r lqty none" }, cl.bill ? "—" : ""), h("span", { class: "r lqty none" })];
+    if (!a) return [h("span", { class: "r lqty none" }, cl.bill ? "—" : ""), h("span", { class: "r lqty none" }), mbLeftCell(L, 0, cl.bill)];
     return [h("span", { class: "r lqty mbclaim" + (a.over ? " over" : ""), title: a.over ? `Over your ${mbQ(L.his, L.unit)} ${L.unit}: ${money(a.impact)} at stake` : `${a.lines.length > 1 ? plural(a.lines.length, "certificate line") + ", " : ""}${money(a.amount)} to date` }, mbQ(a.toDate, L.unit)),
-      h("span", { class: "r lqty" + (a.month ? "" : " none") }, a.month ? (a.month < 0 ? "−" : "") + mbQ(Math.abs(a.month), L.unit) : "—")];
+      h("span", { class: "r lqty" + (a.month ? "" : " none") }, a.month ? (a.month < 0 ? "−" : "") + mbQ(Math.abs(a.month), L.unit) : "—"), mbLeftCell(L, a.toDate, cl.bill)];
   };
-  const blank = () => (cl ? [h("span"), h("span")] : []);
+  const blank = () => (cl ? [h("span"), h("span"), h("span")] : []);
   const q = MB.q.trim().toLowerCase(), f = MB.filter;
   const show = (L) => (f === "all" || L.status === f || L.key === MB.sel)
     && (!q || [L.item, L.description, L.heading, L.clause].some((x) => String(x || "").toLowerCase().includes(q)));
@@ -7375,9 +7396,10 @@ function mbEditor(L, lines) {
   if (ca) body.push(h("div", { class: "edbox" },
     h("div", { class: "edrow" }, h("b", null, `Claimed on ${certLabel(MB.cert.cert.meta)}`),
       ca.over ? h("span", { class: "pill p-red" }, `Over yours by ${mbQ(ca.toDate - L.his, L.unit)} ${L.unit} · ${money(ca.impact)}`) : h("span", { class: "pill p-green" }, "Within yours")),
+    mbLeftRow(L, ca.toDate),
     ...ca.lines.map(lineTable),
     h("button", { type: "button", class: "link accent", onclick: () => mbOpenInClaims(ca.lines[0]) }, "Open this claim in Claims")));
-  else if (MB.claims?.bill && L.his > 0) body.push(h("p", { class: "edtext" }, `Nothing claimed for this line on ${certLabel(MB.cert.cert.meta)}.`));
+  else if (MB.claims?.bill && L.his > 0) body.push(h("p", { class: "edtext" }, `Nothing claimed for this line on ${certLabel(MB.cert.cert.meta)}: all ${mbQ(L.his, L.unit)} ${L.unit} still to claim${L.rate ? ` (${money(L.his * L.rate)})` : ""}.`));
   if (L.why && !L.ai?.add.length) body.push(h("div", { class: "edai" }, h("b", null, "Suggested. "), L.why, " Check the elements, then confirm or change them."));
   // Claude's suggestion beside the original: its reason, how sure it is, its figure against the original's and his, and a
   // warning when its elements are far off his figure. The elements shown below stay the original's until he chooses Claude's.
