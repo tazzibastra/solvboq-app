@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T07:02:04Z">
+<meta name="solvboq-build" content="2026-11-05T16:16:15Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -680,6 +680,42 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 @media (max-width:640px){.mbdlg,.mbdlg.ov{width:100vw;max-height:100dvh;height:100dvh;border-radius:0;margin:0}.mbdlg .edbody{padding:16px}}
 .lqty.mbleft.neg{color:var(--red-t);font-weight:600}
 .edrow b.warn{color:var(--red-t)}
+/* Standards: the modelling standard as cards */
+.stdwrap{display:flex;flex-direction:column;gap:20px}
+.stdhead{padding:28px;display:flex;flex-direction:column;gap:14px}
+.stdintro h2{margin:0 0 6px}
+.stdintro p{margin:0 0 6px;max-width:80ch;line-height:1.5}
+.stdcovs{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:12px}
+.stdcov{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border:1px solid var(--rule);border-radius:16px;background:var(--head)}
+.stdbar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--chip)}
+.stdbar .c{background:var(--accent)}.stdbar .w{background:color-mix(in srgb,var(--accent) 45%,transparent)}.stdbar .n{background:var(--grey)}
+.stdbody{padding-bottom:16px;overflow:hidden}
+.stdlist{display:flex;flex-direction:column;gap:18px;padding:0 28px}
+.stdsec h3{margin:8px 0 10px;font-size:15px}
+.stdcard{border:1px solid var(--rule);border-radius:16px;margin-bottom:8px;background:var(--card)}
+.stdcard > summary{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 12px;padding:12px 16px;cursor:pointer;list-style:none}
+.stdcard > summary::-webkit-details-marker{display:none}
+.stdcard[open] > summary{border-bottom:1px solid var(--rule)}
+.stdcode{font:600 12px/1.6 ui-monospace,Consolas,monospace;padding:1px 8px;border-radius:8px;background:var(--accent-s);color:var(--ink)}
+.stdcode.none{background:var(--chip);color:var(--muted);font-family:inherit}
+.stdgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;padding:14px 16px 16px;font-size:13px;line-height:1.5}
+.stdgrid ul{margin:6px 0 10px;padding-left:18px}.stdgrid p{margin:6px 0}
+.stdtable{width:100%;border-collapse:collapse;margin:6px 0 12px;font-size:12px}
+.stdtable th{text-align:left;font-weight:600;color:var(--muted);border-bottom:1px solid var(--rule);padding:4px 6px}
+.stdtable td{border-bottom:1px solid var(--rule);padding:5px 6px;vertical-align:top}
+.stdtable td:nth-child(2),.stdtable td:nth-child(3){white-space:nowrap}
+@media (max-width:860px){.stdgrid{grid-template-columns:minmax(0,1fr)}.stdlist{padding:0 16px}.stdhead{padding:20px 16px}}
+@media print{.rail,.phead,.toast,.stdhead .tools,.stdbody .maphead,.stdcovs{display:none!important}.page,main{margin:0!important;padding:0!important}.stdcard{break-inside:avoid}.card{box-shadow:none!important}body{background:#fff!important}}
+/* The save status wraps under the project picker on a narrow screen, and never widens the page */
+.projpick{flex-wrap:wrap;min-width:0;max-width:100%}
+.savewrap{min-width:0;max-width:100%}
+.savestate{max-width:100%}
+.headpicks{min-width:0;max-width:100%}
+.stdmats{padding:24px 28px}.stdmats .stdtable td:nth-child(4){white-space:normal}
+@media (max-width:860px){.stdmats{padding:20px 16px;overflow-x:auto}}
+.stdwrap > *{min-width:0;max-width:100%}
+@media (max-width:860px){.stdmats .stdtable td,.stdmats .stdtable th{white-space:normal}.stdmats .stdtable{min-width:0}}
+.stdsteps{margin:4px 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55;max-width:100ch}.stdsteps ul{margin:6px 0 0;padding-left:18px;font-size:13px}
 </style>
 </head>
 <body>
@@ -690,6 +726,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
   <button type="button" class="ritem" id="navMap"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg></span>Map to SANS</button>
   <button type="button" class="ritem" id="navMaster"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M3 14h18M9 9v11M15 9v11"></path></svg></span>Master BoQ</button>
   <button type="button" class="ritem" id="navClaims"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h4"></path><path d="M14.5 14.5l1.5 1.5 3-3"></path></svg></span>Claims</button>
+  <button type="button" class="ritem" id="navStd"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg></span>Standards</button>
   <span class="ritem soon" title="Coming next"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="2"></rect><path d="M9 12l2 2 4-4"></path></svg></span>Review</span>
   <span class="ritem soon" title="Coming next"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h6"></path></svg></span>Bill</span>
   <span class="rspace"></span>
@@ -809,6 +846,9 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 
   <!-- ===== Claims: payment certificates ===== -->
   <div id="viewClaims" hidden></div>
+
+  <!-- ===== Standards: the modelling standard, cards and BoQ codes ===== -->
+  <div id="viewStd" hidden class="stdwrap"></div>
 
   <!-- ===== Conventions ===== -->
   <div id="viewConv" hidden style="display:flex;flex-direction:column;gap:24px"></div>
@@ -2760,6 +2800,403 @@ function compileConventions(profile) {
 
 let CONV = compileConventions(null);
 
+// SolvBoQ modelling standard: one card per thing you model, and the BoQ code its Revit type carries.
+//
+// A card says how to model one kind of element so that every BoQ item it feeds comes out of the model with no decision:
+// the Revit category, the type name, the material, the geometry rules, what it's billed as, what SolvBoQ works out from
+// it (formwork, finishes, joints, reinforcement), the mistakes already seen in real models, and the checks that prove it.
+// Worked-out cards (code null) cover items nobody models (formwork, joints…) and say what the model must get right.
+//
+// The code goes in the Revit type's Assembly Code. The add-in reads it (ElementRecord.AssemblyCode); a coded type gets
+// its role and BoQ item from the card, so Map to SANS has nothing to decide. The Assembly Code file for Revit's picker
+// is generated from these cards (assemblyCodeFile()), so the document, the picker and the checks can't disagree.
+//
+// Sources: his Gravity Thickeners and Incinerator bills (SolvBoQ past bills.json), his GT take-off, and the lessons from
+// the four real models in CLAUDE.md. Clause numbers only where confirmed (blank otherwise), as everywhere in SolvBoQ.
+// Draft until the engineer confirms it: the codes go into models, so they must not change once he starts using them.
+
+const CARD_SECTIONS = [
+  ["G", "SANS 1200 G", "Concrete (structural)"], ["H", "SANS 1200 H", "Structural steelwork"], ["HB", "SANS 1200 HB", "Cladding and sheeting"],
+  ["LE", "SANS 1200 LE", "Stormwater drainage"], ["L", "SANS 1200 L", "Pipelines"], ["MK", "SANS 1200 MK", "Kerbs"],
+  ["PD", "PD", "Building work (particular specification)"], ["D", "SANS 1200 D", "Earthworks"], ["X", "", "Not billed in this BoQ"],
+];
+
+// Revit categories, as the add-in names them (BuiltInCategory) and as the modeller sees them
+const CARD_CAT = {
+  OST_Walls: "Walls", OST_Floors: "Floors", OST_StructuralFoundation: "Structural Foundations", OST_StructuralColumns: "Structural Columns",
+  OST_StructuralFraming: "Structural Framing", OST_Stairs: "Stairs", OST_Roofs: "Roofs", OST_GenericModel: "Generic Models",
+  OST_StairsRailing: "Railings", OST_Doors: "Doors", OST_Windows: "Windows", OST_PipeCurves: "Pipes", OST_PipeFitting: "Pipe Fittings",
+  OST_PipeAccessory: "Pipe Accessories", OST_PlumbingFixtures: "Plumbing Fixtures", OST_MechanicalEquipment: "Mechanical Equipment",
+  OST_ElectricalEquipment: "Electrical Equipment", OST_Columns: "Columns", OST_SpecialityEquipment: "Specialty Equipment",
+  OST_Reveals: "Wall Sweeps and Reveals", OST_Cornices: "Wall Sweeps",
+};
+
+// Shared wording for the concrete cards
+const WT_NOTE = "Watertight and non-watertight 35 MPa concrete are separate items in his tank bills. The code decides which, so give watertight elements their own types (…WT).";
+const GRADE_RULE = "Material: one of the standard materials below, for example “Concrete 35 MPa/19 mm”, with the grade in its name and its compressive strength set. Never the firm’s ungraded “…_CONCRETE_INSITU”.";
+
+// The materials the template carries. SolvBoQ reads the grade from the name first, then the description, then the
+// compressive strength in the material's structural properties (standard grades only: Revit's stock concrete is 27.6 MPa).
+// Set all three the same; the stone size is read from “…/19 mm”.
+const STD_MATERIALS = [
+  { name: "Concrete 15 MPa/19 mm", cls: "Concrete", strength: 15, use: "Blinding (G.BLIND)" },
+  { name: "Concrete 25 MPa/19 mm", cls: "Concrete", strength: 25, use: "Benching, pipe encasement, aprons and ramps (G.BENCH, G.ENCASE, G.APRON)" },
+  { name: "Concrete 30 MPa/19 mm", cls: "Concrete", strength: 30, use: "Buildings: slabs, beams, columns, footings, plinths" },
+  { name: "Concrete 35 MPa/19 mm", cls: "Concrete", strength: 35, use: "Water-retaining structures: walls, floors, footings, suspended slabs, and the rest of a tank" },
+  { name: "Granolithic 35 MPa/10 mm", cls: "Concrete", strength: 35, use: "Granolithic screeds (G.SCREED); a 19 mm one as “Granolithic 35 MPa/19 mm”" },
+  { name: "No-fines concrete", cls: "Concrete", strength: null, use: "No-fines layers (G.NOFINES)" },
+  { name: "Steel S355JR", cls: "Metal", strength: null, use: "Structural steel (H.STEEL); “Steel S355JR galvanised” when it’s galvanised (no coating item)" },
+  { name: "Steel galvanised mild steel", cls: "Metal", strength: null, use: "Handrails, gratings, ladders (H.RAIL, H.GRATE, H.LADDER)" },
+  { name: "Brick face FBX", cls: "Masonry", strength: null, use: "Face brick skins (PD.BRICK.FACE)" },
+  { name: "Brick common NFP", cls: "Masonry", strength: null, use: "Common brick skins (PD.BRICK, PD.BRICK.FACE)" },
+];
+const JOIN_RULE = "Join it to everything it touches (Modify › Join Geometry). Unjoined overlaps are counted twice.";
+
+const CARDS = [
+  // ----- Concrete -----
+  { code: "G.WALL.WT", group: "G", title: "Watertight walls", role: "wall", wt: true, cats: ["OST_Walls"],
+    type: "300 RC Wall · 35 MPa WT", material: GRADE_RULE,
+    model: ["Model as Walls (Structural), one type per thickness and grade.", "Base on the slab or footing it’s cast on, top at its real top: SolvBoQ measures formwork, the wall-base joint and the wall-top finish from this.", "Curved walls as true arcs, not segments: curved formwork is billed by radius.", JOIN_RULE],
+    bills: [["Reinforced class 35 MPa/19 mm concrete (watertight) in walls", "m³", "8.4.3"], ["Formwork to both faces (rough below the floor top, smooth above; curved when on an arc)", "m²", "8.2.1, 8.2.2"], ["Water-bar joint along the base", "m", "8.5"], ["Steel-floated finish to the exposed top", "m²", "8.4.4"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["Beams modelled as walls: they’re billed as walls with formwork on both faces.", "GT’s bridge beams were “400 RC Wall” elements."], ["Inside and outside faces at different radii but one wall: fine, SolvBoQ splits the formwork by radius.", "GT thickener walls 7000 / 7300 mm."]],
+    checks: ["grade", "dup", "overlapwarn", "codecat"], his: ["GT: Gravity thickener walls, Sump walls, Launder walls, Supernatant collection chamber walls"] },
+  { code: "G.WALL", group: "G", title: "Walls, not water-retaining", role: "wall", wt: false, cats: ["OST_Walls"],
+    type: "250 RC Wall · 30 MPa", material: GRADE_RULE,
+    model: ["Model as Walls (Structural), one type per thickness and grade.", "Use this code for retaining walls, building walls and upstands that don’t hold water.", JOIN_RULE],
+    bills: [["Reinforced class [grade]/19 mm concrete in walls", "m³", "8.4.3"], ["Formwork to both faces", "m²", "8.2.1, 8.2.2"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["A beam spanning between supports is a beam (G.BEAM in Structural Framing), not a wall.", "GT’s bridge beams."]],
+    checks: ["grade", "dup", "overlapwarn", "codecat"], his: ["Incinerator: plinth and fuel bund walls"] },
+  { code: "G.FTG.WT", group: "G", title: "Watertight footings and tank bases", role: "foundation", wt: true, cats: ["OST_StructuralFoundation", "OST_Floors"],
+    type: "400 RC Footing · 35 MPa WT", material: GRADE_RULE,
+    model: ["Model a tank’s ring footing or base as one Structural Foundation slab (or Floor), at its real thickness.", "Model it once: a footing ring and a floor slab over the same area is the GT double count.", "Model the blinding under it as its own floor (G.BLIND)."],
+    bills: [["Reinforced class 35 MPa/19 mm concrete (watertight) in footings", "m³", "8.4.3"], ["Rough formwork to the outer edge only (where nothing is cast against it)", "m²", "8.2.1"], ["Wood-floated finish to the top (under screeds too)", "m²", "8.4.4"], ["Stop ends at construction joints", "m²", "8.2.1"], ["Reinforcement", "t", "8.3.1"], ["Earthworks from its footprint (see Earthworks)", "m³", "D 8.3.3"]],
+    avoid: [["Two tanks modelled differently: one 450 mm slab was 17.76 m³, its twin 4.93 m³.", "GT: 12.83 m³ counted twice."]],
+    checks: ["grade", "twins", "dup", "overlapwarn", "codecat"], his: ["GT: Gravity thickener footing, Sump floors"] },
+  { code: "G.FTG", group: "G", title: "Footings and bases", role: "foundation", wt: false, cats: ["OST_StructuralFoundation"],
+    type: "Pad 1300x1300x350 · 35 MPa", material: GRADE_RULE,
+    model: ["Model pad and strip footings as Structural Foundations (Isolated or Wall foundation), size in the type name.", "Model only footings that are built: the extra stair pad in GT was billed by nobody."],
+    bills: [["Reinforced class [grade]/19 mm concrete in footings", "m³", "8.4.3"], ["Rough formwork to the sides, by footing size", "m²", "8.2.1"], ["Reinforcement", "t", "8.3.1"], ["Blinding under (from G.BLIND, or worked out)", "m²", "8.4.2"]],
+    avoid: [["Reinforced type name with an unreinforced material.", "Boiler house: 28 strip footings named ZSt_Strip_RC with “Unreinforced” material."]],
+    checks: ["grade", "rcconflict", "codecat"], his: ["GT: Footings, Sides of 1300 x 1300 x 350 mm deep RC footing (four sizes)"] },
+  { code: "G.SLAB.GB.WT", group: "G", title: "Watertight ground slabs", role: "slab", wt: true, cats: ["OST_Floors"],
+    type: "200 RC Slab · 35 MPa WT", material: GRADE_RULE,
+    model: ["Model as a Structural Floor at its real thickness, on the blinding or fill.", "One slab per pour if you want joints placed like his (otherwise SolvBoQ works out bay joints).", "Cut sumps and recesses as openings or shape edits, not by stacking another slab on top."],
+    bills: [["Reinforced class 35 MPa/19 mm concrete (watertight) in floors", "m³", "8.4.3"], ["Wood-floated finish to the top", "m²", "8.4.4"], ["Floor bay joints", "m", "8.5"], ["Edge formwork where nothing is cast against it", "m²", "8.2.1"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["A slab modelled over another at the same level.", "GT: floor ring over the footing."]],
+    checks: ["grade", "twins", "dup", "overlapwarn", "codecat"], his: ["GT: Gravity thickener floor"] },
+  { code: "G.SLAB.GB", group: "G", title: "Ground slabs and surface beds", role: "slab", wt: false, cats: ["OST_Floors"],
+    type: "170 Surface Bed · 30 MPa", material: GRADE_RULE,
+    model: ["Model as a Floor on the fill, at its real thickness.", "Model the blinding, DPM layer is worked out (buildings)."],
+    bills: [["Reinforced class [grade]/19 mm concrete in floors", "m³", "8.4.3"], ["Steel-floated (buildings) or wood-floated (tanks) finish", "m²", "8.4.4"], ["Saw-cut joints and sealant (buildings)", "m", "8.5"], ["DPM and ant poison under (buildings)", "m²", "PD 10.8"], ["Edge formwork", "m²", "8.2.1"]],
+    avoid: [["Thin “False Floor” elements with an analytical material are load placeholders, not floors: code them X.NOTBUILT.", "Sludge dewatering: 86 and 135 of them."]],
+    checks: ["grade", "codecat"], his: ["Incinerator: Floor"] },
+  { code: "G.SLAB.SUS.WT", group: "G", title: "Watertight suspended slabs", role: "slab", wt: true, cats: ["OST_Floors"],
+    type: "250 RC Slab · 35 MPa WT", material: GRADE_RULE,
+    model: ["Suspended slabs that hold water: launder floors, chamber slabs with walls on them.", "Model as a Structural Floor, cast into the wall it frames into (SolvBoQ bills the type R joint where it does)."],
+    bills: [["Reinforced class 35 MPa/19 mm concrete (watertight) in suspended slabs", "m³", "8.4.3"], ["Smooth formwork to the soffit (sloping when it falls)", "m²", "8.2.2"], ["Edge formwork", "m²", "8.2.2"], ["Joint where it’s cast into a wall", "m", "8.5"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["Level names say little: GT’s launder floor was on level “INLET PIPE IL 2”. The code is what tells SolvBoQ.", ""]],
+    checks: ["grade", "unsupported", "codecat"], his: ["GT: Launder floor, Supernatant collection chamber slab"] },
+  { code: "G.SLAB.SUS", group: "G", title: "Suspended slabs, landings and platforms", role: "slab", wt: false, cats: ["OST_Floors", "OST_StructuralFoundation"],
+    type: "250 RC Slab · 35 MPa", material: GRADE_RULE,
+    model: ["Bridges, platforms, landings, suspended floors that don’t hold water.", "Model what holds it up (columns, beams, walls): a raised slab with nothing reaching its underside is flagged."],
+    bills: [["Reinforced class [grade]/19 mm concrete in suspended slabs", "m³", "8.4.3"], ["Smooth formwork to the soffit and edges", "m²", "8.2.2"], ["Steel-floated finish to the top", "m²", "8.4.4"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["A landing on columns modelled as a foundation: fine, SolvBoQ treats it as suspended when columns end under it.", "GT stair landing."]],
+    checks: ["grade", "unsupported", "codecat"], his: ["GT: Bridge platform, Staircase landings"] },
+  { code: "G.COL", group: "G", title: "Concrete columns", role: "column", wt: false, cats: ["OST_StructuralColumns"],
+    type: "RC Column 400x400 · 35 MPa", material: GRADE_RULE,
+    model: ["Model as Structural Columns with the section in the type name (400x400, or Ø450): SolvBoQ measures formwork from it.", "Base on the footing, top at the underside of what it carries."],
+    bills: [["Reinforced class [grade]/19 mm concrete in columns", "m³", "8.4.3"], ["Smooth formwork to the sides (perimeter × height)", "m²", "8.2.2"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["“RC COLUMNS” with an unreinforced material.", "Boiler house: 6 columns."]],
+    checks: ["grade", "rcconflict", "codecat"], his: ["GT: Columns, Sides of columns (48.5 vs his 47.1 m²)"] },
+  { code: "G.BEAM", group: "G", title: "Concrete beams and ground beams", role: "beam", wt: false, cats: ["OST_StructuralFraming"],
+    type: "RC Beam 300x500 · 35 MPa", material: GRADE_RULE,
+    model: ["Model as Structural Framing (concrete), section in the type name.", "Not as walls: a wall gets formwork on two full faces, a beam gets two sides and a soffit."],
+    bills: [["Reinforced class [grade]/19 mm concrete in beams", "m³", "8.4.3"], ["Formwork to sides and soffit", "m²", "8.2.2"], ["Reinforcement", "t", "8.3.1"]],
+    avoid: [["Bridge beams modelled as 0.75 m deep walls, billed 0.4 m deep.", "GT: formwork came out high."]],
+    checks: ["grade", "codecat"], his: ["GT: Beams, 300 x 500 mm ground beam to support staircase"] },
+  { code: "G.STAIR", group: "G", title: "Concrete stairs", role: null, wt: false, cats: ["OST_Stairs"],
+    type: "RC Stair · 35 MPa", material: GRADE_RULE,
+    model: ["Model with Revit’s Stair tool (Cast-in-place), never as a floor block or in-place family: only a Revit stair gives risers, runs and landings.", "Model every flight that’s built: GT had one modelled and two billed."],
+    bills: [["Reinforced class [grade]/19 mm concrete in staircase", "m³", "8.4.3"], ["Risers (narrow widths)", "m", "8.2.5"], ["Sloping soffit formwork and landing soffits", "m²", "8.2.2"], ["Steel-floated treads and landings", "m²", "8.4.4"]],
+    avoid: [["He estimated the stair as 5 m² × 1.5 m because the model had no stair data.", "GT: 9.06 vs 10.5 m³."]],
+    checks: ["grade", "codecat"], his: ["GT: Staircase, Staircase risers, Soffit of staircase"] },
+  { code: "G.BLIND", group: "G", title: "Blinding", role: "blinding", cats: ["OST_Floors"],
+    type: "Blinding 75 · 15 MPa", material: "Material: “Concrete 15 MPa” (or a blinding material).",
+    model: ["Model as its own thin Floor (≤ 100 mm) directly under the slab or footing.", "Leave it out and SolvBoQ works it out under ground-bearing elements; model it when it differs (deeper, wider)."],
+    bills: [["Class 15 MPa/19 mm concrete blinding, [thickness] mm thick", "m²", "8.4.2"]],
+    avoid: [["Blinding treated as a structural slab got reinforcement, formwork and blinding under itself.", "The first pipeline."]],
+    checks: ["codecat"], his: ["GT: Blinding layer 75 mm (29.56 vs 29.5 m²)", "Incinerator: 75 mm under surface beds"] },
+  { code: "G.SCREED", group: "G", title: "Screeds and granolithic toppings", role: "screed", cats: ["OST_Floors"],
+    type: "Granolithic Screed 50 · 35 MPa/10 mm", material: "Material: the screed, with its grade and stone size.",
+    model: ["Model as a thin Floor (≤ 75 mm) on top of the slab, to falls if it falls.", "One type per specification (35 MPa/10 mm and 35 MPa/19 mm are separate items)."],
+    bills: [["Granolithic screed [spec] to falls", "m²", ""], ["Steel-floated finish (launder channel, conical floors)", "m²", "8.4.4"]],
+    avoid: [["Screeds to the launder and cones weren’t modelled in GT, so they’re still measured by hand.", ""]],
+    checks: ["codecat"], his: ["GT: Granolithic screeding 35 MPa/10 mm and 35 MPa/19 mm"] },
+  { code: "G.BENCH", group: "G", title: "Benching", role: "benching", cats: ["OST_Floors", "OST_GenericModel"],
+    type: "Benching · 25 MPa", material: "Material: “Concrete 25 MPa”.",
+    model: ["Model as a solid (floor with shape edits, or a loadable Generic Model) inside the sump or chamber.", "One type per location if his bill names them separately (sumps, chambers)."],
+    bills: [["Unreinforced class 25 MPa/19 mm concrete in benching", "m³", "8.4.3"]],
+    avoid: [["“120mm NO FINES” with a Benching material was billed as benching.", "GT: now no-fines."]],
+    checks: ["codecat"], his: ["GT: Benching inside central sumps, inside supernatant collection chambers"] },
+  { code: "G.ENCASE", group: "G", title: "Pipe encasement", role: "benching", as: "pipe encasement", cats: ["OST_GenericModel", "OST_Floors", "OST_StructuralFoundation"],
+    type: "Pipe Encasement · 25 MPa", material: "Material: “Concrete 25 MPa”.",
+    model: ["Model the encasement as its own solid around the pipe, net of the pipe (subtract it).", "One element per run, so its sides can be measured."],
+    bills: [["Unreinforced class 25 MPa/19 mm concrete in pipe encasement", "m³", "8.4.3"], ["Rough formwork to the sides", "m²", "8.2.1"]],
+    avoid: [["Not modelled in GT: measured by hand.", ""]],
+    checks: ["codecat"], his: ["GT: Pipe concrete encasement, Sides of pipe concrete encasement"] },
+  { code: "G.NOFINES", group: "G", title: "No-fines concrete", role: "noFines", cats: ["OST_Floors"],
+    type: "No-fines 200", material: "Material: no-fines concrete.",
+    model: ["Model as its own Floor layer at its thickness."],
+    bills: [["No-fines concrete layer, [thickness] mm thick", "m³", "8.10"]],
+    avoid: [], checks: ["codecat"], his: ["GT: 200 mm minimum no-fines layer"] },
+  { code: "G.APRON", group: "G", title: "Aprons and ramps", role: "apron", cats: ["OST_Floors"],
+    type: "Apron 100 · 25 MPa", material: "Material: “Concrete 25 MPa”.",
+    model: ["Model as a Floor outside the building, separate from the floor slab."],
+    bills: [["Unreinforced class 25 MPa/19 mm concrete in aprons and ramps", "m³", "8.4.3"], ["Saw-cut joints in aprons", "m", "8.5"]],
+    avoid: [], checks: ["codecat"], his: ["Incinerator: Aprons and ramps"] },
+  { code: "G.PLINTH", group: "G", title: "Plinths and bunds", role: "plinth", cats: ["OST_Floors", "OST_StructuralFoundation", "OST_GenericModel", "OST_Walls"],
+    type: "Plinth 300 · 30 MPa", material: GRADE_RULE,
+    model: ["Model each plinth or bund wall as its own element on the slab, joined to it."],
+    bills: [["Reinforced class [grade]/19 mm concrete in plinths and bunds", "m³", "8.4.3"]],
+    avoid: [], checks: ["grade", "codecat"], his: ["Incinerator: Plinth and fuel bund"] },
+  { code: "G.CASTIN", group: "G", title: "Cast-in items: puddle flanges, sleeves, duct pipes", role: "fitting", cats: ["OST_PipeFitting", "OST_PipeAccessory", "OST_GenericModel"],
+    type: "Puddle Flange DN250 · 300 wall", material: "Material: as specified (the type gives the bore).",
+    model: ["One loadable family per item, hosted in or placed through the wall or slab, with the nominal bore in the type.", "Put the host thickness in the type name: his items are by wall thickness (250, 300, 400 mm walls).", "Model only what’s cast in by the civil contractor."],
+    bills: [["Casting items in concrete, up to 300 mm nominal bore, through [thickness] mm walls", "No", "8.13"]],
+    avoid: [["18 puddle flanges modelled against his 6 billed.", "GT."]],
+    checks: ["codecat"], his: ["GT: Casting items through 250, 300 and 400 mm walls; “Gereg” duct pipes"] },
+  { code: "G.CHAMFER", group: "G", title: "Chamfers and splays", role: "chamfer", cats: ["OST_Reveals", "OST_Cornices", "OST_GenericModel"],
+    type: "Chamfer 100x100", material: "",
+    model: ["Model as a wall sweep or reveal type along the edge (GT used reveals: 81.7 vs his 82 m).", "Size in the type name: over 40 × 40 mm is its own item."],
+    bills: [["Chamfers and splays over 40 × 40 mm (narrow widths)", "m", "8.2.5"]],
+    avoid: [["Reveals aren’t elements in the Master BoQ groups yet, so they can’t be linked to his line.", "GT."]],
+    checks: [], his: ["GT: 100 x 100 mm chamfer (smooth, curved)"] },
+  { code: "G.COAT", group: "G", title: "Coatings and proprietary floor finishes", role: null, cats: [],
+    type: "", material: "",
+    model: ["To decide with him: Revit’s Paint tool isn’t read. Options: a finish layer in the wall or floor type, or a parameter on the type naming the face that’s coated."],
+    bills: [["Concrete protection (for example Sikaguard 720 Epodem) to the inside faces", "m²", "8.23"], ["Proprietary floor finishes (for example quartz resin)", "m²", "8.23"]],
+    avoid: [["GT’s Sika coating has elements but no measured area.", ""]], checks: [], his: ["GT: Sikaguard 720 Epodem", "Incinerator: Floor finish type 1"] },
+
+  // ----- Structural steel -----
+  { code: "H.STEEL", group: "H", title: "Structural steel members", role: "steel", cats: ["OST_StructuralFraming", "OST_StructuralColumns"],
+    type: "IPE 200 · S355JR", material: "Material: steel with its grade (S355JR); galvanised if it is.",
+    model: ["Structural Framing and Columns from the steel family library, section in the type name.", "Columns standing on concrete get holding-down bolts worked out (4 each)."],
+    bills: [["Supply and fabrication of steel, by member type", "t", "H 8.3.1"], ["Delivery, erection, erection bolts (1%), coating unless galvanised", "t", "H 8.3.2–8.3.13"], ["Holding-down bolts", "No", "H 8.3.6"]],
+    avoid: [["27 t of ASB beams under the GRP cover went to the mechanical bill: code them X.MECH if so.", "GT."]],
+    checks: ["steelgrade", "steelsize", "steelzero", "codecat"], his: ["Incinerator: steel portal roof"] },
+  { code: "H.RAIL", group: "H", title: "Handrails and balustrades", role: "handrail", cats: ["OST_StairsRailing"],
+    type: "Handrail 1100 Galv MS", material: "Material: galvanised mild steel (or stainless), so the finish is known.",
+    model: ["Model with the Railing tool along the real path (stairs host their own).", "Level and sloping handrails are separate items: SolvBoQ splits them by rise."],
+    bills: [["Handrail assembly complete, horizontal", "m", "H 8.3.7"], ["Handrail assembly complete, sloping (measured on slope)", "m", "H 8.3.7"]],
+    avoid: [["Railings with no material.", "Sludge dewatering, boiler house."], ["115 m of level railings modelled against his 175 m.", "GT."]],
+    checks: ["metalmat", "codecat"], his: ["GT: galvanised mild steel handrails (4 items)"] },
+  { code: "H.GRATE", group: "H", title: "Gratings and open grid flooring", role: "grating", cats: ["OST_Floors"],
+    type: "Grating 30x5 Galv", material: "Material: galvanised steel.",
+    model: ["Model as a thin Floor with a metal material, its own type."],
+    bills: [["Open grid flooring complete with frames", "m²", "H 8.3.9"]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "H.LADDER", group: "H", title: "Ladders and step irons", role: "ladder", cats: ["OST_GenericModel", "OST_SpecialityEquipment"],
+    type: "Ladder 3.0 m Galv", material: "",
+    model: ["A loadable family per ladder or step iron, length in the type."],
+    bills: [["Step irons and ladders complete", "No", "H 8.3.8"]], avoid: [], checks: ["codecat"], his: [] },
+
+  // ----- Cladding and sheeting -----
+  { code: "HB.ROOF", group: "HB", title: "Roof sheeting", role: "roofSheet", cats: ["OST_Roofs"],
+    type: "Klip-Lok 700 0.58 Chromadek", material: "Material: the profile, gauge and finish (not “Roof 3”).",
+    model: ["Model with the Roof tool (footprint or extrusion) at the real pitch, never as an in-place or generic family.", "One type per profile and finish."],
+    bills: [["Roof coverings fixed to steel purlins, [profile]", "m²", "HB 8.2.2"]],
+    avoid: [["In-place families and the material “Roof 3” on every roof so far.", "Sludge dewatering, boiler house, holding tanks."]],
+    checks: ["vague", "inplace", "roofarea", "codecat"], his: ["Incinerator: 0.58 mm Klip-Lok 700 roofing"] },
+  { code: "HB.CLAD", group: "HB", title: "Side cladding", role: "cladding", cats: ["OST_Walls"],
+    type: "Side Cladding Klip-Lok 700 0.58", material: "Material: the profile, gauge and finish.",
+    model: ["Model as a Wall type made of the sheeting only (no concrete or brick layers)."],
+    bills: [["Side cladding, [profile]", "m²", "HB 8.2.2"]], avoid: [], checks: ["codecat"], his: ["Incinerator: side cladding"] },
+  { code: "HB.FLASH", group: "HB", title: "Flashings, ridges and closures", role: "flashing", cats: ["OST_GenericModel", "OST_Roofs"],
+    type: "Ridge Flashing 0.58 Chromadek", material: "",
+    model: ["A line-based loadable family (with a length) per flashing type, or a roof fascia/edge sweep.", "Never an in-place family: its length can’t be read."],
+    bills: [["Flashings, [type]", "m", "HB 8.2.3"]],
+    avoid: [["In-place flashings on every building model so far.", ""]], checks: ["flashnolen", "inplace", "codecat"], his: ["Incinerator: 9 flashing and ridge items"] },
+  { code: "HB.GUTTER", group: "HB", title: "Gutters", role: "gutter", cats: ["OST_GenericModel", "OST_Roofs"],
+    type: "Box Gutter 300 0.6 Galv", material: "",
+    model: ["Roof › Gutter, or a line-based family with a length; not in-place."],
+    bills: [["Eaves and box gutters, [type]", "m", "HB 8.2.3"]], avoid: [["In-place box gutters.", "All three building models."]], checks: ["flashnolen", "inplace", "codecat"], his: [] },
+  { code: "HB.DOWNPIPE", group: "HB", title: "Downpipes", role: "downpipe", cats: ["OST_GenericModel", "OST_PipeCurves"],
+    type: "Downpipe 100x75", material: "",
+    model: ["A Pipe of its own type, or a line-based family with a length; not in-place."],
+    bills: [["Downpipes, [type]", "m", "HB 8.2.3"]], avoid: [], checks: ["flashnolen", "inplace", "codecat"], his: [] },
+
+  // ----- Drainage and pipework -----
+  { code: "LE.SUBSOIL", group: "LE", title: "Subsoil drains", role: "subsoilDrain", cats: ["OST_PipeCurves", "OST_Floors", "OST_GenericModel"],
+    type: "Subsoil Drain 300x600 Stone + 110 uPVC", material: "",
+    model: ["Model as a Pipe (preferred: the length is read directly) or a line-based family along the drain’s path.", "As a Floor, the length is taken as half its perimeter (GT: 47.75 vs his 48 m), which only works for a narrow ring."],
+    bills: [["Supply and install subsoil drains complete, [cross-section]", "m", "LE 8.2.14"]],
+    avoid: [["142.25 m claimed against 48 m: a modelled length settles it.", "Certificate 14."]], checks: ["codecat"], his: ["GT: subsurface drains 300x600 stone, 110 uPVC"] },
+  { code: "L.PIPE", group: "L", title: "Pipes", role: "pipe", cats: ["OST_PipeCurves"],
+    type: "uPVC Class 34 160", material: "Material: the pipe material and class.",
+    model: ["Pipes with a pipe type naming the material, class and standard; the diameter from the pipe size.", "Code X.MECH where pipework is in the mechanical bill."],
+    bills: [["Supply, lay and joint pipes, [type], [diameter]", "m", ""]], avoid: [["Pipe types called “Default”.", "Pump station samples."]], checks: ["pipedia", "pipeclass", "pipelen", "codecat"], his: [] },
+  { code: "L.FIT", group: "L", title: "Pipe specials and fittings", role: "fitting", cats: ["OST_PipeFitting", "OST_PipeAccessory"],
+    type: "Bend 90 PN16 DN150", material: "",
+    model: ["Fittings from the pipe’s routing preferences, with the standard, class and size in the type."],
+    bills: [["Specials and fittings, [type]", "No", ""]], avoid: [], checks: ["fitdia", "codecat"], his: [] },
+  { code: "MK.KERB", group: "MK", title: "Kerbs", role: "kerb", cats: ["OST_GenericModel", "OST_Floors"],
+    type: "Precast Kerb FK", material: "Material: precast concrete.",
+    model: ["A line-based family along the kerb line, kerb type in the name."],
+    bills: [["Precast concrete kerbs, [type]", "m", ""]], avoid: [], checks: ["codecat"], his: [] },
+
+  // ----- Building work -----
+  { code: "PD.BRICK.FACE", group: "PD", title: "Face brickwork", role: "masonry", cats: ["OST_Walls"],
+    type: "280 Cavity · FBX Silvergrey / Common", material: "Layers: name each skin’s brick (face or common).",
+    model: ["Model cavity walls as one wall type with both skins and the cavity as layers.", "Walls stop at the slab (no overlap with concrete)."],
+    bills: [["Brickwork in cavity walls, [thickness] mm", "m²", "PD 10.1"], ["Extra over for face brickwork", "m²", "PD 10.1"], ["Lintels, one per skin over each opening (width + 400 mm)", "m", "PD 10.1"], ["DPC", "m²", "PD 10.8"], ["Plaster and paint to the inside face", "m²", "PD 10.2, 10.7"]],
+    avoid: [], checks: ["codecat"], his: ["Incinerator: 280 mm cavity walls, Corobrick FBX"] },
+  { code: "PD.BRICK", group: "PD", title: "Common brickwork", role: "masonry", cats: ["OST_Walls"],
+    type: "230 Common Brick", material: "",
+    model: ["One wall type per thickness, stopping at the slab and beams."],
+    bills: [["Brickwork in walls, [thickness] mm", "m²", "PD 10.1"], ["Plaster and paint, both faces", "m²", "PD 10.2, 10.7"], ["DPC", "m²", "PD 10.8"]],
+    avoid: [], checks: ["codecat"], his: [] },
+  { code: "PD.DOOR", group: "PD", title: "Doors", role: "opening", cats: ["OST_Doors"],
+    type: "3CR12 Steel Door 900x2100", material: "",
+    model: ["Loadable door families with the size and specification in the type name; drawing reference if his item names one."],
+    bills: [["Doors complete, [type] [size]", "No", "PD 10.4"]], avoid: [], checks: ["opensize", "codecat"], his: ["Incinerator: 3CR12 steel doors with airtight seals"] },
+  { code: "PD.WIN", group: "PD", title: "Windows", role: "opening", cats: ["OST_Windows"],
+    type: "WG66 Winblock 1200x900", material: "",
+    model: ["Loadable window families with the size and specification in the type name."],
+    bills: [["Windows complete, [type] [size]", "No", "PD 10.4"]], avoid: [], checks: ["opensize", "codecat"], his: ["Incinerator: WG66 Winblock windows"] },
+  { code: "PD.SANITARY", group: "PD", title: "Sanitary fittings", role: null, cats: ["OST_PlumbingFixtures"],
+    type: "", material: "", model: ["Plumbing Fixtures, specification in the type name."],
+    bills: [["Sanitary fittings, [type]", "No", ""]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "PD.TIMBER", group: "PD", title: "Timber", role: "timber", cats: ["OST_StructuralFraming", "OST_GenericModel"],
+    type: "SA Pine 38x38 Brandering", material: "Material: timber, with the grade.",
+    model: ["Structural Framing (timber) with the section in the type name."],
+    bills: [["Carpentry and joinery, [section]", "m", ""]], avoid: [["763 m of brandering fell into “other items”.", "Boiler house."]], checks: ["codecat"], his: [] },
+
+  // ----- Not billed here -----
+  { code: "X.MECH", group: "X", title: "Mechanical and electrical (priced in its own bill)", role: "mechElec", cats: [],
+    type: "", material: "", model: ["Code anything the civil BoQ leaves to the mechanical or electrical bill: equipment, pipework, ASB beams under covers."],
+    bills: [["Left out of this BoQ, listed as such", "", ""]], avoid: [], checks: [], his: ["GT: pipework and 27 t of ASB beams"] },
+  { code: "X.NOTBUILT", group: "X", title: "Not built: placeholders, references, analytical", role: "notBuilt", cats: [],
+    type: "", material: "", model: ["Code anything in the model that isn’t built: load placeholders, reference masses, existing structures shown for context (or put those on an existing phase)."],
+    bills: [["Left out of the BoQ, listed as such", "", ""]], avoid: [["“False Floor” with “Electrical Analytical Loads”.", "Sludge dewatering."]], checks: [], his: [] },
+];
+
+// Items nobody models: what the model must get right for SolvBoQ to work them out. No code.
+const WORKED = [
+  { id: "formwork", group: "G", title: "Formwork", from: ["G.WALL.WT", "G.WALL", "G.FTG.WT", "G.FTG", "G.SLAB.SUS.WT", "G.SLAB.SUS", "G.COL", "G.BEAM", "G.STAIR", "G.ENCASE"],
+    needs: ["Elements in the right category (a beam as a beam, not a wall).", "Walls based on what they’re cast on; slabs joined to the walls they’re cast against (that face isn’t formed).", "Curved walls as arcs; column sections in the type name.", "Stairs as Revit stairs (risers and soffits)."],
+    bills: [["Rough formwork, below the top of the largest ground slab", "m²", "8.2.1"], ["Smooth formwork, above it", "m²", "8.2.2"], ["Narrow widths: risers, chamfers", "m", "8.2.5"], ["Box-outs from openings, by size and host depth", "No", "8.2.6"]],
+    his: ["GT: 21 formwork items, mostly within 5% of his take-off"] },
+  { id: "boxout", group: "G", title: "Box-outs and voids", from: ["G.WALL.WT", "G.WALL", "G.SLAB.SUS.WT", "G.SLAB.SUS", "G.SLAB.GB.WT", "G.SLAB.GB"],
+    needs: ["Every hole as a Revit opening (wall opening, shaft, opening by face) or a void in the host, not a gap between elements.", "Circular holes as circles: his items are by diameter band."],
+    bills: [["Box out holes / form voids, by size and depth", "No", "8.2.6"]], his: ["GT: Box out holes 0.35–0.7 m diameter"] },
+  { id: "finishes", group: "G", title: "Floated finishes", from: ["G.FTG.WT", "G.SLAB.GB.WT", "G.SLAB.GB", "G.SLAB.SUS", "G.WALL.WT"],
+    needs: ["Slabs and footings at their real tops; benching and screeds modelled where they cover a top (a covered top isn’t finished).", "One slab per area: a slab over another at the same level is counted once."],
+    bills: [["Wood-floated finish (tank floors and footings)", "m²", "8.4.4"], ["Steel-floated finish (suspended slabs, landings, wall tops; building slabs)", "m²", "8.4.4"]],
+    his: ["GT: wood 403 vs his 415 m², steel 198 vs 211.8"] },
+  { id: "joints", group: "G", title: "Joints", from: ["G.WALL.WT", "G.SLAB.GB.WT", "G.SLAB.SUS.WT", "G.SLAB.GB", "G.APRON"],
+    needs: ["Walls standing on the slab or footing they’re cast on (a water-bar joint along each base).", "Suspended slabs cast into walls partway up (type R joint).", "One floor per pour if his joint layout matters; otherwise bays are worked out."],
+    bills: [["Water-bar and construction joints, by type and member", "m", "8.5"], ["Saw-cut joints and sealant (buildings)", "m", "8.5"]],
+    his: ["GT: wall joints 221 vs his 246 m; floor joints 152.9 vs 159.9 m"] },
+  { id: "rebar", group: "G", title: "Reinforcement", from: ["G.WALL.WT", "G.WALL", "G.FTG.WT", "G.FTG", "G.SLAB.GB.WT", "G.SLAB.GB", "G.SLAB.SUS.WT", "G.SLAB.SUS", "G.COL", "G.BEAM", "G.STAIR", "G.PLINTH"],
+    needs: ["Reinforced and unreinforced concrete told apart (the code and the material agree).", "Until bar schedules are read: volume × his rate (115 kg/m³ tanks, 130 buildings; 5% mild steel)."],
+    bills: [["Mild steel and high tensile bars, by diameter", "t", "8.3.1"]], his: ["GT 113 kg/m³, Incinerator 133 kg/m³"] },
+  { id: "earthworks", group: "D", title: "Earthworks", from: ["G.FTG.WT", "G.FTG", "G.SLAB.GB.WT", "G.SLAB.GB"],
+    needs: ["Ground-bearing elements at their real levels (the footprint is worked out from them).", "The replacement depth from the geotechnical report, and the ground level, set per model (in Map to SANS until they’re project parameters in the template)."],
+    bills: [["Restricted excavation, footprint × replacement depth", "m³", "D 8.3.3"], ["G5 and G6 fill, pioneer layer, stockpiling, working space", "m³", ""], ["Hard rock and hand excavation (provisional)", "m³", ""]],
+    his: ["GT tender lines within about 4%; completion figures are surveyed"] },
+  { id: "building", group: "PD", title: "Building sundries", from: ["PD.BRICK.FACE", "PD.BRICK", "PD.DOOR", "PD.WIN", "G.SLAB.GB"],
+    needs: ["Doors and windows hosted in the brick walls (lintels are worked out from their widths).", "Brick types naming face and common skins (plaster and paint follow them)."],
+    bills: [["Lintels", "m", "PD 10.1"], ["Plaster", "m²", "PD 10.2"], ["Paint", "m²", "PD 10.7"], ["DPC, DPM, ant poison", "m²", "PD 10.8"]],
+    his: ["Incinerator: all within his ratios"] },
+  { id: "never", group: "X", title: "Never from the model", from: [],
+    needs: ["Priced from the specification or as provisional sums: preliminaries and general, dayworks, contingencies, watertightness testing (Sum), provisional earthworks quantities."],
+    bills: [["Kept as his figures in the Master BoQ", "", ""]], his: ["GT: Watertightness testing"] },
+];
+
+const CARD_BY_CODE = new Map(CARDS.map((c) => [c.code, c]));
+const normCode = (s) => String(s || "").trim().toUpperCase().replace(/\s+/g, "");
+// The card for an element, from the Assembly Code on its type; null when it has none or one SolvBoQ doesn't know
+function cardOf(e) { const c = normCode(e && e.AssemblyCode); return c ? CARD_BY_CODE.get(c) || null : null; }
+const cardCatOk = (card, e) => !card.cats.length || card.cats.includes(e.Bic);
+
+// Concrete cards whose material must give a grade (blinding, screeds, no-fines and the like carry theirs in the name or don't need one)
+const NO_GRADE = new Set(["G.BLIND", "G.SCREED", "G.NOFINES", "G.CASTIN", "G.CHAMFER", "G.COAT"]);
+const cardNeedsGrade = (c) => c.group === "G" && !NO_GRADE.has(c.code);
+
+// The rules the Revit add-in checks live, while he models (SolvBoQ.Readiness/Live). Written by build.mjs into
+// SolvBoQ.Readiness/Web/card-rules.json, which the add-in carries, so a live warning and the card can't disagree.
+// Only per-element rules: whole-model checks (overlaps, twins, ground level) stay in the engine, run by the button.
+function cardRules() {
+  const billed = [...new Set(CARDS.flatMap((c) => c.cats))].sort();
+  return {
+    kind: "solvboq-card-rules", grades: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60], billed,
+    codes: Object.fromEntries(CARDS.map((c) => [c.code, { title: c.title, cats: c.cats, grade: cardNeedsGrade(c) }])),
+  };
+}
+
+// The Revit Assembly Code file (Manage › Additional Settings › Assembly Code › load it): tab-separated code, description,
+// level, the same layout as Revit's UniformatClassifications.txt. ASCII only (Revit reads it in the system code page).
+// No category column yet: a code allowed in several categories can't be limited to one, so every code shows everywhere.
+function assemblyCodeFile() {
+  const ascii = (s) => String(s).replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/·/g, "-").replace(/³/g, "3").replace(/²/g, "2").replace(/[^\x20-\x7E]/g, "");
+  const rows = [];
+  for (const [g, , title] of CARD_SECTIONS) {
+    const cards = CARDS.filter((c) => c.group === g); if (!cards.length) continue;
+    rows.push([g, ascii(`SolvBoQ ${g === "X" ? "" : g + " "}${title}`).replace(/\s+/g, " "), 1]);
+    for (const c of cards) rows.push([c.code, ascii(c.title), 2]);
+  }
+  return rows.map((r) => r.join("\t")).join("\r\n") + "\r\n";
+}
+
+// Which card (or worked-out card) a line of his bill comes from: so the standard can show how much of his bill it covers.
+// { code } for a modelled card, { worked } for a worked-out one, { never: true } for items the model never gives.
+function coverLine(desc, unit, section) {
+  const d = String(desc || "").toLowerCase(), s = String(section || ""), u = String(unit || "").toLowerCase();
+  const sec = /1200 d|earthworks/i.test(s) ? "D" : /1200 hb|cladding/i.test(s) ? "HB" : /1200 h\b|structural steel/i.test(s) ? "H" : /1200 le|stormwater/i.test(s) ? "LE" : /1200 l\b|pipe/i.test(s) ? "L" : /\bpd\b|particular|building work/i.test(s) ? "PD" : "G";
+  if (/^sum$/.test(u) || /watertight(ness)? test|provisional|daywork|contingenc|preliminar/.test(d)) return { never: true };
+  if (sec === "D") return /hard rock|hand excavation/.test(d) ? { worked: "earthworks", provisional: true } : { worked: "earthworks" };
+  if (sec === "LE") return /subs(oil|urface) drain/.test(d) ? { code: "LE.SUBSOIL" } : { code: "L.PIPE" };
+  if (sec === "HB") return /flashing|ridge|closure|barge|apron flash|valley/.test(d) || u === "m" ? { code: "HB.FLASH" } : /side|wall cladding/.test(d) ? { code: "HB.CLAD" } : { code: "HB.ROOF" };
+  if (sec === "H") return /handrail|balustrad/.test(d) ? { code: "H.RAIL" } : /grat|grid floor/.test(d) ? { code: "H.GRATE" } : /ladder|step iron/.test(d) ? { code: "H.LADDER" } : { code: "H.STEEL" };
+  if (sec === "PD") {
+    const own = d.replace(/^doors and windows:\s*/, "");   // his heading names both
+    if (/^[^,]*?\b(windows?|winblock)\b/.test(own)) return { code: "PD.WIN" };
+    if (/\bdoors?\b/.test(own)) return { code: "PD.DOOR" };
+    if (/lintel|plaster|paint|primer|damp|dpc|dpm|ant poison|soil poison/.test(d)) return { worked: "building" };
+    if (/face brick|facebrick|fbx/.test(d)) return { code: "PD.BRICK.FACE" };
+    if (/brick/.test(d)) return { code: /cavity/.test(d) ? "PD.BRICK.FACE" : "PD.BRICK" };
+    if (/sanitary|wc|basin|urinal/.test(d)) return { code: "PD.SANITARY" };
+    return { never: true };
+  }
+  // Linings and membranes by area: an HDPE lining cast into the concrete is a protection layer, geofabric follows the footprint
+  if (/geofabric|geotextile/.test(d)) return { worked: "earthworks" };
+  if (/hdpe (covering|lining|liner)|liner|lining/.test(d) && u !== "no") return { code: "G.COAT" };
+  // Concrete (cast-in items first: “through 400 mm walls or sides of the sump” isn’t formwork)
+  if (/casting items|cast into|puddle|sleeve|duct pipe/.test(d)) return { code: "G.CASTIN" };
+  if (/formwork|soffit|sides of|box out|form voids|riser|chamfer|splay|narrow width/.test(d)) return /chamfer|splay/.test(d) ? { code: "G.CHAMFER" } : /box out|form voids/.test(d) ? { worked: "boxout" } : { worked: "formwork" };
+  if (/steel bars|mild.steel|high.tensile|reinforcement|mesh/.test(d) && u === "t") return { worked: "rebar" };
+  if (/joint|sealant|sealing/.test(d)) return { worked: "joints" };
+  if (/floated|unformed surface/.test(d)) return /screed/.test(d) ? { code: "G.SCREED" } : { worked: "finishes" };
+  if (/sikaguard|epodem|protection|proprietary|resin|coating/.test(d)) return { code: "G.COAT" };
+  if (/blinding/.test(d)) return { code: "G.BLIND" };
+  if (/no.fines?/.test(d)) return { code: "G.NOFINES" };
+  if (/screed/.test(d)) return { code: "G.SCREED" };
+  if (/casting items|cast into|puddle|sleeve|duct pipe/.test(d)) return { code: "G.CASTIN" };
+  if (/benching/.test(d)) return { code: "G.BENCH" };
+  if (/encasement/.test(d)) return { code: "G.ENCASE" };
+  if (/apron|ramp/.test(d)) return { code: "G.APRON" };
+  if (/plinth|bund/.test(d)) return { code: "G.PLINTH" };
+  const wt = /\(watertight|watertight reinforced/.test(d) && !/non.?watertight/.test(d);
+  if (/stair/.test(d) && !/landing|beam/.test(d)) return { code: "G.STAIR" };
+  if (/column/.test(d)) return { code: "G.COL" };
+  if (/beam/.test(d)) return { code: "G.BEAM" };
+  if (/wall/.test(d)) return { code: wt ? "G.WALL.WT" : "G.WALL" };
+  if (/footing|base|foundation/.test(d)) return { code: wt ? "G.FTG.WT" : "G.FTG" };
+  if (/platform|landing|suspended|bridge|chamber slab|launder floor|soffit/.test(d)) return { code: wt ? "G.SLAB.SUS.WT" : "G.SLAB.SUS" };
+  if (/floor|slab|surface bed/.test(d)) return { code: wt ? "G.SLAB.GB.WT" : "G.SLAB.GB" };
+  return { never: true };
+}
+
+
 // ===== Readiness checks: a line-for-line mirror of Core/ReadinessChecks.cs, working on ElementRecords =====
 const NON_MEASURED = new Set(["OST_Rooms", "OST_Areas", "OST_MEPSpaces"]);
 // Only these categories are building elements a BoQ measures. Everything else Revit stores as an element
@@ -2772,7 +3209,8 @@ const MEASURED = new Set(["OST_Floors", "OST_Walls", "OST_StructuralFoundation",
   "OST_Topography", "OST_Toposolid", "OST_Site", "OST_Parking", "OST_Roads", "OST_Hardscape"]);
 // Older CSV rows without a category code are kept
 // Floors whose material is an analytical load placeholder (seen as "Electrical Analytical Loads") aren't built
-const isMeasured = (e) => (!e.Bic || MEASURED.has(e.Bic)) && !CONV.hint.notBuilt.test(e.Material || "") && CONV.roles[typeKey(e)] !== "notBuilt";
+const isMeasured = (e) => (!e.Bic || MEASURED.has(e.Bic)) && !CONV.hint.notBuilt.test(e.Material || "") && CONV.roles[typeKey(e)] !== "notBuilt"
+  && !(typeof cardOf === "function" && cardOf(e)?.code === "X.NOTBUILT");
 const CONCRETE_CATS = new Set(["OST_Floors", "OST_Walls", "OST_StructuralFoundation", "OST_StructuralColumns", "OST_StructuralFraming", "OST_Stairs", "OST_GenericModel"]);
 const SUPPORT_CATS = new Set(["OST_Walls", "OST_StructuralColumns", "OST_StructuralFraming", "OST_StructuralFoundation"]);
 const TYPE_LABEL = { OST_Floors: "Slabs and floors", OST_Walls: "Walls", OST_StructuralFoundation: "Foundations", OST_StructuralColumns: "Columns",
@@ -2787,11 +3225,22 @@ const RX = {
 };
 // Order for "Start here": wrong quantities first, then things that can't be billed, then missing spec, then classification to confirm
 const TIERS = [
-  { key: 1, label: "Quantity could be wrong", checks: ["dup", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin"] },
+  { key: 1, label: "Quantity could be wrong", checks: ["dup", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
   { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
-  { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess"] },
+  { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode"] },
 ];
+const STD_GRADES = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
+const gradeInText = (t) => { const a = String(t || "").match(/(\d{2})\s*mpa/i); if (a) return +a[1]; const b = String(t || "").match(/\b(\d{2})\s*\/\s*(\d{1,2})\b/); return b ? +b[1] : null; };
+const stoneInText = (t) => { const m = String(t || "").match(/\b\d{2}\s*(?:mpa)?\s*\/\s*(\d{1,2})\s*mm\b/i); return m ? +m[1] : null; };
+function materialGrade(e) {
+  const name = e.Material || "", d = (e.MaterialDetails || []).find((m) => m.Name === name) || null, desc = d ? d.Description : "";
+  let g = gradeInText(name), source = g != null ? "name" : "";
+  if (g == null && desc) { g = gradeInText(desc); if (g != null) source = "description"; }
+  let odd = null;
+  if (g == null && d && d.Strength != null) { const s = STD_GRADES.find((x) => Math.abs(x - d.Strength) <= 0.5); if (s) { g = s; source = "strength"; } else odd = d.Strength; }
+  return { grade: g != null ? g + " MPa" : "", source, stone: stoneInText(name) || stoneInText(desc) || null, odd };
+}
 const TIER_OF = Object.fromEntries(TIERS.flatMap((t) => t.checks.map((c) => [c, t])));
 const RANK = { excluded: 4, unknown: 3, eyes: 2, handled: 1 };
 const isConcreteLike = (e) => RX.concrete.test(e.Material || "");
@@ -2858,6 +3307,8 @@ function computeRoles(els) {
   const roles = new Map();
   const set = (e, role, source, detail) => { if (!roles.has(e.Id)) roles.set(e.Id, { role, source, detail: detail || "" }); };
   for (const e of els) { const r = CONV.roles[typeKey(e)]; if (r && ROLES[r]) set(e, r, "profile", "Set in your conventions profile"); }
+  // The BoQ code on the type (Assembly Code, from the SolvBoQ standard): the modeller has said what it is
+  if (typeof cardOf === "function") for (const e of els) { const c = cardOf(e); if (c && c.role && ROLES[c.role]) set(e, c.role, "code", `BoQ code ${c.code}: ${c.title.charAt(0).toLowerCase() + c.title.slice(1)}`); }
 
   // Geometry: a thin floor directly under a slab or foundation is blinding; directly on top of one, a screed or topping.
   const thickOf = (e) => (e.Thickness != null ? e.Thickness : e.Box ? e.Box[5] - e.Box[2] : null);
@@ -3031,8 +3482,26 @@ function runChecks(input, opts = {}) {
     rcConflict.length ? `For example, “${nameOf(rcConflict[0])}” is named as reinforced concrete but its material is “${rcConflict[0].Material}”. That decides whether it’s billed as reinforced concrete and whether reinforcement is measured for it.` : "",
     "Check the drawings, then correct the type name or the material.", rcConflict);
 
+  // The SolvBoQ standard: once a model uses BoQ codes, every billed type needs one, it must be a SolvBoQ code, and it must
+  // suit the Revit category (a beam coded G.BEAM but drawn as a wall gets a wall's formwork). Models without codes aren't checked.
+  const coded = typeof cardOf === "function" ? live.filter((e) => cardOf(e)) : [];
+  if (coded.length) {
+    const badCode = live.filter((e) => e.AssemblyCode && !cardOf(e));
+    add("badcode", "eyes", "BoQ codes SolvBoQ doesn’t know",
+      badCode.length ? `For example “${badCode[0].AssemblyCode}” on “${nameOf(badCode[0])}”. Without a code from the SolvBoQ standard the type is classified from its name, and may be billed as the wrong item.` : "",
+      "Pick the type’s code from the SolvBoQ list (Assembly Code in the type properties).", badCode);
+    const noCode = live.filter((e) => !e.AssemblyCode && !e.InPlace && !NON_MEASURED.has(e.Bic));
+    add("nocode", "eyes", "Billed types with no BoQ code",
+      noCode.length ? `This model uses BoQ codes, but “${nameOf(noCode[0])}” and ${plural2(new Set(noCode.map(typeKey)).size - 1, "other type")} have none, so they’re classified from their names and need a decision in Map to SANS.` : "",
+      "Give each type its code from the SolvBoQ standard (Assembly Code in the type properties). Use X.NOTBUILT or X.MECH for what isn’t billed here.", noCode);
+    const wrongCat = coded.filter((e) => !cardCatOk(cardOf(e), e));
+    add("codecat", "eyes", "BoQ code doesn’t suit the Revit category",
+      wrongCat.length ? `For example “${nameOf(wrongCat[0])}” is coded ${cardOf(wrongCat[0]).code} (${cardOf(wrongCat[0]).title.toLowerCase()}) but drawn as ${CARD_CAT[wrongCat[0].Bic] || wrongCat[0].Category}. Formwork, finishes and joints follow the category, so they’ll be worked out for the wrong thing.` : "",
+      "Remodel it in the category its card says, or correct the code.", wrongCat);
+  }
+
   const noMatSet = new Set(noMat);
-  const generic = live.filter((e) => e.Bic === "OST_GenericModel" && !e.InPlace && !noMatSet.has(e));
+  const generic = live.filter((e) => e.Bic === "OST_GenericModel" && !e.InPlace && !noMatSet.has(e) && !(typeof cardOf === "function" && cardOf(e)));
   add("generic", "eyes", "Elements modelled as Generic Models",
     "The category doesn’t say what these are, so classification relies on the family name alone.",
     "Confirm what each one is and classify it yourself.", generic);
@@ -3044,7 +3513,7 @@ function runChecks(input, opts = {}) {
   add("inplace", "eyes", "In-place families",
     "Their quantities are often fine, but they can’t be matched to rules reliably and tend to change between revisions.",
     "Check their quantities by hand, and recheck them on each new revision.", inPlace);
-  const noGrade = live.filter((e) => /concrete/i.test(e.Material || "") && !RX.grade.test(e.Material) && !grades[e.Material] && !roleIs(e, "blinding", "screed") && !/precast|grout|no.?fines/i.test(`${e.Material} ${e.Type}`) && !H().screed.test(e.Material) && !H().blinding.test(e.Material));
+  const noGrade = live.filter((e) => /concrete/i.test(e.Material || "") && !RX.grade.test(e.Material) && !materialGrade(e).grade && !grades[e.Material] && !roleIs(e, "blinding", "screed") && !/precast|grout|no.?fines/i.test(`${e.Material} ${e.Type}`) && !H().screed.test(e.Material) && !H().blinding.test(e.Material));
   // Reinforced concrete with no grade takes the standard grade for the kind of structure. Benching, aprons and the like
   // are often a lower grade (25 MPa in the Gravity Thickeners BoQ), so they still need a grade from the drawings.
   // What kind of structure: the model's title says it best ("Sludge Holding Tanks", "Boiler House"). Without a clear title,
@@ -3298,6 +3767,12 @@ function deriveItems(r, opts = {}) {
       } else if (["OST_StructuralColumns", "OST_StructuralFraming", "OST_Stairs"].includes(e.Bic)) r.concretePart[e.Id] = { wt: false, why: "Columns, beams and stairs don’t hold water." };
     }
   }
+  // A BoQ code that says watertight or not settles it, over the geometry (a building only gets the split where a code asks for it)
+  if (typeof cardOf === "function") for (const e of T("concrete")) {
+    const c = cardOf(e); if (!c || c.wt == null || !c.role || (!civil && !c.wt)) continue;
+    const as = c.role === "beam" ? "beams" : c.code.startsWith("G.SLAB.SUS") && !c.wt ? "suspended slabs" : c.code === "G.FTG" ? "footings" : undefined;
+    r.concretePart[e.Id] = { wt: c.wt, as, why: `BoQ code ${c.code} on its type.` };
+  }
   const area = (l) => l.reduce((s, e) => s + (e.Area || 0), 0);
   const items = [];
   const item = (o) => items.push(o);
@@ -3397,7 +3872,8 @@ const CAT_TO_BIC = { "floors": "OST_Floors", "walls": "OST_Walls", "structural f
   "areas": "OST_Areas", "spaces": "OST_MEPSpaces", "pipes": "OST_PipeCurves", "pipe fittings": "OST_PipeFitting", "railings": "OST_StairsRailing",
   "doors": "OST_Doors", "windows": "OST_Windows" };
 const FIELDS = ["Id", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
-  "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Openings", "Stair"];
+  "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Openings", "Stair",
+  "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails"];
 
 function normaliseRecord(raw) {
   const lower = {}; for (const [k, v] of Object.entries(raw || {})) lower[k.toLowerCase()] = v;
@@ -3405,7 +3881,7 @@ function normaliseRecord(raw) {
   r.Id = r.Id != null ? String(r.Id) : "";
   r.Category = r.Category || "";
   r.Bic = r.Bic || CAT_TO_BIC[r.Category.toLowerCase()] || "";
-  ["Family", "Type", "Level", "LevelMethod", "Material", "PhaseCreated", "DesignOption", "SystemName"].forEach((k) => (r[k] = r[k] == null ? "" : String(r[k])));
+  ["Family", "Type", "Level", "LevelMethod", "Material", "PhaseCreated", "DesignOption", "SystemName", "AssemblyCode", "Keynote", "TypeMark"].forEach((k) => (r[k] = r[k] == null ? "" : String(r[k])));
   ["Volume", "Area"].forEach((k) => (r[k] = Number(r[k]) || 0));
   ["LevelElevation", "Perimeter", "Thickness", "Length", "Diameter"].forEach((k) => (r[k] = r[k] == null || r[k] === "" || !isFinite(Number(r[k])) ? null : Number(r[k])));
   r.LevelInferred = !!r.LevelInferred; r.IsDemolished = !!r.IsDemolished; r.InPlace = !!r.InPlace;
@@ -3416,6 +3892,8 @@ function normaliseRecord(raw) {
   // From newer add-ins. An empty list means read and none found; null means this extract doesn't have it.
   const low = (o) => { const x = {}; for (const [k, v] of Object.entries(o || {})) x[k.toLowerCase()] = v; return x; };
   const num = (v) => (isFinite(Number(v)) ? Number(v) : 0);
+  r.MaterialDetails = Array.isArray(r.MaterialDetails) ? r.MaterialDetails.map(low).map((m) => ({ Name: String(m.name || ""), Class: String(m.class || ""), Description: String(m.description || ""),
+    Strength: m.strength == null || m.strength === "" || !isFinite(Number(m.strength)) ? null : Number(m.strength), Volume: num(m.volume), Area: num(m.area) })) : null;
   r.JoinedTo = Array.isArray(r.JoinedTo) ? r.JoinedTo.map(String) : null;
   r.Openings = Array.isArray(r.Openings) ? r.Openings.map(low).map((o) => ({ Id: String(o.id ?? ""), Kind: String(o.kind || "other"), W: num(o.w), H: num(o.h) })).filter((o) => o.W > 0 && o.H > 0)
     : "openings" in lower ? [] : null;
@@ -3910,6 +4388,9 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
   const mat = e.Material || "", n = nm(e), mm = mmOf(e);
   const it = (section, clause, heading, description, unit, ruleId, check) => ({ item: { section, clause, heading, description, unit }, ruleId, check: check || "" });
   // Clauses for no-fines (PSG 8.10), subsoil drains (PSLE 8.2.14) and cast-in items (PSG 8.13) are from the engineer's Gravity Thickeners BoQ
+  // A BoQ code on the type settles items its role alone can't (a cast-in item whose name doesn't say "puddle")
+  const card = typeof cardOf === "function" ? cardOf(e) : null;
+  if (card?.code === "G.CASTIN") return it("SANS 1200 G", "8.13", "Casting items in concrete", `Casting items in concrete: ${e.Type || e.Family}${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN");
   if (role === "noFines") return it("SANS 1200 G", "8.10", "No-fines concrete", `No-fines concrete layer, ${mm || "[thickness]"} mm thick`, "m³", "G-NOFINES");
   if (role === "subsoilDrain") return it("SANS 1200 LE", "8.2.14", "Subsoil drains", `Supply and install subsoil drains complete${mat ? ` (${mat})` : ""}`, "m", "LE-SUBSOIL",
     e.Bic === "OST_Floors" && !(e.Length > 0) ? "Modelled as a floor, so the length is taken as half its perimeter. Check it against the drawings." : "");
@@ -3917,13 +4398,14 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
     if (role === "blinding" || (!role && /blind/i.test(mat + n))) return it("SANS 1200 G", "8.4.2", "Blinding layer", `Class 15 MPa/19 mm concrete, ${mm || 75} mm thick under floors`, "m²", "G-BLIND");
     if (role === "screed" || (!role && /screed/i.test(mat + n))) return it("PD", "", "Screeds", `Cement screed to floors, ${mm || 50} mm thick`, "m²", "PD-SCREED");
     if (/precast/i.test(mat) && /kerb/.test(n)) return it("SANS 1200 MK", "", "Precast concrete kerbs", `${e.Type || "Kerb"}`, "m", "MK-KERB", e.Bic === "OST_GenericModel" ? "Modelled as a Generic Model, so the kerb type is read from its name." : "");
-    const grade = gradeOf(mat) || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
+    const mg = typeof materialGrade === "function" ? materialGrade(e) : { grade: gradeOf(mat) };
+    const grade = mg.grade || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
     // In a tank, his bill names watertight and non-watertight concrete separately (result.concretePart, from the engine)
-    const group = part?.as || concreteGroupLabel(e, role), tight = part && !unreinf ? (part.wt ? " (watertight)" : " (non-watertight)") : "";
+    const group = part?.as || card?.as || concreteGroupLabel(e, role), tight = part && !unreinf ? (part.wt ? " (watertight)" : " (non-watertight)") : "";
     const why = !mat ? "No material, so the grade is unknown and concrete is assumed from the element type."
       : !grade ? "The material doesn’t give a grade. Add it from the specification."
       : e.Bic === "OST_GenericModel" ? "Modelled as a Generic Model, so the element group is read from the family name." : "";
-    return it("SANS 1200 G", "8.4.3", "Strength concrete", `${unreinf ? "Unreinforced" : "Reinforced"} class ${grade || "[grade]"}/19 mm concrete${tight} in ${group}`, "m³", "G-STRENGTH", why);
+    return it("SANS 1200 G", "8.4.3", "Strength concrete", `${unreinf ? "Unreinforced" : "Reinforced"} class ${grade || "[grade]"}/${mg.stone || 19} mm concrete${tight} in ${group}`, "m³", "G-STRENGTH", why);
   }
   if (trade === "steel") {
     const what = e.Bic === "OST_StructuralColumns" ? "columns" : "beams and rafters";
@@ -3978,10 +4460,13 @@ function explainRule(g, result) {
   const roleWhy = role ? ` Taken as ${(ROLES[role.role]?.label || role.role).toLowerCase()}${role.reason ? `: ${role.reason.replace(/\.$/, "")}` : ""}.` : "";
   switch (g.ruleId) {
     case "G-STRENGTH": {
-      const grade = gradeOf(mat) ? `${gradeOf(mat)}, read from the material “${mat}”` : result.materialGrades?.[mat] ? `${result.materialGrades[mat]}, set for “${mat}” in your profile`
+      const mg = materialGrade(e), via = { name: "its name", description: "its description", strength: "its structural properties (compressive strength)" }[mg.source];
+      const grade = mg.grade ? `${mg.grade}, read from the material “${mat}” (${via})` : result.materialGrades?.[mat] ? `${result.materialGrades[mat]}, set for “${mat}” in your profile`
         : result.assumedGrade?.ids.has(e.Id) ? `${result.assumedGrade.grade}, the standard grade for a ${result.assumedGrade.structure === "civil" ? "water-retaining structure" : "building"}, because the material gives none` : "not known yet";
       out.push(`Rule: concrete elements are billed as strength concrete (SANS 1200 G 8.4.3) by Revit category and type.${roleWhy}`);
       out.push(`Grade: ${grade}.`);
+      if (mg.odd != null) out.push(`The material’s structural properties give ${mg.odd} MPa, which isn’t a standard grade (Revit’s stock concrete carries 27.6 MPa), so it isn’t used.`);
+      if (mg.stone) out.push(`Stone size: ${mg.stone} mm, from the material.`);
       out.push(/^Unreinforced/.test(it.description) ? "Unreinforced, because its role, type or material says so (benching, aprons, kerbs, chamfers, mass concrete)." : "Reinforced, because nothing in the type, material or role says it’s unreinforced.");
       if (part) out.push(`${part.wt ? "Watertight" : "Non-watertight"}: ${part.why.charAt(0).toLowerCase()}${part.why.slice(1)}`);
       else out.push(`Billed “in ${concreteGroupLabel(e, role?.role)}” from its Revit category (${cat}).`);
@@ -4040,7 +4525,8 @@ function buildGroups(result, decisions, learned) {
     const d = decisions[g.key];
     const otherBill = result.roles?.[e.Id]?.role === "mechElec" || ["OST_ElectricalEquipment", "OST_MechanicalEquipment", "OST_DuctCurves", "OST_DuctFitting", "OST_CableTray", "OST_Conduit"].includes(e.Bic) && !/ladder|step iron/i.test(`${e.Family} ${e.Type}`);
     if (excluded) { method = "excluded"; reason = (result.byElement[e.Id] || []).find((i) => i.severity === "excluded")?.title || "Left out of the BoQ"; }
-    else if (otherBill && !decisions[g.key] && !learned[g.key]) { method = "excluded"; reason = "Mechanical or electrical installation, which is priced in its own bill. Change it if this one belongs in the civil BoQ."; }
+    else if (otherBill && !decisions[g.key] && !learned[g.key]) { method = "excluded"; confirmed = typeof cardOf === "function" && cardOf(e)?.code === "X.MECH";
+      reason = confirmed ? "Coded X.MECH on its type: priced in the mechanical or electrical bill." : "Mechanical or electrical installation, which is priced in its own bill. Change it if this one belongs in the civil BoQ."; }
     else if (d) { ({ item, method, confirmed } = d); reason = d.reason || ""; confidence = d.confidence ?? null; }
     else if (learned[g.key]) { item = learned[g.key].item || learned[g.key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
     else {
@@ -4049,9 +4535,10 @@ function buildGroups(result, decisions, learned) {
       // pipework and gratings, which are often priced in the mechanical bill (his Gravity Thickeners bill has none)
       // A readiness flag that could change the quantity or stop it being billed (tier 1 or 2) also holds a rule match back
       const flag = g.elements.flatMap((x) => result.byElement[x.Id] || []).find((i) => i.tier <= 2 && i.severity !== "handled" && i.severity !== "excluded");
-      const look = !r || r.check ? "" : flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : g.elements.some((x) => x.InPlace) ? "An in-place family, drawn by hand in the model. Check what it is and that this item fits it."
+      const coded = typeof cardOf === "function" && g.elements.every((x) => cardOf(x) && cardOf(x).code === cardOf(e)?.code);
+      const look = !r || r.check ? "" : flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : coded ? "" : g.elements.some((x) => x.InPlace) ? "An in-place family, drawn by hand in the model. Check what it is and that this item fits it."
         : r.item.section === "SANS 1200 L" || r.ruleId === "H-GRATING" || r.ruleId === "G-CASTIN" ? "Pipework, fittings, puddle flanges and gratings are often priced in the mechanical bill. Confirm they belong in this one, or leave them out." : "";
-      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = r.check || look; }
+      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = r.check || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : ""); }
       else reason = "No rule matches this category, family and material.";
     }
     const unit = item ? item.unit : null;
@@ -5501,7 +5988,7 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: state.view === "master" || state.view === "claims" ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts() }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -5588,15 +6075,18 @@ function render() {
   $("viewConv").hidden = state.view !== "conv";
   $("viewClaims").hidden = state.view !== "claims";
   $("viewMaster").hidden = state.view !== "master";
+  $("viewStd").hidden = state.view !== "std";
+  $("navStd").setAttribute("aria-current", state.view === "std" ? "page" : "false");
   $("navReady").setAttribute("aria-current", state.view === "overview" || state.view === "detail" ? "page" : "false");
   $("navMap").setAttribute("aria-current", state.view === "map" ? "page" : "false");
   $("navMaster").setAttribute("aria-current", state.view === "master" ? "page" : "false");
   $("navClaims").setAttribute("aria-current", state.view === "claims" ? "page" : "false");
   $("btnConv").setAttribute("aria-current", state.view === "conv" ? "page" : "false");
-  $("pageTitle").textContent = { overview: "Readiness", detail: "Readiness", map: "Map to SANS", conv: "Conventions", claims: "Claims", master: "Master BoQ" }[state.view] || "Readiness";
+  $("pageTitle").textContent = { overview: "Readiness", detail: "Readiness", map: "Map to SANS", conv: "Conventions", claims: "Claims", master: "Master BoQ", std: "Standards" }[state.view] || "Readiness";
   // Claims works on certificates, not the model: no model switcher or fix list there. The master BoQ needs the model.
-  document.querySelector(".modelpick").hidden = false; $("btnGoFix").hidden = state.view === "claims" || state.view === "master";
+  document.querySelector(".modelpick").hidden = false; $("btnGoFix").hidden = ["claims", "master", "std"].includes(state.view);
   if (state.view === "claims") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderClaims(); }
+  if (state.view === "std") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderStandards(); }
   if (state.view === "master") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderMaster(); }
   // A model from Revit or a file goes by its title (the Revit project name is often cut short); a sample by its project
   $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model";
@@ -5801,7 +6291,7 @@ function gradePanel(iss) {
 }
 function roleControl(sel) {
   const r = state.result.roles[sel.Id], k = typeKey(sel);
-  const src = { profile: "set in your profile", geometry: "from geometry", material: "from its material", name: "from its name" };
+  const src = { profile: "set in your profile", code: "from its BoQ code", geometry: "from geometry", material: "from its material", name: "from its name" };
   return h("div", { style: "display:flex;flex-direction:column;gap:6px" },
     h("h3", { style: "margin:0;font-size:13px;font-weight:600" }, "What this type is"),
     h("div", { class: "sub" }, r ? `${ROLES[r.role] ? ROLES[r.role].label : r.role}, ${src[r.source] || r.source}${r.detail ? ": " + r.detail : ""}` : `Not recognised, so it’s counted as ${TRADE[state.result.tradeOfId[sel.Id]]?.label.toLowerCase() || "other items"}.`),
@@ -7678,6 +8168,145 @@ $("navMaster").addEventListener("click", goMaster);
 document.addEventListener("drop", (e) => { if (state.view !== "master") return; e.preventDefault(); document.body.classList.remove("dropping"); const f = e.dataTransfer?.files?.[0]; if (f) mbImport(f); });
 document.addEventListener("dragover", (e) => { if (state.view === "master") { e.preventDefault(); document.body.classList.add("dropping"); } });
 Store.onUser(() => { MB.saved = []; if (state && state.view === "master") mbList(); });
+
+// ----- Standards: the modelling standard as cards, the BoQ codes for Revit, and how much of his bills it covers -----
+// The cards are data (cards.js); this page only shows them. Print gives the card pack for the modeller.
+const STD = { q: "", group: "all" };
+
+// How much of a bill the cards cover: from a coded element, worked out from them, or never from the model.
+// With amounts (his Master BoQ), by value too.
+function stdCoverage(lines) {
+  const t = { card: 0, worked: 0, never: 0, value: { card: 0, worked: 0, never: 0 }, priced: false, n: lines.length };
+  for (const L of lines) {
+    const c = coverLine(L.description, L.unit, L.section), k = c.code ? "card" : c.worked ? "worked" : "never";
+    t[k]++; if (L.amount > 0) { t.value[k] += L.amount; t.priced = true; }
+  }
+  return t;
+}
+function stdCoverRow(name, t) {
+  const tot = t.value.card + t.value.worked + t.value.never, pct = (k) => (t.priced && tot ? Math.round((t.value[k] / tot) * 100) : Math.round((t[k] / t.n) * 100));
+  return h("div", { class: "stdcov" },
+    h("b", null, name), h("span", { class: "sub" }, `${plural(t.n, "line")}${t.priced ? `, ${money(tot)}` : ""}`),
+    h("div", { class: "stdbar", role: "img", "aria-label": `${pct("card")}% from coded elements, ${pct("worked")}% worked out from them, ${pct("never")}% never from the model` },
+      h("span", { class: "c", style: `width:${pct("card")}%` }), h("span", { class: "w", style: `width:${pct("worked")}%` }), h("span", { class: "n", style: `width:${pct("never")}%` })),
+    h("span", { class: "sub" }, `${pct("card") + pct("worked")}% from the model${t.priced ? " by value" : ""}: ${t.card} lines from coded elements, ${t.worked} worked out from them, ${t.never} never from the model`));
+}
+
+// This model against the standard: how many billed types carry a SolvBoQ code
+function stdModelState() {
+  const r = state.result; if (!r) return null;
+  const els = r.elements.filter((e) => r.status[e.Id] !== "excluded" && !NON_MEASURED.has(e.Bic));
+  const types = new Map(); for (const e of els) { const k = typeKey(e); if (!types.has(k)) types.set(k, e); }
+  const all = [...types.values()], coded = all.filter((e) => cardOf(e)), unknown = all.filter((e) => e.AssemblyCode && !cardOf(e));
+  return { types: all.length, coded: coded.length, unknown: unknown.length, read: els.some((e) => "AssemblyCode" in e && e.AssemblyCode !== undefined) };
+}
+
+function renderStandards() {
+  const v = $("viewStd");
+  const bills = typeof pastBills === "function" ? pastBills() : [];
+  const master = typeof MB !== "undefined" && MB.master ? MB.master : null;
+  const ms = stdModelState();
+  const q = STD.q.trim().toLowerCase();
+  const match = (c) => (STD.group === "all" || c.group === STD.group) && (!q || JSON.stringify(c).toLowerCase().includes(q));
+  const cards = CARDS.filter(match), worked = WORKED.filter(match);
+  const groups = CARD_SECTIONS.filter(([g]) => CARDS.some((c) => c.group === g) || WORKED.some((w) => w.group === g));
+
+  const search = h("input", { type: "search", placeholder: "Search the cards", value: STD.q, oninput: (e) => { STD.q = e.target.value; renderStdCards(); } });
+  const list = h("div", { class: "stdlist", id: "stdList" });
+  function renderStdCards() {
+    const q2 = STD.q.trim().toLowerCase(), m2 = (c) => (STD.group === "all" || c.group === STD.group) && (!q2 || JSON.stringify(c).toLowerCase().includes(q2));
+    const cs = CARDS.filter(m2), ws = WORKED.filter(m2);
+    list.replaceChildren(
+      ...groups.map(([g, sec, title]) => {
+        const here = cs.filter((c) => c.group === g), hw = ws.filter((w) => w.group === g);
+        if (!here.length && !hw.length) return null;
+        return h("section", { class: "stdsec" }, h("h3", null, `${sec || "Not billed"}${sec ? " " + title.charAt(0).toLowerCase() + title.slice(1) : ""}`),
+          ...here.map(stdCard), ...hw.map(stdWorked));
+      }),
+      cs.length || ws.length ? null : h("p", { class: "sub" }, "No card matches."));
+  }
+
+  v.replaceChildren(
+    h("section", { class: "card stdhead" },
+      h("div", { class: "stdintro" },
+        h("h2", null, "Modelling standard"),
+        h("p", null, "One card per thing you model. Give each Revit type its BoQ code (the type’s ", h("b", null, "Assembly Code"), "), follow its card, and SolvBoQ bills it with no decisions: the item, the grade, and what’s worked out from it (formwork, finishes, joints, reinforcement)."),
+        h("p", { class: "sub" }, "Draft: the codes go into models, so confirm them with the engineer before the first model uses them. Clause numbers are shown only where confirmed from his bills or the SANS 1200 schedules.")),
+      h("div", { class: "tools" },
+        h("button", { type: "button", class: "btn dark", onclick: () => saveFile("SolvBoQ Assembly Codes.txt", assemblyCodeFile()), title: "In Revit: Manage › Additional Settings › Assembly Code, then load this file" }, "Download the codes for Revit"),
+        h("button", { type: "button", class: "btn", onclick: stdPrint }, "Print the cards")),
+      h("p", { class: "sub" }, "In Revit: Manage › Additional Settings › Assembly Code › load the file. Then, in each type’s properties, Assembly Code › pick the SolvBoQ code."),
+      h("div", { class: "stdcovs" },
+        ms ? h("div", { class: "stdcov" }, h("b", null, `This model: ${cleanName(state.name)}`),
+          h("span", { class: "sub" }, ms.coded ? `${ms.coded} of ${plural(ms.types, "billed type")} carry a SolvBoQ code${ms.unknown ? `; ${ms.unknown} carry a code SolvBoQ doesn’t know` : ""}.` : "No SolvBoQ codes yet. Codes are read by the add-in from 5 Nov 2026 on; older extracts have none.")) : null,
+        master ? stdCoverRow(`Your BoQ: ${master.name}`, stdCoverage(master.lines.map((L) => ({ description: [L.clause, L.heading, L.description].filter(Boolean).join(" "), unit: L.unit, section: L.section, amount: Number(hisAmount(L, master)) || 0 })))) : null,
+        ...bills.map((b) => stdCoverRow(`Past bill: ${b.name}`, stdCoverage(b.items || []))),
+        !master && !bills.length ? h("p", { class: "sub" }, "Load your past bills (Conventions › Claude) or a BoQ in Master BoQ to see how much of it the cards cover.") : null)),
+    h("section", { class: "card stdbody" },
+      h("div", { class: "maphead" },
+        h("div", { class: "seg", role: "group", "aria-label": "Section" }, [["all", "All"], ...groups.map(([g, sec]) => [g, g === "X" ? "Not billed" : sec.replace("SANS 1200 ", "")])].map(([k, l]) =>
+          h("button", { type: "button", "aria-pressed": String(STD.group === k), onclick: () => { STD.group = k; renderStandards(); } }, l))),
+        h("div", { class: "search" }, h("label", { class: "sr", for: "stdSearch" }, "Search the cards"), svg(ICON.search), (search.id = "stdSearch", search))),
+      list),
+    h("section", { class: "card stdbody stdmats stdlive" },
+      h("div", { class: "stdintro" }, h("h2", null, "Checking as you model"),
+        h("p", { class: "sub" }, "Three layers, from instant to thorough. Nothing here changes the model.")),
+      h("ol", { class: "stdsteps" },
+        h("li", null, h("b", null, "Live check (the add-in). "), "On the SolvBoQ tab, “Live check” is on by default. Once the model uses SolvBoQ codes, Revit warns as you place an element or change its type: no BoQ code, a code that doesn’t suit the category (a beam drawn as a wall), concrete whose material gives no grade, an in-place family in a billed category. The rules are the cards’ own."),
+        h("li", null, h("b", null, "The BoQ check view (set up once in the template). "), "A 3D view that colours what isn’t ready:",
+          h("ul", null,
+            h("li", null, "View › 3D View, duplicate it and name it “SolvBoQ check”."),
+            h("li", null, "Visibility/Graphics › Filters › Edit/New › new filter “SolvBoQ – no BoQ code”: categories ", CARDS_CATS_TEXT(), "; rule ", h("b", null, "Assembly Code › has no value"), ". Add it to the view with a solid red surface pattern."),
+            h("li", null, "A second filter “SolvBoQ – not billed”: the same categories, rule ", h("b", null, "Assembly Code › begins with › X."), ", shown halftone, so what’s left out is visible at a glance."),
+            h("li", null, "Save the view in the template (or File › Save as › Template) so every new model has it."))),
+        h("li", null, h("b", null, "The full check (the BoQ readiness button). "), "At each milestone (foundations, walls, slabs, roof), run it: overlaps, double counts, unsupported slabs, the ground level and every card rule across the whole model, with the elements to fix.")),
+      h("p", { class: "sub" }, "The live check and the view filters haven’t been tried in Revit 2025 yet: try them on the first model before relying on them.")),
+    h("section", { class: "card stdbody stdmats" },
+      h("div", { class: "stdintro" }, h("h2", null, "Materials for the template"),
+        h("p", { class: "sub" }, "SolvBoQ reads a concrete grade from the material’s name, then its description, then the compressive strength in its structural properties (standard grades only: Revit’s stock concrete carries 27.6 MPa). Set all three the same. The stone size is read from “…/19 mm”.")),
+      h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Material name"), h("th", null, "Class"), h("th", null, "Compressive strength"), h("th", null, "Use for"))),
+        h("tbody", null, STD_MATERIALS.map((m) => h("tr", null, h("td", null, h("b", null, m.name)), h("td", null, m.cls), h("td", null, m.strength ? m.strength + " MPa" : "—"), h("td", null, m.use)))))));
+  renderStdCards();
+}
+
+const CARDS_CATS_TEXT = () => [...new Set(CARDS.flatMap((c) => c.cats).filter((c) => !["OST_Reveals", "OST_Cornices"].includes(c)))].map((c) => CARD_CAT[c] || c).sort().join(", ");
+const stdChecks = (keys) => keys.map((k) => ({ codecat: "code suits the category", grade: "grade", dup: "duplicates", twins: "twins", overlapwarn: "overlaps", rcconflict: "reinforced or not", unsupported: "supports", steelgrade: "steel grade", steelsize: "section size", steelzero: "volume", metalmat: "material", vague: "material named", inplace: "not in-place", roofarea: "roof area", flashnolen: "length", pipedia: "diameter", pipeclass: "pipe class", pipelen: "length", fitdia: "size", opensize: "size" }[k] || k));
+function stdBills(rows) {
+  return h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Billed as"), h("th", null, "Unit"), h("th", null, "Clause"))),
+    h("tbody", null, rows.map(([what, unit, clause]) => h("tr", null, h("td", null, what), h("td", null, unit), h("td", null, clause || "—")))));
+}
+function stdCard(c) {
+  return h("details", { class: "stdcard", id: "card-" + c.code },
+    h("summary", null, h("code", { class: "stdcode" }, c.code), h("b", null, c.title), h("span", { class: "sub" }, c.cats.map((x) => CARD_CAT[x] || x).join(" · ") || "Any category")),
+    h("div", { class: "stdgrid" },
+      h("div", null,
+        h("span", { class: "edlabel" }, "Model it"),
+        h("ul", null, c.model.map((x) => h("li", null, x))),
+        c.type ? h("p", null, h("span", { class: "sub" }, "Type name, for example: "), h("b", null, c.type)) : null,
+        c.material ? h("p", null, c.material) : null,
+        c.wt != null && c.role ? h("p", { class: "sub" }, WT_NOTE) : null),
+      h("div", null,
+        h("span", { class: "edlabel" }, "What it bills"),
+        stdBills(c.bills),
+        c.avoid.length ? [h("span", { class: "edlabel" }, "Seen in real models"), h("ul", { class: "stdavoid" }, c.avoid.map(([x, seen]) => h("li", null, x, seen ? h("span", { class: "sub" }, ` ${seen}`) : null)))] : null,
+        c.checks.length ? h("p", { class: "sub" }, "SolvBoQ checks: ", stdChecks(c.checks).join(", "), ".") : null,
+        c.his.length ? h("p", { class: "sub" }, "In his bills: ", c.his.join("; ")) : null)));
+}
+function stdWorked(w) {
+  return h("details", { class: "stdcard worked", id: "card-" + w.id },
+    h("summary", null, h("code", { class: "stdcode none" }, "worked out"), h("b", null, w.title), h("span", { class: "sub" }, w.from.length ? `from ${w.from.join(", ")}` : "")),
+    h("div", { class: "stdgrid" },
+      h("div", null, h("span", { class: "edlabel" }, "The model must get right"), h("ul", null, w.needs.map((x) => h("li", null, x)))),
+      h("div", null, h("span", { class: "edlabel" }, "What SolvBoQ works out"), stdBills(w.bills), w.his.length ? h("p", { class: "sub" }, w.his.join("; ")) : null)));
+}
+// Print opens every card first, then puts them back as they were
+function stdPrint() {
+  const shut = [...document.querySelectorAll("#stdList details:not([open])")];
+  shut.forEach((d) => (d.open = true)); window.print(); shut.forEach((d) => (d.open = false));
+}
+
+function goStandards() { state.view = "std"; render(); window.scrollTo(0, 0); }
+$("navStd").addEventListener("click", goStandards);
 
 // ===== Projects in the header: choose, start, join with a code; the project's saved models, by date =====
 // A project holds its models, master BoQs and certificates. The project list and the current project are CL.projects and
