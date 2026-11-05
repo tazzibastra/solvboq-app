@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T17:07:59Z">
+<meta name="solvboq-build" content="2026-11-05T17:32:28Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3202,16 +3202,18 @@ function cardRules() {
   };
 }
 
-// The Revit Assembly Code file (Manage › Additional Settings › Assembly Code › load it): tab-separated code, description,
-// level, the same layout as Revit's UniformatClassifications.txt. ASCII only (Revit reads it in the system code page).
-// No category column yet: a code allowed in several categories can't be limited to one, so every code shows everywhere.
+// The Revit Assembly Code file (Manage › Additional Settings › Assembly Code › load it). Revit's own sample
+// (Classification_Taxonomy.txt) gives the layout: number [tab] title [tab] level [tab] Revit category ID when applies, with
+// # comment lines. Four columns on every line: the first version had three, and Revit showed an empty list (5 Nov 2026).
+// The category column is left empty, so every code shows on every category. ASCII only, CRLF.
 function assemblyCodeFile() {
   const ascii = (s) => String(s).replace(/[’‘]/g, "'").replace(/[“”]/g, '"').replace(/·/g, "-").replace(/³/g, "3").replace(/²/g, "2").replace(/[^\x20-\x7E]/g, "");
-  const rows = [];
+  const rows = [["#SolvBoQ BoQ codes for the Assembly Code field. Load with Manage > Additional Settings > Assembly Code."],
+    ["#Code[tab]Title[tab]Level[tab]Revit category ID (empty: every category)"]];
   for (const [g, , title] of CARD_SECTIONS) {
     const cards = CARDS.filter((c) => c.group === g); if (!cards.length) continue;
-    rows.push([g, ascii(`SolvBoQ ${g === "X" ? "" : g + " "}${title}`).replace(/\s+/g, " "), 1]);
-    for (const c of cards) rows.push([c.code, ascii(c.title), 2]);
+    rows.push([g, ascii(`SolvBoQ ${g === "X" ? "" : g + " "}${title}`).replace(/\s+/g, " "), 1, ""]);
+    for (const c of cards) rows.push([c.code, ascii(c.title), 2, ""]);
   }
   return rows.map((r) => r.join("\t")).join("\r\n") + "\r\n";
 }
