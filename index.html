@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-06T15:02:15Z">
+<meta name="solvboq-build" content="2026-11-06T19:01:27Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4555,7 +4555,7 @@ function inferLines(r, ctx) {
   };
   const typeName = (e) => e.Type || e.Family || e.Category;
   const height = (e) => (e.Box ? e.Box[5] - e.Box[2] : 0);
-  const dims = (e) => { const m = `${e.Type} ${e.Family}`.match(/(\d{2,4})\s*[x×]\s*(\d{2,4})/i); return m ? [+m[1] / 1000, +m[2] / 1000] : null; };
+  const dims = (e) => { const m = `${e.Type} ${e.Family}`.match(/(\d{2,4})\s*(?:mm)?\s*(?:\([a-z]\))?\s*[x×]\s*(\d{2,4})/i); return m ? [+m[1] / 1000, +m[2] / 1000] : null; };
   const fw = (rough) => rough ? { clause: "8.2.1", heading: "Rough formwork" } : { clause: "8.2.2", heading: "Smooth formwork" };
   const item = (rough, description) => ({ section: "SANS 1200 G", ...fw(rough), description, unit: "m²" });
   // Faces below the top of the main ground-bearing floor (the largest one) are taken as rough, because they won't be seen;
@@ -4611,22 +4611,40 @@ function inferLines(r, ctx) {
     add(`fwcols|${typeKey(e)}`, item(false, `Vertical formwork to sides of columns (${typeName(e)})`),
       "Inferred: column perimeter × height, with the section size read from the type name.", e, per * h, d ? "" : "The type name gives no section size, so the column is taken as square. Check its size on the drawings.");
   }
-  // Concrete beams: two sides and the soffit
+  // Concrete beams: two sides and the soffit. The sides only below the slab the beam carries (a beam modelled with its top level
+  // with the slab's top is formed only under the slab), and along its clear length: the length between supports, from its
+  // volume, which Revit cuts where it joins the walls (his valve chamber beam: 10.0 m clear, 10.3 m long)
+  const slabOver = (p) => p.Box && suspended.find((s) => s !== p && conc.includes(s) && s.Box && s.Box[2] > p.Box[2] + 0.05 && s.Box[2] <= p.Box[5] + 0.05 && p.Box[5] <= s.Box[5] + 0.05
+    && p.Box[0] >= s.Box[0] - 0.05 && p.Box[1] >= s.Box[1] - 0.05 && p.Box[3] <= s.Box[3] + 0.05 && p.Box[4] <= s.Box[4] + 0.05);
+  const beamGeom = (e) => {
+    const d = dims(e); if (!d || !e.Box) return null;
+    const [b, hgt] = d[0] < d[1] ? d : [d[1], d[0]], s = slabOver(e), below = s ? Math.min(hgt, s.Box[2] - e.Box[2]) : hgt;
+    const long = e.Length > 0 ? e.Length : Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]);
+    // Not cut by the slab: volume over the full section; cut by it: volume over the section below the slab
+    const full = e.Volume / (b * hgt), cut = e.Volume / (b * below);
+    const len = !(e.Volume > 0) ? long : Math.min(long || Infinity, full >= 0.9 * long || !s ? full : cut);
+    return { b, hgt, below, len, slab: s };
+  };
   for (const e of conc.filter((e) => e.Bic === "OST_StructuralFraming")) {
-    const d = dims(e), len = e.Length > 0 ? e.Length : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
-    if (!d) { add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, e.Area || 0,
+    const d = dims(e), g = beamGeom(e), len = g ? g.len : e.Length > 0 ? e.Length : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
+    if (!g) { add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, e.Area || 0,
       "The type name gives no section size, so the beam’s surface area as modelled is used. Check it on the drawings."); continue; }
-    const [b, hgt] = d[0] < d[1] ? d : [d[1], d[0]];
-    add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, (2 * hgt + b) * len);
+    const { b, below } = g;
+    add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), `Inferred: two sides and the soffit of each beam, along its clear length${g.slab && below < g.hgt - 0.01 ? ", the sides below the slab only" : ""}.`, e, (2 * below + b) * len);
   }
-  // Soffits of suspended slabs. A manhole cover slab sits on the wall tops, so that ring isn’t formed and is deducted. Elsewhere the
-  // full soffit, as his GT take-off measures it: the bridge platform cast with its beams was billed at its whole area (58.49 m²).
-  const props = !ctx.manhole ? [] : live.filter((p) => p.Box && ["OST_Walls", "OST_StructuralColumns"].includes(p.Bic) && p.Volume > 0);
+  // Soffits of suspended slabs, less the plan area of the walls, columns and beams it bears on (their tops at its underside):
+  // those aren't formed. His rule, from his note on the valve chamber (6 Nov 2026): “the area of the cover slab less the top
+  // surface areas of the walls and of the beams” (97.24 m², SolvBoQ 97.20). It replaces the manhole-only deduction. A beam’s
+  // own soffit is billed with the beam, so nothing is lost. Not a wall that stands on nothing and spans as a beam (GT’s bridge
+  // beams are 400 RC Wall elements): wall formwork measures only its sides, so the slab soffit over it stands for its soffit,
+  // and his GT take-off billed that platform soffit in full (58.49 m²).
+  const props = live.filter((p) => p.Box && ["OST_Walls", "OST_StructuralColumns", "OST_StructuralFraming"].includes(p.Bic) && p.Volume > 0 && conc.includes(p) && !(p.Bic === "OST_Walls" && r.concretePart?.[p.Id]?.as === "beams"));
   for (const e of suspended.filter((e) => conc.includes(e))) {
-    const under = e.Box ? props.filter((p) => p !== e && Math.abs(p.Box[5] - e.Box[2]) <= 0.05 && p.Box[0] >= e.Box[0] - 0.05 && p.Box[1] >= e.Box[1] - 0.05 && p.Box[3] <= e.Box[3] + 0.05 && p.Box[4] <= e.Box[4] + 0.05) : [];
-    const bearing = under.reduce((s, p) => s + p.Volume / Math.max(p.Box[5] - p.Box[2], 0.01), 0);
+    const under = e.Box ? props.filter((p) => p !== e && p.Box[5] >= e.Box[2] - 0.05 && p.Box[5] <= e.Box[5] + 0.05 && p.Box[2] < e.Box[2] - 0.05 && p.Box[0] >= e.Box[0] - 0.05 && p.Box[1] >= e.Box[1] - 0.05 && p.Box[3] <= e.Box[3] + 0.05 && p.Box[4] <= e.Box[4] + 0.05) : [];
+    const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], e.Box[2]) - p.Box[2], 0.01); };
+    const bearing = under.reduce((s, p) => s + plan(p), 0);
     add(`fwsoffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of suspended slabs (${typeName(e)})`),
-      `Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it)${bearing > 0 ? ", less the tops of the walls and columns it bears on" : ""}. Sloping soffits aren’t told apart from flat ones.`, e, Math.max(0, (e.Area || 0) - bearing));
+      `Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it)${bearing > 0 ? ", less the tops of the walls, columns and beams it bears on" : ""}. Sloping soffits aren’t told apart from flat ones.`, e, Math.max(0, (e.Area || 0) - bearing));
   }
   // Edges of slabs and foundations: only the outer edge, and only where nothing is cast against it at the same height
   const solid = conc.filter((e) => e.Box && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls"].includes(e.Bic));
