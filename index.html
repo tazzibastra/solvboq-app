@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-06T19:01:27Z">
+<meta name="solvboq-build" content="2026-11-06T19:38:30Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4390,7 +4390,7 @@ function deriveItems(r, opts = {}) {
   fwItem("fwsoffit", "Formwork to soffits of suspended slabs", "fwsoffit", hasElev || withBoxes ? "Underside of each suspended slab." : "Needs level heights to tell which slabs are suspended.");
   fwItem("fwwalls", "Formwork to concrete walls", "fwwalls", "Both faces of each concrete wall, rough below the ground-bearing floor and smooth above it.");
   fwItem("fwcols", "Formwork to columns", "fwcols", "Perimeter × height, from the section size in the type name.");
-  fwItem("fwbeams", "Formwork to concrete beams", "fwbeams", "Two sides and the soffit, from the section size in the type name.");
+  fwItem("fwbeams", "Formwork to concrete beams", "fwbeams", "Sides and soffits of beams as separate items, from the section size in the type name.");
   if (inferred.notMeasured.length) item({ key: "fwother", label: "Formwork to stairs and in-place concrete", ref: "1200 G 8.2", unit: "m²", qty: null, status: "none",
     note: `${plural2(inferred.notMeasured.length, "stair or in-place element")} (${fmt1(inferred.notMeasured.reduce((s, e) => s + (e.Volume || 0), 0))} m³) can’t be measured for formwork from the model. Measure it from the drawings.` });
   const rebarT = total("rebar");
@@ -4500,7 +4500,34 @@ function normaliseRecord(raw) {
 function recordsFromJSON(data) {
   const list = Array.isArray(data) ? data : data && Array.isArray(data.elements) ? data.elements : null;
   if (!list) throw new Error("Expected a list of element records, or a report saved by the add-in.");
-  return list.map(normaliseRecord).filter((r) => r.Id || r.Category);
+  const recs = list.map(normaliseRecord).filter((r) => r.Id || r.Category);
+  // Linework and labels from views and sheets (his joint layout), carried with the records; null in older extracts
+  Object.defineProperty(recs, "annotations", { value: data && !Array.isArray(data) && data.annotations && typeof data.annotations === "object" ? data.annotations : null, enumerable: false });
+  return recs;
+}
+
+// His joint layout as drawn: lines in views or on sheets, each joint labelled A, B… nearby. Each short label (“A”, “Joint A”,
+// a mark symbol carrying “A”) claims the nearest line in its view, within about 30 mm on paper; lines are also totalled by
+// line style. Read to see his layout and calibrate the joint rules on it; not yet used for a quantity.
+function jointLayout(ann) {
+  if (!ann || !Array.isArray(ann.Lines ?? ann.lines)) return null;
+  const g = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)];
+  const lines = g(ann, "Lines") || [], labels = g(ann, "Labels") || [], views = new Map((g(ann, "Views") || []).map((v) => [String(g(v, "Id")), v]));
+  const mark = (t) => { const x = String(t || "").split(" | ").map((p) => p.trim()); for (const p of x.reverse()) { const m = p.match(/^(?:joint|jnt|type)?\s*([A-Z]{1,2}\d?)$/i); if (m) return m[1].toUpperCase(); } return null; };
+  const dist = (p, l) => { const [x1, y1, , x2, y2] = g(l, "Points"), dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((p[0] - x1) * dx + (p[1] - y1) * dy) / L2)) : 0; return Math.hypot(p[0] - x1 - t * dx, p[1] - y1 - t * dy); };
+  const byLabel = {}, byStyle = {}, claimed = new Set();
+  for (const l of lines) { const st = g(l, "Style") || "(no style)"; byStyle[st] = byStyle[st] || { length: 0, count: 0 }; byStyle[st].length += g(l, "Length") || 0; byStyle[st].count++; }
+  for (const lb of labels) {
+    const m = mark(g(lb, "Text")), at = g(lb, "At"); if (!m || !at) continue;
+    const vid = String(g(lb, "View")), v = views.get(vid), paper = /sheet/i.test(String(g(v, "Kind") || ""));
+    const near = paper ? 0.03 : Math.max(0.5, 0.03 * (g(v, "Scale") || 50));
+    let best = null, bd = Infinity;
+    for (const l of lines) if (String(g(l, "View")) === vid && g(l, "Points")) { const d = dist(at, l); if (d < bd) { bd = d; best = l; } }
+    if (!best || bd > near) { (byLabel[m] = byLabel[m] || { length: 0, lines: [], loose: 0 }).loose++; continue; }
+    const e = (byLabel[m] = byLabel[m] || { length: 0, lines: [], loose: 0 });
+    if (!claimed.has(best)) { claimed.add(best); e.length += g(best, "Length") || 0; e.lines.push(g(best, "Id")); }
+  }
+  return { lines: lines.length, labels: labels.length, views: [...views.values()].map((v) => g(v, "Sheet") || g(v, "Name")), byLabel, byStyle };
 }
 // Older CSV extracts: one row per element per material. Combine into one record per element.
 function recordsFromCSVRows(rows) {
@@ -4629,8 +4656,11 @@ function inferLines(r, ctx) {
     const d = dims(e), g = beamGeom(e), len = g ? g.len : e.Length > 0 ? e.Length : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
     if (!g) { add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), "Inferred: two sides and the soffit of each beam, along its length.", e, e.Area || 0,
       "The type name gives no section size, so the beam’s surface area as modelled is used. Check it on the drawings."); continue; }
+    // His bills measure them apart (his note on the valve chamber, 6 Nov 2026): vertical formwork to the sides, and horizontal
+    // formwork to the soffits of beams as an item of its own
     const { b, below } = g;
-    add(`fwbeams|${typeKey(e)}`, item(false, `Formwork to sides and soffits of beams (${typeName(e)})`), `Inferred: two sides and the soffit of each beam, along its clear length${g.slab && below < g.hgt - 0.01 ? ", the sides below the slab only" : ""}.`, e, (2 * below + b) * len);
+    add(`fwbeams|sides|${typeKey(e)}`, item(false, `Vertical formwork to sides of beams (${typeName(e)})`), `Inferred: both sides of each beam along its clear length${g.slab && below < g.hgt - 0.01 ? ", below the slab only" : ""}.`, e, 2 * below * g.len);
+    add(`fwbeams|soffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of beams (${typeName(e)})`), "Inferred: the beam’s width along its clear length.", e, b * g.len);
   }
   // Soffits of suspended slabs, less the plan area of the walls, columns and beams it bears on (their tops at its underside):
   // those aren't formed. His rule, from his note on the valve chamber (6 Nov 2026): “the area of the cover slab less the top
@@ -7745,6 +7775,7 @@ function editorFor(L, lines) {
     h("span", { class: "edlabel" }, "Where it comes from"),
     h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
     ...reasons.map((r) => h("p", { class: "edtext" }, r)),
+    /joint/i.test(L.description) ? jointLayoutNote() : null,
     L.groups.some((g) => g.issues.length) && L.status !== "flag" ? h("p", { class: "edtext warn" }, "Readiness: " + [...new Set(L.groups.flatMap((g) => g.issues))].slice(0, 3).join("; ")) : null,
     els.length ? h("button", { type: "button", class: "link accent", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "View"} ${plural(els.length, "model element")}`) : h("span", { class: "edsub" }, "No model elements behind this line."),
     state.showEls && els.length ? h("div", { class: "edels" },
@@ -7820,6 +7851,16 @@ function boqRows() {
       element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") });
   }
   return out;
+}
+
+// What SolvBoQ read of his joint layout (lines and labels on his sheets), shown on joint lines so he can see it was found
+function jointLayoutNote() {
+  const j = jointLayout(state.records?.annotations);
+  if (!j) return h("p", { class: "edtext edsub" }, "Your joint layout isn’t in this model data: it comes with the next run of BoQ readiness from Revit (add-in of 6 Nov 2026 or later).");
+  const marks = Object.entries(j.byLabel).sort(([a], [b]) => a.localeCompare(b));
+  return h("p", { class: "edtext edsub" }, `Your joint layout: ${plural(j.lines, "line")} and ${plural(j.labels, "label")} read from ${j.views.length ? j.views.slice(0, 3).join(", ") : "the model"}. `,
+    marks.length ? "Joints found by their label: " + marks.map(([m, x]) => `${m} ${x.length.toFixed(2)} m (${plural(x.lines.length, "line")}${x.loose ? `, ${x.loose} label${x.loose === 1 ? "" : "s"} with no line near` : ""})`).join("; ") + ". " : "No labels like A or B found next to a line. ",
+    "Not used for this figure yet: we’re checking it against your measure first.");
 }
 
 // ===== Readiness: a verdict, three steps, and the current step's checks (from the Claude Design redesign) =====
