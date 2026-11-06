@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-05T18:24:28Z">
+<meta name="solvboq-build" content="2026-11-06T10:28:35Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -723,12 +723,53 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .stdlabels .stdtable td,.stdlabels .stdtable th{white-space:normal}
 @media (max-width:640px){.stdlabels .stdtable td,.stdlabels .stdtable th{overflow-wrap:anywhere}}
 .stdlabels,.stdmats{overflow-x:auto}
+
+/* His notes on bill lines (notes.js) */
+.lnbox.has{background:var(--accent-s);border-radius:16px;padding:12px 14px}
+.lnwhy{width:100%;box-sizing:border-box;min-height:70px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);color:inherit;font:inherit;font-size:13px;resize:vertical}
+.lnwhy:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-s)}
+.lnkinds{display:flex;flex-wrap:wrap;gap:6px}
+.lnkinds button{border:1px solid var(--line);background:var(--card);border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer;color:inherit}
+.lnkinds button[aria-checked="true"]{border-color:var(--accent);background:var(--accent);color:#fff}
+.lnreason{white-space:pre-wrap}
+.lnreply{border-left:3px solid var(--accent);padding-left:8px}
+.lnmark{display:inline-flex;margin-left:6px;vertical-align:middle}
+.lnlink{display:flex;justify-content:space-between;gap:10px;width:100%;border:0;background:none;padding:4px 0;text-align:left;font:inherit;font-size:13px;color:inherit;cursor:pointer}
+.lnlink:hover span{text-decoration:underline}
+.lnover{display:flex;flex-direction:column;gap:6px}
+
+/* Project inputs (inputsview.js) */
+.pigrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:20px}
+.pifield{display:flex;flex-direction:column;gap:8px;min-width:0}
+.pichoice{display:flex;gap:10px;align-items:flex-start;font-size:13px;line-height:1.45;cursor:pointer}
+.pichoice input{margin-top:3px;flex:none}
+.pichoice > span{display:flex;flex-direction:column;gap:2px}
+.pitag{display:inline-block;width:max-content;font-size:11px;font-weight:600;padding:0 8px;border-radius:999px;background:var(--chip);color:var(--muted)}
+.piinput{min-height:34px;width:100%;box-sizing:border-box;padding:0 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;font-size:13px}
+.piinput.sm{width:110px;flex:none}
+.piinput:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-s)}
+.pirow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.pirow .piinput{flex:1;min-width:140px}
+.pisrc{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:2px 0 8px}
+.pisrc select{min-height:34px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:13px;padding:0 8px}
+.pisrc .piinput{flex:1;min-width:140px}.pisrc .piinput.sm{flex:none}
+.pichecks{display:flex;flex-direction:column;gap:4px;max-height:180px;overflow:auto}
+.pihole{border:1px solid var(--rule);border-radius:12px;padding:10px 12px;margin:6px 0;display:flex;flex-direction:column;gap:6px;overflow-x:auto}
+.pihole .stdtable td:nth-child(2),.pihole .stdtable td:nth-child(3){white-space:normal}
+.pihole .stdtable select{min-height:32px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:12px}
+.stdmats > .stdcard{margin:10px 0}
+/* The information each card needs (Standards) */
+.stdneeds td:nth-child(2),.stdneeds td:nth-child(3){white-space:normal}
+.stduni{font:500 11px/1.6 ui-monospace,Consolas,monospace;color:var(--muted)}
+.stdgrid.one{grid-template-columns:minmax(0,1fr);padding-top:0}.stdgrid.one:empty{display:none}
+#mInputs:empty{display:none}#mInputs{padding:0 28px 12px}
 </style>
 </head>
 <body>
 <div class="shell">
 <nav class="rail" aria-label="SolvBoQ">
   <span class="brand" title="SolvBoQ"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14V8h3v6M6.5 14V3h3v11M11 14v-4h3v4" stroke="#D4F23A" stroke-width="1.6" stroke-linejoin="round"></path></svg></span>
+  <button type="button" class="ritem" id="navProj"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path><path d="M8 13h8M8 16h5"></path></svg></span>Project</button>
   <button type="button" class="ritem" id="navReady"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16a8 8 0 1116 0"></path><path d="M12 16l4-5"></path></svg></span>Readiness</button>
   <button type="button" class="ritem" id="navMap"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg></span>Map to SANS</button>
   <button type="button" class="ritem" id="navMaster"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M3 14h18M9 9v11M15 9v11"></path></svg></span>Master BoQ</button>
@@ -839,6 +880,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
         <button class="btn sm" id="btnBoqCopy" type="button">Copy</button>
         <button class="btn sm" id="btnBoqCsv" type="button" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg>Download</button>
       </div>
+      <div id="mInputs"></div>
       <div class="mtree">
         <div class="mrow mth" aria-hidden="true"><span>SANS item</span><span>Unit</span><span class="r">Quantity</span><span>Status</span></div>
         <div id="mTree"></div>
@@ -856,6 +898,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 
   <!-- ===== Standards: the modelling standard, cards and BoQ codes ===== -->
   <div id="viewStd" hidden class="stdwrap"></div>
+  <div id="viewProj" hidden class="stdwrap"></div>
 
   <!-- ===== Conventions ===== -->
   <div id="viewConv" hidden style="display:flex;flex-direction:column;gap:24px"></div>
@@ -3152,6 +3195,145 @@ const WORKED = [
     bills: [["Kept as his figures in the Master BoQ", "", ""]], his: ["GT: Watertightness testing"] },
 ];
 
+// ===== What the bill needs, who supplies it, and by when =====
+// The level of information need (ISO 7817-1:2024, with ISO 19650): for each card, each item of information the BoQ needs,
+// whether it's geometric, alphanumeric (a field or a name) or a document, who supplies it, by which stage, where it goes,
+// and what SolvBoQ does while it's missing. The purpose is always the bill (and then Claims). Research and the standards
+// behind this: docs/research/information-structure.md.
+const STAGES = [["design", "Design"], ["tender", "Tender"], ["construction", "Construction"]];
+const STAGE_RANK = { design: 1, tender: 2, construction: 3 };
+const ACTORS = { modeller: "Modeller, in Revit", engineer: "Engineer, in SolvBoQ", geotech: "Engineer, from the geotechnical report", designer: "Engineer, from the design", client: "Client’s documents" };
+const NEED_KINDS = { geometric: "Geometry", alphanumeric: "Field or name", document: "Document" };
+const IF_MISSING = {
+  assumed: "Assumed, and marked as assumed",
+  provisional: "Billed as provisional",
+  flagged: "Flagged before it’s billed",
+  decide: "Asked in Map to SANS",
+  measure: "Left to measure by hand",
+  out: "Not in the generated bill",
+};
+const need = (id, what, kind, who, by, where, missing, why) => ({ id, what, kind, who, by, where, missing, why });
+
+// Codes measured by length: their family must give one
+const BY_LENGTH = new Set(["HB.FLASH", "HB.GUTTER", "HB.DOWNPIPE", "LE.SUBSOIL", "LD.CHANNEL", "MK.KERB", "H.RAIL", "L.PIPE", "G.CHAMFER"]);
+// Codes counted, billed by size and specification
+const BY_SIZE = new Set(["G.CASTIN", "PD.DOOR", "PD.WIN", "LD.MH", "LD.RING", "LD.SLAB", "LD.COVER", "L.FIT", "H.LADDER", "PD.SANITARY"]);
+const CONCRETE_ROLES = new Set(["wall", "slab", "foundation", "column", "beam", "plinth", "benching", "apron", "noFines"]);
+// Extra needs particular to one card
+const CARD_NEEDS = {
+  "G.STAIR": [need("stairtool", "Built with Revit’s Stair tool (Cast-in-place)", "geometric", "modeller", "design", "Architecture › Stair", "measure", "Only a Revit stair gives risers, runs and landings; otherwise risers, soffits and treads are measured by hand.")],
+  "LD.MH": [need("mhheight", "Height from the top of the cover to the underside of the base", "geometric", "modeller", "design", "The family’s height", "flagged", "Each manhole is billed by depth band (0.5 m).")],
+  "LD.COVER": [need("coverlevel", "Placed at ground level", "geometric", "modeller", "design", "The cover’s level", "assumed", "Its top is taken as the ground level for the manhole’s excavation.")],
+  "H.STEEL": [need("steelgrade", "Steel grade, and galvanised or not", "alphanumeric", "modeller", "tender", "Material", "flagged", "Supply is priced by grade; galvanised steel gets no coating item.")],
+  "G.COAT": [need("coatface", "Which faces are coated (to decide with him how it’s modelled)", "alphanumeric", "modeller", "tender", "To decide", "measure", "Revit’s Paint tool isn’t read, so coated areas are measured by hand for now.")],
+  "G.SLAB.SUS.WT": [need("castinto", "Cast into the wall it frames into", "geometric", "modeller", "design", "Join Geometry with the wall", "assumed", "The joint where a suspended slab is cast into a wall partway up is billed from this.")],
+  "G.FTG.WT": [need("once", "Modelled once (not a footing ring and a floor over the same area)", "geometric", "modeller", "design", "One element per pour", "flagged", "The GT double count: 12.83 m³ counted twice.")],
+};
+// The needs of one card, from what the card is (so 42 cards stay consistent), plus its own
+function cardNeeds(c) {
+  if (!c) return [];
+  const n = [need("code", "Its BoQ code", "alphanumeric", "modeller", "design", "Type › Assembly Code", "decide", "Decides the item, what it is and what’s worked out from it. Without it, SolvBoQ goes by the name and asks.")];
+  if (c.group === "X") return n;
+  n.push(need("type", "One type per line of his bill, named after it", "alphanumeric", "modeller", "tender", "Type name", "decide", "Elements of one type are billed together; a type spread over two of his lines needs a decision."));
+  if (c.cats.length) n.push(need("cat", `Modelled as ${c.cats.map((x) => CARD_CAT[x] || x).join(" or ")}`, "geometric", "modeller", "design", "Revit category", "flagged", "Formwork, finishes and joints follow the category (a beam drawn as a wall gets two full faces)."));
+  if (cardNeedsGrade(c)) n.push(need("grade", "Material with its grade, for example “Concrete 35 MPa/19 mm”", "alphanumeric", "modeller", "design", "Material name (and its compressive strength)", "assumed", "Strength concrete is priced by grade. Without it, the structure’s standard grade is used and marked as assumed."));
+  if (CONCRETE_ROLES.has(c.role)) n.push(need("join", "Joined to everything it touches, at its real base and top", "geometric", "modeller", "design", "Join Geometry; base and top constraints", "flagged", "Unjoined overlaps are counted twice; formwork, joints and finishes are measured from the faces."));
+  if (c.role === "wall") n.push(need("faces", "Outer and inner face finish (Rough, Smooth or None)", "alphanumeric", "modeller", "tender", "SolvBoQ Outer Finish and Inner Finish on the type", "assumed", "Rough or smooth formwork per face. Without them, SolvBoQ goes by position."));
+  if (/^G\.(SLAB|FTG)/.test(c.code)) n.push(need("top", "Top finish (Wood-floated, Steel-floated or None)", "alphanumeric", "modeller", "tender", "SolvBoQ Top Finish on the type", "assumed", "Wood-floated for tank floors, steel-floated for suspended slabs and buildings, unless the label says otherwise."));
+  if (["wall", "slab"].includes(c.role)) n.push(need("openings", "Holes as Revit openings (circles as circles)", "geometric", "modeller", "tender", "Opening tools", "measure", "Box-outs are billed by size and host depth from the openings; a gap between elements isn’t one."));
+  if (["column", "beam"].includes(c.role)) n.push(need("section", "Section size in the type name (400x400, Ø450)", "alphanumeric", "modeller", "design", "Type name", "measure", "Formwork is measured from the section; without it, it’s measured by hand."));
+  if (/^G\.WALL/.test(c.code)) n.push(need("arcs", "Curved walls as true arcs", "geometric", "modeller", "design", "Wall tool, arc", "assumed", "Curved formwork is billed by radius."));
+  if (BY_LENGTH.has(c.code)) n.push(need("length", "A length Revit can read (a line-based family, a pipe or a railing)", "geometric", "modeller", "design", "Family template", "measure", "It’s billed by length; an in-place family has none."));
+  if (BY_SIZE.has(c.code)) n.push(need("size", "Size and specification in the type name", "alphanumeric", "modeller", "tender", "Type name", "decide", "Each size and specification is its own item."));
+  n.push(need("structure", "Which structure it belongs to", "alphanumeric", "modeller", "tender", "SolvBoQ Structure on the element", "assumed", "Separate structures are separate items (SANS 1200 D), and each takes its own grade and geotech from the project. Without it, the whole model is one structure."));
+  return [...n, ...(CARD_NEEDS[c.code] || [])];
+}
+// The needs behind the worked-out cards: mostly the engineer's, from his design and the geotechnical report
+const WORKED_NEEDS = {
+  formwork: [need("finishes", "Which faces are exposed (smooth) and which buried (rough)", "alphanumeric", "designer", "tender", "SolvBoQ finish labels on the wall types", "assumed", "Without them: rough below the top of the largest ground slab, smooth above.")],
+  boxout: [need("openings", "Every hole as a Revit opening", "geometric", "modeller", "tender", "Opening tools", "measure", "Holes that aren’t openings are left to measure.")],
+  finishes: [need("top", "Top finish on each slab type", "alphanumeric", "designer", "tender", "SolvBoQ Top Finish", "assumed", "Wood-floated for tanks, steel-floated for buildings and suspended slabs.")],
+  joints: [need("pours", "The joint layout: one floor element per pour, or the bay size", "geometric", "designer", "tender", "One floor per pour in the model", "assumed", "Floor bays are worked out at 0.5 m per m² (4 m bays) for floors up to 300 mm.")],
+  rebar: [need("rebarrate", "Reinforcement rate for the structure (kg/m³)", "alphanumeric", "designer", "tender", "Project › the structure › reinforcement", "assumed", "115 kg/m³ for tanks, 130 for buildings, 5% mild steel, until set."),
+    need("schedules", "Bending schedules (bar diameters)", "document", "designer", "construction", "Not read yet", "measure", "Reinforcement by bar diameter is still measured from the schedules.")],
+  earthworks: [need("geotech", "The geotechnical report, with its borehole logs", "document", "geotech", "tender", "Project › the structure › geotech", "assumed", "Without it, the excavation depth and rock are his Gravity Thickeners figures, marked as assumed."),
+    need("depth", "Replacement depth or founding level", "alphanumeric", "geotech", "tender", "Project › the structure › geotech", "assumed", "Tanks: excavation = footprint × replacement depth (3.73 m in GT until set)."),
+    need("classes", "The SANS 1200 D class of each layer (your reading of the logs)", "alphanumeric", "geotech", "tender", "Project › the structure › boreholes", "provisional", "Hard rock and intermediate excavation follow the layers over the excavation depth; without them, his 20% provisional allowance."),
+    need("ground", "Ground level at the structure", "geometric", "modeller", "tender", "A toposolid, or the top of the cover (manholes)", "assumed", "The excavation depth is measured from it.")],
+  building: [need("pd", "The client’s particular specification (PD)", "document", "client", "tender", "Project › particular specification", "flagged", "Plaster, paint, DPC, DPM and ant poison follow it.")],
+  manhole: [need("log", "The borehole log at the manhole", "document", "geotech", "tender", "Project › the structure › geotech", "out", "Rock in the excavation is billed only from a log; without one, none is billed.")],
+  never: [need("policy", "Provisional sums, contingencies and P&G", "alphanumeric", "engineer", "tender", "Project › policy", "out", "Priced from the specification; listed in the project, not generated from the model.")],
+};
+const workedNeeds = (w) => (w ? WORKED_NEEDS[w.id] || [] : []);
+
+// The project level: set once per project, by the engineer, in SolvBoQ
+const PROJECT_NEEDS = [
+  need("method", "The method of measurement the contract calls up", "document", "engineer", "tender", "Project › method of measurement", "assumed", "SANS 1200 Clause 8 until set. SANS 1200 lost its national-standard status in 2016; SANS 2001 has no measurement rules, so the contract names the method."),
+  need("spec", "The client’s particular specification", "document", "client", "tender", "Project › particular specification", "flagged", "Building items (PD) and amendments to the standard follow it."),
+  need("stage", "The stage the bill is for", "alphanumeric", "engineer", "design", "Project › stage", "assumed", "Tender until set: what’s still missing at that stage is listed."),
+  need("policy", "Provisional sums and contingencies", "alphanumeric", "engineer", "tender", "Project › policy", "out", "Listed with the project for the general bill; not generated from the model."),
+];
+
+// The kinds of structure, from the Uniclass 2015 Entities table (En) where it has one (manholes are Systems, Ss, under a
+// pipeline). Each kind is a module: its earthworks rule, its standard grade and what it needs. Tables of April 2022
+// (En v1.24, Ss v1.26): check the codes against NBS before relying on them.
+const STRUCTURE_KINDS = [
+  { id: "tank", title: "Tank, basin or reservoir (water-retaining)", module: "civil", grade: "35 MPa",
+    uniclass: [["En_50_75_80", "Sludge treatment entities"], ["En_50_75_96", "Wastewater storage structures"], ["En_50_75_26", "Effluent tanks"], ["En_55_15_55", "Water treatment tanks"], ["En_55_70_89", "Treated water reservoirs"]],
+    rule: "Earthworks by his Gravity Thickeners tender rule: footprint × replacement depth, G5 and G6 fill, a pioneer layer, rock and hand excavation, working space per metre of perimeter. Watertight and non-watertight concrete are separate items.",
+    needs: ["depth", "classes", "geotech", "rebarrate", "pours"] },
+  { id: "pumpstation", title: "Pump station (wet well and superstructure)", module: "civil", grade: "35 MPa",
+    uniclass: [["En_50_75_68", "Pumping stations"], ["En_50_35_93", "Wastewater pumping stations"], ["En_55_70_87", "Treated water pumping stations"]],
+    rule: "Billed as a water-retaining structure (the wet well). A superstructure at another grade: label it as a building structure of its own.",
+    needs: ["depth", "classes", "geotech", "rebarrate"] },
+  { id: "manhole", title: "Manhole or chamber", module: "manhole", grade: "35 MPa",
+    uniclass: [["Ss_50_35_06_14", "Concrete manhole systems"], ["Ss_50_35_06_12", "Concrete deep manhole systems"], ["Ss_50_35_06_06", "Brick manhole systems"]],
+    rule: "Dug from the top of its cover to the underside of its base; working space by area (SANS 1200 D); precast manholes by depth band. Rock only from the log at the manhole.",
+    needs: ["log", "classes"] },
+  { id: "building", title: "Building", module: "building", grade: "30 MPa",
+    uniclass: [["En_55_15_50", "Water treatment buildings"], ["En_50_75_20", "Dewatering hubs"], ["En_90_90_68", "Pump houses"]],
+    rule: "Earthworks by his Incinerator BoQ: footprint × 1.5 m, G5 under the footprint; DPC, DPM, ant poison, plaster and paint from the brickwork and floors.",
+    needs: ["depth", "classes", "geotech", "rebarrate", "pd"] },
+  { id: "linear", title: "Pipeline or rising main", module: "linear", grade: "",
+    uniclass: [["En_50_35_98", "Wastewater collection pipelines"], ["En_50_35_99", "Wastewater rising mains"], ["En_55_70_85", "Treated water distribution pipelines"]],
+    rule: "Not from a Revit model yet: trench depths and bedding need the ground surface and the route. Pipes in the model are billed by length.",
+    needs: [] },
+];
+const KIND_BY_ID = new Map(STRUCTURE_KINDS.map((k) => [k.id, k]));
+
+// The method of measurement a contract calls up in its pricing assumptions. SolvBoQ bills to SANS 1200 Clause 8 so far.
+const MEASUREMENT_METHODS = [
+  { id: "sans1200", title: "SANS 1200 Clause 8, with SANS 1200 A", built: true,
+    note: "Each part’s Clause 8 (measurement and payment). Withdrawn as a national standard in April 2016, still sold by the SABS and still called up in contracts. His GT bill uses it." },
+  { id: "cesmm3sa", title: "CESMM3-SA (ICE-SA, 2011)", built: false,
+    note: "The southern African edition of the civil engineering standard method of measurement: three divisions per item, with measurement, definition, coverage and additional description rules." },
+  { id: "asaqs7", title: "ASAQS Standard System of Measuring Building Work, 7th edition (2015)", built: false,
+    note: "For building work. The client’s particular specification sits on top." },
+];
+
+// Uniclass 2015 for each code: the closest Systems (Ss) or Elements/functions (EF) entry, or none where none fits well
+// (cast-in items, chamfers, pipes whose service decides it, items not billed here). Our codes stay what the modeller picks;
+// Uniclass is for clients and IFC.
+const UNICLASS = {
+  "G.WALL.WT": ["Ss_25_11_16_70", "Reinforced concrete wall structure systems"], "G.WALL": ["Ss_25_11_16_70", "Reinforced concrete wall structure systems"],
+  "G.FTG.WT": ["Ss_20_05_15", "Concrete foundation systems"], "G.FTG": ["Ss_20_05_15_70", "Reinforced concrete pad and strip foundation systems"],
+  "G.SLAB.GB.WT": ["EF_30_20", "Floors"], "G.SLAB.GB": ["EF_30_20", "Floors"],
+  "G.SLAB.SUS.WT": ["Ss_30_12_85_70", "Reinforced concrete deck systems"], "G.SLAB.SUS": ["Ss_30_12_85_70", "Reinforced concrete deck systems"],
+  "G.COL": ["Ss_20_10_75_70", "Reinforced concrete framing systems"], "G.BEAM": ["Ss_20_10_75_70", "Reinforced concrete framing systems"],
+  "G.STAIR": ["Ss_35_10_85_15", "Concrete stair or ramp systems"], "G.BLIND": ["EF_20_05", "Substructure"], "G.SCREED": ["Ss_30_42_15_15", "Cementitious wearing screed systems"],
+  "G.BENCH": ["EF_37_16", "Vessels and trenches"], "G.ENCASE": ["Ss_20_05_50", "Minor concrete substructure systems"], "G.NOFINES": ["EF_20_05", "Substructure"],
+  "G.APRON": ["EF_30_60", "Pavements"], "G.PLINTH": ["Ss_20_05_50", "Minor concrete substructure systems"], "G.COAT": ["Ss_15_30_17_16", "Concrete protective coating systems"],
+  "H.STEEL": ["Ss_20_10_75_35", "Heavy steel framing systems"], "H.RAIL": ["Ss_25_60_05_35", "Handrail systems"], "H.GRATE": ["Ss_35_10_30_95", "Working platform and walkway systems"],
+  "H.LADDER": ["Ss_35_10_30_62", "Permanently-fixed vertical ladder systems"],
+  "HB.ROOF": ["Ss_30_40_65_50", "Metal profiled sheet self-supporting roof covering systems"], "HB.CLAD": ["Ss_25_20_68_50", "Metal profiled sheet self-supporting cladding systems"],
+  "HB.FLASH": ["Ss_32_30_30", "Flashing systems"], "HB.GUTTER": ["Ss_50_30_02_28", "External gravity rainwater drainage systems"], "HB.DOWNPIPE": ["Ss_50_30_02_28", "External gravity rainwater drainage systems"],
+  "LE.SUBSOIL": ["Ss_50_35_45_85", "Subsoil drainage pipe drain systems"],
+  "LD.MH": ["Ss_50_35_06_14", "Concrete manhole systems"], "LD.RING": ["Ss_50_35_06_14", "Concrete manhole systems"], "LD.SLAB": ["Ss_50_35_06_14", "Concrete manhole systems"],
+  "LD.CHANNEL": ["Ss_50_35_06_14", "Concrete manhole systems"], "LD.COVER": ["Ss_50_35_06_14", "Concrete manhole systems"],
+  "MK.KERB": ["Ss_30_60_45_65", "Precast kerb systems"], "PD.BRICK.FACE": ["Ss_25_13_50", "Masonry wall systems"], "PD.BRICK": ["Ss_25_13_50", "Masonry wall systems"],
+  "PD.DOOR": ["EF_25_30_25", "Doors"], "PD.WIN": ["EF_25_30_97", "Windows"], "PD.SANITARY": ["Ss_40_15_75", "Sanitary appliance systems"], "PD.TIMBER": ["Ss_20_10_75_85", "Timber framing systems"],
+};
+
 const CARD_BY_CODE = new Map(CARDS.map((c) => [c.code, c]));
 const normCode = (s) => String(s || "").trim().toUpperCase().replace(/\s+/g, "");
 // The card for an element, from the Assembly Code on its type; null when it has none or one SolvBoQ doesn't know
@@ -3189,11 +3371,26 @@ function sharedParamFile() {
 }
 const CRLF_ = String.fromCharCode(13, 10);
 
+// The rules the add-in checks per element, with who fixes each and what it changes in the bill (shown in its issues panel).
+// NoStructure is for the panel only: a just-placed element has no label yet, so it isn't a live warning.
+const LIVE_RULES = {
+  NoCode: { who: "modeller", by: "design", affects: "The item, what it is and what’s worked out from it." },
+  BadCode: { who: "modeller", by: "design", affects: "It may be billed as the wrong item." },
+  WrongCategory: { who: "modeller", by: "design", affects: "Formwork, finishes and joints follow the category." },
+  NoGrade: { who: "modeller", by: "design", affects: "The concrete item’s grade: the structure’s standard grade is assumed." },
+  InPlace: { who: "modeller", by: "design", affects: "Its lengths and faces can’t be read, so it’s measured by hand." },
+  NoStructure: { who: "modeller", by: "tender", affects: "Separate items per structure, and the structure’s grade and geotech from the project." },
+};
+const stageTitle = (k) => (STAGES.find((s) => s[0] === k) || [, k])[1];
+
 function cardRules() {
   const billed = [...new Set(CARDS.flatMap((c) => c.cats))].sort();
   return {
     kind: "solvboq-card-rules", grades: [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60], billed,
-    codes: Object.fromEntries(CARDS.map((c) => [c.code, { title: c.title, cats: c.cats, grade: cardNeedsGrade(c) }])),
+    codes: Object.fromEntries(CARDS.map((c) => [c.code, { title: c.title, cats: c.cats, grade: cardNeedsGrade(c), uniclass: UNICLASS[c.code]?.[0] || "",
+      needs: cardNeeds(c).map((n) => ({ what: n.what, who: ACTORS[n.who], by: stageTitle(n.by), missing: IF_MISSING[n.missing] })) }])),
+    rules: Object.fromEntries(Object.entries(LIVE_RULES).map(([k, v]) => [k, { who: ACTORS[v.who], by: stageTitle(v.by), affects: v.affects }])),
+    structureParam: "SolvBoQ Structure",
     // For the add-in's “Set up SolvBoQ” command (one click: codes, labels and materials into the open model)
     assemblyCodes: assemblyCodeFile(), sharedParameters: sharedParamFile(),
     labels: LABELS.map((p) => ({ name: p.name, guid: p.guid, instance: p.on === "instance",
@@ -3216,6 +3413,48 @@ function assemblyCodeFile() {
     for (const c of cards) rows.push([c.code, ascii(c.title), 2, ""]);
   }
   return rows.map((r) => r.join("\t")).join("\r\n") + "\r\n";
+}
+
+// ===== The standard as an IDS file (buildingSMART Information Delivery Specification 1.0) =====
+// For outside designers: they check their own model against SolvBoQ's per-element rules in a tool that reads IDS
+// (IDS4Revit and IDS Inspector check a live Revit model; others check the IFC). Three rules translate: every billed
+// element carries a SolvBoQ code, each code suits its category, and concrete that's priced by grade names its grade.
+// Rules between elements (overlaps, joins, twins) and the labels stay with SolvBoQ. The IFC classes are those Revit's IFC
+// exporter writes for each category by default, and the code is read from the classification Revit exports from the
+// Assembly Code (Uniformat by default): the system is left open. Not yet tried in an IDS checker.
+const IFC_OF = {
+  OST_Walls: ["IFCWALL"], OST_Floors: ["IFCSLAB"], OST_StructuralFoundation: ["IFCFOOTING", "IFCSLAB"], OST_StructuralColumns: ["IFCCOLUMN"],
+  OST_StructuralFraming: ["IFCBEAM", "IFCMEMBER"], OST_Stairs: ["IFCSTAIR"], OST_Roofs: ["IFCROOF", "IFCSLAB"], OST_GenericModel: ["IFCBUILDINGELEMENTPROXY"],
+  OST_StairsRailing: ["IFCRAILING"], OST_Doors: ["IFCDOOR"], OST_Windows: ["IFCWINDOW"], OST_PipeCurves: ["IFCPIPESEGMENT"], OST_PipeFitting: ["IFCPIPEFITTING"],
+  OST_PipeAccessory: ["IFCVALVE", "IFCPIPEFITTING"], OST_PlumbingFixtures: ["IFCSANITARYTERMINAL"], OST_SpecialityEquipment: ["IFCFURNISHINGELEMENT", "IFCBUILDINGELEMENTPROXY"],
+};
+const GRADE_PATTERN = ".*([0-9]{2} ?[Mm][Pp][Aa]|[0-9]{2} ?/ ?[0-9]{1,2}).*";
+function idsFile(date) {
+  const x = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  const ifcOf = (cats) => [...new Set(cats.flatMap((c) => IFC_OF[c] || []))].sort();
+  const val = (list) => list.length === 1 ? `<ids:simpleValue>${x(list[0])}</ids:simpleValue>`
+    : `<xs:restriction base="xs:string">${list.map((v) => `<xs:enumeration value="${x(v)}"/>`).join("")}</xs:restriction>`;
+  const pattern = (p) => `<xs:restriction base="xs:string"><xs:pattern value="${x(p)}"/></xs:restriction>`;
+  const anySystem = `<ids:system>${pattern(".+")}</ids:system>`;
+  const billed = ifcOf(CARDS.flatMap((c) => c.cats));
+  const specs = [
+    `<ids:specification name="Every billed element carries a SolvBoQ BoQ code" ifcVersion="IFC4 IFC4X3_ADD2" identifier="SOLVBOQ-CODE" description="${x("Each element in a category SolvBoQ bills has its type's BoQ code from the SolvBoQ standard.")}" instructions="${x("In Revit: Edit Type, Assembly Code, pick its SolvBoQ code (X.NOTBUILT or X.MECH if it isn't billed in the civil BoQ). Export the Assembly Code as a classification.")}">` +
+      `<ids:applicability minOccurs="0" maxOccurs="unbounded"><ids:entity><ids:name>${val(billed)}</ids:name></ids:entity></ids:applicability>` +
+      `<ids:requirements><ids:classification cardinality="required"><ids:value>${val(CARDS.map((c) => c.code))}</ids:value>${anySystem}</ids:classification></ids:requirements></ids:specification>`,
+  ];
+  for (const c of CARDS) {
+    const ents = ifcOf(c.cats);
+    if (!ents.length && !cardNeedsGrade(c)) continue;
+    const req = [ents.length ? `<ids:entity><ids:name>${val(ents)}</ids:name></ids:entity>` : "",
+      cardNeedsGrade(c) ? `<ids:material cardinality="required" instructions="${x("Use a standard SolvBoQ material with the grade in its name, for example Concrete 35 MPa/19 mm.")}"><ids:value>${pattern(GRADE_PATTERN)}</ids:value></ids:material>` : ""].join("");
+    specs.push(`<ids:specification name="${x(`${c.code}: ${c.title}`)}" ifcVersion="IFC4 IFC4X3_ADD2" identifier="SOLVBOQ-${x(c.code)}" description="${x(`Modelled as ${c.cats.map((k) => CARD_CAT[k] || k).join(" or ") || "any category"}${cardNeedsGrade(c) ? ", with a graded material" : ""}.`)}" instructions="${x(c.model[0] || "")}">` +
+      `<ids:applicability minOccurs="0" maxOccurs="unbounded"><ids:classification><ids:value><ids:simpleValue>${x(c.code)}</ids:simpleValue></ids:value>${anySystem}</ids:classification></ids:applicability>` +
+      `<ids:requirements>${req}</ids:requirements></ids:specification>`);
+  }
+  const d = (date ? new Date(date) : new Date()).toISOString().slice(0, 10);
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<ids:ids xmlns:ids="http://standards.buildingsmart.org/IDS" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://standards.buildingsmart.org/IDS http://standards.buildingsmart.org/IDS/1.0/ids.xsd">\n` +
+    `<ids:info><ids:title>SolvBoQ modelling standard</ids:title><ids:version>draft ${d}</ids:version><ids:description>${x("The per-element rules of the SolvBoQ modelling standard, so a model can be billed with no decisions. Rules between elements and the SolvBoQ labels are checked by SolvBoQ itself.")}</ids:description><ids:date>${d}</ids:date><ids:purpose>Bill of quantities</ids:purpose><ids:milestone>Tender</ids:milestone></ids:info>\n` +
+    `<ids:specifications>\n${specs.join("\n")}\n</ids:specifications>\n</ids:ids>\n`;
 }
 
 // Which card (or worked-out card) a line of his bill comes from: so the standard can show how much of his bill it covers.
@@ -3277,6 +3516,135 @@ function coverLine(desc, unit, section) {
 }
 
 
+// ===== The project's inputs: the top of the information tree, entered by the engineer in SolvBoQ =====
+// Project › structure › (cards in Revit). The project carries the method of measurement, the particular specification, the
+// stage and the policy items; each structure its kind (a module: tank, manhole, building…), its defaults and its geotech,
+// as the engineer works them out from the report. Types and elements stay in Revit; the SolvBoQ Structure label joins
+// the two. Every value keeps where it came from (the report and page, his judgement, or assumed), who and when, so a
+// bill line can show its evidence. Pure data: storage is in inputsview.js, the engine reads engineInputs().
+// Saved to projects/{pid}/inputs/main (one document), or in this browser before a project exists.
+
+const SANS_D_CLASSES = [["soft", "Soft"], ["intermediate", "Intermediate"], ["hard", "Hard rock"], ["boulderA", "Boulder class A"], ["boulderB", "Boulder class B"]];
+const INPUT_SOURCES = [["report", "From the geotechnical report"], ["design", "From the design"], ["judgement", "My judgement"], ["assumed", "Assumed"]];
+const inStr = (v, n = 200) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+const inNum = (v, lo = -1e6, hi = 1e6) => { const x = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(",", ".")); return Number.isFinite(x) && x >= lo && x <= hi ? x : null; };
+const inKey = (s) => inStr(s, 80).toLowerCase().replace(/\s+/g, " ");
+
+function inputsBlank() { return { v: 1, project: { method: "", amendments: "", spec: "", stage: "", provisional: [], contingency: null }, structures: [] }; }
+
+// Shared data is untrusted: everything is cleaned on load and on save
+function normInputs(doc) {
+  const d = doc && typeof doc === "object" ? doc : {}, p = d.project && typeof d.project === "object" ? d.project : {};
+  const src = (s) => (s && typeof s === "object" ? { from: INPUT_SOURCES.some((x) => x[0] === s.from) ? s.from : "", ref: inStr(s.ref, 120), why: inStr(s.why, 600), by: inStr(s.by, 120), at: inStr(s.at, 40) } : null);
+  const out = inputsBlank();
+  out.project = {
+    method: MEASUREMENT_METHODS.some((m) => m.id === p.method) ? p.method : "", amendments: inStr(p.amendments, 2000), spec: inStr(p.spec, 300),
+    stage: STAGES.some((s) => s[0] === p.stage) ? p.stage : "", contingency: inNum(p.contingency, 0, 100),
+    provisional: (Array.isArray(p.provisional) ? p.provisional : []).slice(0, 100).map((x) => ({ description: inStr(x?.description, 300), amount: inNum(x?.amount, 0, 1e12) })).filter((x) => x.description),
+    by: inStr(p.by, 120), at: inStr(p.at, 40),
+  };
+  out.structures = (Array.isArray(d.structures) ? d.structures : []).slice(0, 200).map((s, i) => {
+    const g = s?.geotech && typeof s.geotech === "object" ? s.geotech : {};
+    const ew = s?.earthworks && typeof s.earthworks === "object" ? s.earthworks : {};
+    return {
+      id: inStr(s?.id, 60) || "s" + (i + 1), name: inStr(s?.name, 80), kind: KIND_BY_ID.has(s?.kind) ? s.kind : "",
+      models: (Array.isArray(s?.models) ? s.models : []).map((m) => inStr(m, 200)).filter(Boolean).slice(0, 50),
+      grade: /^\d{2} MPa$/.test(s?.grade || "") ? s.grade : "", rebarKg: inNum(s?.rebarKg, 0, 400),
+      earthworks: { replacementDepth: inNum(ew.replacementDepth, 0, 50), buildingDepth: inNum(ew.buildingDepth, 0, 50), groundLevel: inNum(ew.groundLevel, -1000, 5000) },
+      geotech: {
+        report: { title: inStr(g.report?.title, 300), author: inStr(g.report?.author, 200), date: inStr(g.report?.date, 40), ref: inStr(g.report?.ref, 120) },
+        method: ["log", "average"].includes(g.method) ? g.method : "average", limitations: inStr(g.limitations, 1000), water: inNum(g.water, 0, 200),
+        holes: (Array.isArray(g.holes) ? g.holes : []).slice(0, 60).map((h, j) => ({
+          id: inStr(h?.id, 40) || "BH" + (j + 1), ground: inNum(h?.ground, -1000, 5000), water: inNum(h?.water, 0, 200), page: inStr(h?.page, 40),
+          strata: (Array.isArray(h?.strata) ? h.strata : []).slice(0, 40).map((t) => ({ top: inNum(t?.top, 0, 200), base: inNum(t?.base, 0, 200), desc: inStr(t?.desc, 400), cls: SANS_D_CLASSES.some((c) => c[0] === t?.cls) ? t.cls : "" }))
+            .filter((t) => t.top != null && t.base != null && t.base > t.top),
+        })),
+      },
+      src: Object.fromEntries(Object.entries(s?.src && typeof s.src === "object" ? s.src : {}).slice(0, 40).map(([k, v]) => [inStr(k, 40), src(v)]).filter(([, v]) => v)),
+      by: inStr(s?.by, 120), at: inStr(s?.at, 40),
+    };
+  }).filter((s) => s.name || s.kind);
+  return out;
+}
+
+// The structure a model belongs to: one that lists the model, else the project's only structure. Labels name the rest.
+const modelKey = (t) => inKey(String(t || "").replace(/_\d{8}_\d{6}/, "").replace(/\.(json|csv|rvt)$/i, ""));
+function structureFor(inputs, modelTitle) {
+  const list = inputs?.structures || [], k = modelKey(modelTitle);
+  return list.find((s) => s.models.some((m) => modelKey(m) === k)) || list.find((s) => k && inKey(s.name) === k) || (list.length === 1 && !list[0].models.length ? list[0] : null);
+}
+
+// How the excavation depth divides into SANS 1200 D classes, from the logs he classified: per hole, the share of each
+// class between ground level and the depth; then the average of the holes (or the one log he chose). Layers he hasn't
+// classified count as soft (no extra over), and are reported, so nothing is hidden.
+function geoShares(st, depth) {
+  const holes = (st?.geotech?.holes || []).filter((h) => h.strata.some((t) => t.cls));
+  if (!holes.length || !(depth > 0)) return null;
+  const per = holes.map((h) => {
+    const sh = {}; let unclassed = 0;
+    for (const t of h.strata) {
+      const a = Math.max(0, Math.min(depth, t.top)), b = Math.max(0, Math.min(depth, t.base)), thick = b - a;
+      if (thick <= 0) continue;
+      if (!t.cls) unclassed += thick; else sh[t.cls] = (sh[t.cls] || 0) + thick;
+    }
+    const logged = Math.max(0, ...h.strata.map((t) => t.base));
+    return { id: h.id, page: h.page, sh, unclassed, short: logged < depth - 0.01 ? logged : null };
+  });
+  const use = st.geotech.method === "log" ? per.slice(0, 1) : per;
+  const shares = {};
+  for (const [c] of SANS_D_CLASSES) shares[c] = use.reduce((s, p) => s + (p.sh[c] || 0), 0) / use.length / depth;
+  return { shares, holes: use.map((p) => p.id), pages: use.map((p) => p.page).filter(Boolean), unclassed: use.reduce((s, p) => s + p.unclassed, 0) / use.length,
+    short: use.filter((p) => p.short != null).map((p) => `${p.id} logged to ${p.short} m`), depth, method: st.geotech.method };
+}
+
+// What the engine needs for one model: the method, the stage, the model's structure (resolved) and the labelled ones
+function engineInputs(inputs, modelTitle) {
+  if (!inputs || (!inputs.structures.length && !inputs.project.method && !inputs.project.stage)) return null;
+  const resolve = (s) => {
+    if (!s) return null;
+    const k = KIND_BY_ID.get(s.kind);
+    const src = (f) => s.src?.[f] || null;
+    return { id: s.id, name: s.name, kind: s.kind, kindTitle: k ? k.title : "", module: k ? k.module : "", grade: s.grade || (k ? k.grade : ""), gradeSet: !!s.grade,
+      rebarKg: s.rebarKg, earthworks: Object.fromEntries(Object.entries(s.earthworks).filter(([, v]) => v != null)), src: s.src || {}, srcOf: src,
+      geotech: s.geotech, report: s.geotech.report, by: s.by, at: s.at, raw: s };
+  };
+  const structure = resolve(structureFor(inputs, modelTitle));
+  const byLabel = {};
+  for (const s of inputs.structures) if (s.name) byLabel[inKey(s.name)] = resolve(s);
+  return { method: inputs.project.method || "sans1200", methodSet: !!inputs.project.method, stage: inputs.project.stage || "tender", structure, byLabel, names: inputs.structures.map((s) => s.name).filter(Boolean), count: inputs.structures.length };
+}
+
+// Where a value came from, in words, for a bill line: “from the geotechnical report (p. 12), entered by … on 6 Nov 2026”
+function srcText(s, fallback) {
+  if (!s) return fallback || "";
+  const from = (INPUT_SOURCES.find((x) => x[0] === s.from) || [, ""])[1].toLowerCase();
+  const when = s.at ? new Date(s.at) : null, d = when && !isNaN(when) ? when.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+  const who = `entered${s.by ? " by " + s.by : ""}${d ? " on " + d : ""}`;
+  return `${from ? `${from}${s.ref ? ` (${s.ref})` : ""}, ${who}` : `${who}${s.ref ? ` (${s.ref})` : ""}, no source given`}${s.why ? `: ${s.why}` : ""}`;
+}
+
+// What's still needed at the chosen stage, project and structures, with who supplies it: the engineer's own checklist
+function inputsMissing(inputs, stage) {
+  const st = STAGE_RANK[stage || inputs?.project?.stage || "tender"] || 2, due = (n) => STAGE_RANK[n.by] <= st;
+  const out = [], p = inputs?.project || {};
+  const pn = (id) => PROJECT_NEEDS.find((n) => n.id === id);
+  if (!p.method && due(pn("method"))) out.push({ level: "Project", need: pn("method") });
+  if (!p.spec && due(pn("spec"))) out.push({ level: "Project", need: pn("spec") });
+  if (!p.stage && due(pn("stage"))) out.push({ level: "Project", need: pn("stage") });
+  if (!(inputs?.structures || []).length) out.push({ level: "Project", need: need("structures", "The structures in the project, each with its kind", "alphanumeric", "engineer", "design", "Project › structures", "assumed", "Without them, each model is taken as one structure and its kind is guessed from its title.") });
+  const wn = Object.fromEntries(Object.values(WORKED_NEEDS).flat().map((n) => [n.id, n]));
+  for (const s of inputs?.structures || []) {
+    const k = KIND_BY_ID.get(s.kind), lvl = s.name || "A structure";
+    if (!k) { out.push({ level: lvl, need: need("kind", "What kind of structure it is", "alphanumeric", "engineer", "design", "Project › the structure", "assumed", "Its kind decides its earthworks rule, standard grade and what else it needs.") }); continue; }
+    const holes = s.geotech.holes.filter((h) => h.strata.length), classed = holes.some((h) => h.strata.some((t) => t.cls));
+    const have = { depth: s.earthworks.replacementDepth != null || s.earthworks.buildingDepth != null, classes: classed, geotech: !!(s.geotech.report.title || holes.length), log: holes.length > 0,
+      rebarrate: s.rebarKg != null, pours: true, pd: !!p.spec };
+    for (const id of k.needs) { const n = wn[id]; if (n && !have[id] && due(n)) out.push({ level: lvl, need: n }); }
+  }
+  return out;
+}
+
+
 // ===== Readiness checks: a line-for-line mirror of Core/ReadinessChecks.cs, working on ElementRecords =====
 const NON_MEASURED = new Set(["OST_Rooms", "OST_Areas", "OST_MEPSpaces"]);
 // Only these categories are building elements a BoQ measures. Everything else Revit stores as an element
@@ -3308,7 +3676,7 @@ const TIERS = [
   { key: 1, label: "Quantity could be wrong", checks: ["dup", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
   { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
-  { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode"] },
+  { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode", "nostructure"] },
 ];
 const STD_GRADES = [10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60];
 const gradeInText = (t) => { const a = String(t || "").match(/(\d{2})\s*mpa/i); if (a) return +a[1]; const b = String(t || "").match(/\b(\d{2})\s*\/\s*(\d{1,2})\b/); return b ? +b[1] : null; };
@@ -3324,6 +3692,8 @@ function materialGrade(e) {
   if (g == null && d && d.Strength != null) { const s = STD_GRADES.find((x) => Math.abs(x - d.Strength) <= 0.5); if (s) { g = s; source = "strength"; } else odd = d.Strength; }
   return { grade: g != null ? g + " MPa" : "", source, stone: stoneInText(name) || stoneInText(desc) || null, odd };
 }
+// Where a project input came from, in words (inputs.js keeps the source with each value)
+const srcWords = (s) => (s && typeof srcText === "function" ? srcText(s) : "") || "set in the project";
 const TIER_OF = Object.fromEntries(TIERS.flatMap((t) => t.checks.map((c) => [c, t])));
 const RANK = { excluded: 4, unknown: 3, eyes: 2, handled: 1 };
 const isConcreteLike = (e) => RX.concrete.test(e.Material || "");
@@ -3582,6 +3952,16 @@ function runChecks(input, opts = {}) {
       wrongCat.length ? `For example “${nameOf(wrongCat[0])}” is coded ${cardOf(wrongCat[0]).code} (${cardOf(wrongCat[0]).title.toLowerCase()}) but drawn as ${CARD_CAT[wrongCat[0].Bic] || wrongCat[0].Category}. Formwork, finishes and joints follow the category, so they’ll be worked out for the wrong thing.` : "",
       "Remodel it in the category its card says, or correct the code.", wrongCat);
   }
+  // Structure labels the project doesn't know: their elements don't get that structure's grade, kind or geotech
+  if (opts.inputs?.names?.length) {
+    const key = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+    const known = new Set(opts.inputs.names.map(key));
+    const stray = live.filter((e) => e.Structure && !known.has(key(e.Structure)));
+    const ex = [...new Set(stray.map((e) => e.Structure))];
+    add("nostructure", "eyes", "Structure labels that aren’t structures in the project",
+      ex.length ? `“${ex.slice(0, 3).join("”, “")}”${ex.length > 3 ? ` and ${ex.length - 3} more` : ""} ${ex.length === 1 ? "isn’t" : "aren’t"} in the project’s structures (${opts.inputs.names.join(", ")}). They’re still billed as separate items, but without that structure’s kind, grade or geotech.` : "",
+      "Add the structure under Project, or correct the SolvBoQ Structure label on the elements.", stray);
+  }
 
   const noMatSet = new Set(noMat);
   const generic = live.filter((e) => e.Bic === "OST_GenericModel" && !e.InPlace && !noMatSet.has(e) && !(typeof cardOf === "function" && cardOf(e)));
@@ -3604,19 +3984,22 @@ function runChecks(input, opts = {}) {
   const title = String(opts.title || "");
   const titleWater = H().waterStructure.test(title), titleBuilding = H().buildingStructure.test(title);
   const hasBuilding = els.some((e) => ["masonry", "openings"].includes(tradeOf(e)));
-  const civil = titleWater ? true : titleBuilding ? false : !hasBuilding;
-  const structureWhy = titleWater ? `The model is called “${title.trim()}”, so it’s taken as a water-retaining structure${hasBuilding ? " (it also has brickwork, doors or windows: if part of it is a building at a different grade, set that material’s grade)" : ""}.`
+  // The project says what the structure is, when the engineer has set it up (inputs.js); otherwise the title and contents
+  const S = opts.inputs?.structure || null, sMod = S?.module || "";
+  const civil = sMod ? sMod !== "building" : titleWater ? true : titleBuilding ? false : !hasBuilding;
+  const structureWhy = sMod ? `The project sets it up as ${S.name ? `“${S.name}”, ` : ""}${(S.kindTitle || "").charAt(0).toLowerCase() + (S.kindTitle || "").slice(1)}.`
+    : titleWater ? `The model is called “${title.trim()}”, so it’s taken as a water-retaining structure${hasBuilding ? " (it also has brickwork, doors or windows: if part of it is a building at a different grade, set that material’s grade)" : ""}.`
     : titleBuilding ? `The model is called “${title.trim()}”, so it’s taken as a building.`
     : civil ? "The model has no brickwork, doors or windows, so it’s taken as a water-retaining structure such as a tank."
     : "The model has brickwork, doors or windows, so it’s taken as a building.";
-  const assumedGrade = CONV.structureGrades[civil ? "civil" : "building"] || "";
+  const assumedGrade = (S && S.grade) || CONV.structureGrades[civil ? "civil" : "building"] || "";
   const lowGrade = (e) => roleIs(e, "benching", "chamfer", "apron", "kerb", "plinth", "noFines") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`);
   const assumed = assumedGrade ? noGrade.filter((e) => !lowGrade(e)) : [];
   add("grade", "eyes", "Concrete with no grade in its material",
     "Strength concrete (SANS 1200 G 8.4.3) is priced by grade, and the model doesn’t say which.",
     "Take the grade from the drawings or specification, then set it once per material so every element using it is graded.", noGrade.filter((e) => !assumed.includes(e)));
   add("gradeassumed", "handled", `Concrete grade taken as ${assumedGrade}`,
-    `The material doesn’t give a grade. ${structureWhy} The standard grade is ${assumedGrade} for ${civil ? "water-retaining structures" : "buildings"}.`,
+    `The material doesn’t give a grade. ${structureWhy} ${S?.gradeSet ? `The project gives it ${assumedGrade}${S.srcOf("grade") ? ` (${srcWords(S.srcOf("grade"))})` : ""}.` : `The standard grade is ${assumedGrade} for ${civil ? "water-retaining structures" : "buildings"}.`}`,
     "If any of it is a different grade, set the grade for that material and it replaces this one.", assumed);
   const noLevel = live.filter((e) => !e.Level);
   add("nolevel", "eyes", "Elements with no level",
@@ -3792,6 +4175,8 @@ function runChecks(input, opts = {}) {
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
   const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
   out.reveals = input.filter((e) => e.Bic === "OST_Reveals");   // chamfers modelled as reveals are billed from these
+  out.inputs = opts.inputs || null;   // the project's inputs used (inputs.js): the structure, its kind, its geotech
+  out.structureWhy = structureWhy;
   out.derived = deriveItems(out, opts);
   out.derived.expected = expectedItems(out, out.derived.lines);
   return out;
@@ -3877,8 +4262,8 @@ function deriveItems(r, opts = {}) {
     item({ key: "floorfinish", label: "Floor finishes (for example resin or quartz)", ref: "1200 G 8.23", unit: "m²", qty: allSlabArea, status: slabs.length ? "partly" : "none", note: "The area comes from the slabs. Which finish goes where comes from the finishes schedule." });
   }
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
-  const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || ""));
-  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole });
+  const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
+  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
   const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
@@ -3891,7 +4276,7 @@ function deriveItems(r, opts = {}) {
     note: `${plural2(inferred.notMeasured.length, "stair or in-place element")} (${fmt1(inferred.notMeasured.reduce((s, e) => s + (e.Volume || 0), 0))} m³) can’t be measured for formwork from the model. Measure it from the drawings.` });
   const rebarT = total("rebar");
   if (rebarT > 0) item({ key: "rebar", label: "Reinforcement (estimate)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: "partly",
-    note: `${CONV.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
+    note: `${Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(opts.inputs?.structure?.rebarKg) ? opts.inputs.structure.rebarKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
 
   const masonry = T("masonry");
   if (masonry.length) {
@@ -3904,7 +4289,7 @@ function deriveItems(r, opts = {}) {
 
   // Earthworks: inferred from the lowest parts of the structure and stated assumptions (inferEarthworks)
   // A precast-only manhole has no concrete slabs, but its parts have positions: it still gets its earthworks
-  const manholeOnly = !withBoxes && typeof cardOf === "function" && live.some((e) => e.Box && /^LD\./.test(cardOf(e)?.code || ""));
+  const manholeOnly = !withBoxes && ((typeof cardOf === "function" && live.some((e) => e.Box && /^LD\./.test(cardOf(e)?.code || ""))) || (opts.inputs?.structure?.module === "manhole" && live.some((e) => e.Box)));
   const earth = withBoxes || manholeOnly ? inferEarthworks(r, { live, ground }, opts) : { lines: [], assumptions: null };
   const eTotal = (k) => earth.lines.find((l) => l.key === "earth|" + k)?.qty;
   if (earth.assumptions?.manhole) {
@@ -4178,9 +4563,12 @@ function inferLines(r, ctx) {
     const unreinf = new Set((r.issues.find((i) => i.key === "unreinf")?.elements || []).map((e) => e.Id));
     const rc = conc.filter((e) => !unreinf.has(e.Id));
     // kg/m³ and the mild steel share: the user's figures for this model if set, otherwise the profile's
-    const kg = Number.isFinite(ctx.rebar?.kg) ? ctx.rebar.kg : CONV.rebar[r.structure === "civil" ? "civil" : "building"] || 0;
+    // kg/m³: this model's figure, else the structure's rate from the project (the designer's), else the profile's
+    const St = ctx.structure, sKg = St && Number.isFinite(St.rebarKg) ? St.rebarKg : null;
+    const kg = Number.isFinite(ctx.rebar?.kg) ? ctx.rebar.kg : sKg != null ? sKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"] || 0;
     const mild = Number.isFinite(ctx.rebar?.mild) ? ctx.rebar.mild : CONV.rebar.mildShare;
-    const why = `Estimated at ${kg} kg of steel per m³ of reinforced concrete (${Math.round(mild * 100)}% mild steel). Replace it with the bar schedule quantities, split by diameter, when they’re available.`;
+    const kgFrom = Number.isFinite(ctx.rebar?.kg) ? " (set for this model)" : sKg != null ? ` (the rate for ${St.name || "this structure"} in the project, ${srcWords(St.srcOf("rebarKg"))})` : "";
+    const why = `Estimated at ${kg} kg of steel per m³ of reinforced concrete${kgFrom} (${Math.round(mild * 100)}% mild steel). Replace it with the bar schedule quantities, split by diameter, when they’re available.`;
     for (const e of rc) {
       add("rebar|mild", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: mild steel bars", description: "Mild steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * mild) / 1000);
       add("rebar|ht", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: high tensile steel bars", description: "High tensile steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * (1 - mild)) / 1000);
@@ -4245,10 +4633,19 @@ function outerEdge(e) {
 // Every assumption is written into its line and can be changed per model.
 function inferEarthworks(r, ctx, opts) {
   const { live, ground } = ctx;
-  const A = { ...CONV.earthworks, ...(opts.earthworks || {}) };
+  // The figures: the profile's defaults, then the structure's inputs in the project (from his geotech), then this model's own
+  const S = opts.inputs?.structure || null, fromS = S?.earthworks || {}, mine = opts.earthworks || {};
+  const A = { ...CONV.earthworks, ...fromS, ...mine };
+  const from = (k) => (mine[k] != null ? "model" : fromS[k] != null ? "project" : "default");
+  const fromText = (k) => (from(k) === "model" ? "set for this model under Earthworks" : `from ${S?.name || "the structure"} in the project, ${srcWords(S?.srcOf(k))}`);
   const mhCode = (e) => (typeof cardOf === "function" && cardOf(e)?.code) || "";
-  if (live.some((e) => /^LD\./.test(mhCode(e))) || /manhole/i.test(String(opts.title || ""))) return manholeEarthworks(r, live, A);
+  if (live.some((e) => /^LD\./.test(mhCode(e))) || /manhole/i.test(String(opts.title || "")) || S?.module === "manhole") return manholeEarthworks(r, live, A, opts);
   const civil = r.structure === "civil";
+  // Rock and intermediate excavation from his reading of the borehole logs, over the depth that's dug (unless set for this model)
+  const geo = S && typeof geoShares === "function" ? geoShares(S.raw, civil ? A.replacementDepth : A.buildingDepth) : null;
+  if (geo && mine.rockShare == null) A.rockShare = geo.shares.hard;
+  const geoWhere = geo ? `${geo.method === "log" ? "the log of" : `the average of ${plural2(geo.holes.length, "borehole")}:`} ${geo.holes.join(", ")}${geo.pages.length ? ` (${geo.pages.join(", ")})` : ""}` : "";
+  const geoCheck = geo ? [geo.short.length ? `${geo.short.join("; ")}: below that, no rock is billed` : "", geo.unclassed > 0.005 ? `${fmt2(geo.unclassed)} m of the depth has layers without a SANS 1200 D class (counted as soft)` : ""].filter(Boolean).join(". ") : "";
   const base = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_StructuralFoundation" || ground.includes(e)));
   if (!base.length) return { lines: [], assumptions: null };
   const outerArea = outlineArea;
@@ -4266,7 +4663,8 @@ function inferEarthworks(r, ctx, opts) {
     const exc = civil ? fp * A.replacementDepth : fp * A.buildingDepth;
     const q = civil
       ? { exc, rock: exc * A.rockShare, hand: exc * A.handShare, ws: perim * A.wsPerMetre, stock: exc * A.stockShare, g5: exc * A.g5Share, g6: exc * (1 - A.g5Share), pioneer: fp * A.pioneerThickness }
-      : { exc, ws: perim * A.buildingDepth, stock: exc, g5: fp * A.fillThickness };
+      : { exc, ws: perim * A.buildingDepth, stock: exc, g5: fp * A.fillThickness, ...(geo ? { rock: exc * A.rockShare } : {}) };
+    if (geo) Object.assign(q, { inter: exc * geo.shares.intermediate, boulderA: exc * geo.shares.boulderA, boulderB: exc * geo.shares.boulderB });
     for (const [k, v] of Object.entries(q)) tot[k] = (tot[k] || 0) + v;
     tot.area = (tot.area || 0) + fp; tot.perim = (tot.perim || 0) + perim;
     els.push(root); per.set(root.Id, q);
@@ -4276,10 +4674,19 @@ function inferEarthworks(r, ctx, opts) {
   const item = (clause, heading, description) => ({ section: "SANS 1200 D", clause, heading, description, unit: "m³" });
   const line = (key, it, reason, check = "") => ({ key: "earth|" + key, kind: "earth", item: it, reason: `Inferred: ${reason}`, check, qty: tot[key] || 0, elements: els, parts: els.map((e) => ({ id: e.Id, qty: per.get(e.Id)[key] || 0 })) });
   const FILL = "Importing of materials for fill under floors and foundations";
+  const rockWhy = geo && mine.rockShare == null ? `${pct(A.rockShare)} of the excavation: the hard rock in the top ${fmt2(geo.depth)} m, from ${geoWhere}, your SANS 1200 D classification of the logs.`
+    : mine.rockShare != null ? `${pct(A.rockShare)} of the excavation, set for this model.` : `${pct(A.rockShare)} of the excavation, his provisional allowance.`;
+  const geoLines = geo ? [
+    line("inter", item("8.3.3", "Restricted excavation", "Extra over for excavation in intermediate material (provisional)"), `${pct(geo.shares.intermediate)} of the excavation: intermediate material in the top ${fmt2(geo.depth)} m, from ${geoWhere}.`, geoCheck),
+    line("boulderA", item("8.3.3", "Restricted excavation", "Extra over for boulder excavation, class A (provisional)"), `${pct(geo.shares.boulderA)} of the excavation, from ${geoWhere}.`, geoCheck),
+    line("boulderB", item("8.3.3", "Restricted excavation", "Extra over for boulder excavation, class B (provisional)"), `${pct(geo.shares.boulderB)} of the excavation, from ${geoWhere}.`, geoCheck),
+  ] : [];
   const lines = civil ? [
     line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials, and use as compacted backfill, for structures"),
-      `footprint × ${fmt2(A.replacementDepth)} m replacement depth (${fp}). The depth comes from the geotechnical report; ${fmt2(A.replacementDepth)} m is the Gravity Thickeners figure. Change it under Earthworks.`),
-    line("rock", item("8.3.3", "Restricted excavation", "Extra over for excavation in hard rock (provisional)"), `${pct(A.rockShare)} of the excavation, his provisional allowance.`),
+      from("replacementDepth") === "default" ? `footprint × ${fmt2(A.replacementDepth)} m replacement depth (${fp}). The depth comes from the geotechnical report; ${fmt2(A.replacementDepth)} m is the Gravity Thickeners figure. Change it under Earthworks.`
+        : `footprint × ${fmt2(A.replacementDepth)} m replacement depth (${fp}), ${fromText("replacementDepth")}.`),
+    line("rock", item("8.3.3", "Restricted excavation", "Extra over for excavation in hard rock (provisional)"), rockWhy, geo && mine.rockShare == null ? geoCheck : ""),
+    ...geoLines,
     line("hand", item("8.3.3", "Restricted excavation", "Extra over for hand excavation (provisional)"), `${pct(A.handShare)} of the excavation, his provisional allowance.`),
     line("ws", item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), `${fmt2(A.wsPerMetre)} m³ per metre of outer perimeter (${fmt1(tot.perim || 0)} m).`),
     line("stock", item("8.3.14", "Stockpiling", "Extra over item 8.3.3 for temporary stockpiling"), `${pct(A.stockShare)} of the excavation.`),
@@ -4287,20 +4694,24 @@ function inferEarthworks(r, ctx, opts) {
     line("g6", item("8.3.16", FILL, "(c) G6 compacted to 95% Mod. AASHTO in 150 mm layers"), `${pct(1 - A.g5Share)} of the excavation.`),
     line("pioneer", item("8.3.16", FILL, `(j) ${Math.round(A.pioneerThickness * 1000)} mm compacted pioneer layer of 100 mm to 300 mm boulders`), `footprint × ${fmt2(A.pioneerThickness)} m.`),
   ] : [
-    line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for structures"), `footprint × ${fmt2(A.buildingDepth)} m (${fp}), from his Incinerator building BoQ. Change it under Earthworks.`),
+    line("exc", item("8.3.3", "Restricted excavation", "Excavation in all materials for structures"), from("buildingDepth") === "default" ? `footprint × ${fmt2(A.buildingDepth)} m (${fp}), from his Incinerator building BoQ. Change it under Earthworks.` : `footprint × ${fmt2(A.buildingDepth)} m (${fp}), ${fromText("buildingDepth")}.`),
+    ...(geo ? [line("rock", item("8.3.3", "Restricted excavation", "Extra over for excavation in hard rock (provisional)"), rockWhy, mine.rockShare == null ? geoCheck : ""), ...geoLines] : []),
     line("ws", { ...item("8.3.5", "Working space", "Extra excavation in all materials to provide working space around structure"), unit: "m²" }, `outer perimeter × ${fmt2(A.buildingDepth)} m deep. SANS 1200 D measures working space by area (perimeter × average depth); the width is in the rate.`),
     line("stock", item("8.3.14", "Stockpiling", "Extra over item 8.3.3 for temporary stockpiling"), "the same volume as the excavation."),
     line("g5", item("8.3.16", FILL, `(b) G5 compacted to 98% Mod. AASHTO in 150 mm layers, ${Math.round(A.fillThickness * 1000)} mm thick (assumed)`),
       `footprint × ${fmt2(A.fillThickness)} m. The layers come from the geotechnical report; replace this when it’s available.`),
   ];
-  return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil, footprints: els.length, area: tot.area || 0, perimeter: tot.perim || 0 } };
+  return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil, footprints: els.length, area: tot.area || 0, perimeter: tot.perim || 0,
+    src: { replacementDepth: from("replacementDepth"), buildingDepth: from("buildingDepth"), rockShare: geo && mine.rockShare == null ? "geotech" : from("rockShare") },
+    srcText: { replacementDepth: from("replacementDepth") === "project" ? fromText("replacementDepth") : "", buildingDepth: from("buildingDepth") === "project" ? fromText("buildingDepth") : "" },
+    geo: geo ? { ...geo, where: geoWhere, check: geoCheck } : null, structure: S?.name || "" } };
 }
 
 // A manhole is dug from ground level to the underside of its lowest part (the blinding, or the base). Its frame and cover
 // sit at ground level, so the top of the highest part is taken as ground level. Excavation = footprint × depth; working
 // space = outer perimeter × an assumed width (0.5 m) × depth. Round parts are measured as circles: concrete from their
 // perimeter (outlineArea), precast parts when they're square in plan and their name says they're round (ring, ID, Ø).
-function manholeEarthworks(r, live, A) {
+function manholeEarthworks(r, live, A, opts = {}) {
   const SOLID = ["OST_Floors", "OST_Walls", "OST_StructuralFoundation", "OST_GenericModel", "OST_SpecialityEquipment", "OST_PlumbingFixtures", "OST_StructuralColumns"];
   const parts = live.filter((e) => e.Box && SOLID.includes(e.Bic));
   if (!parts.length) return { lines: [], assumptions: null };
@@ -4369,6 +4780,24 @@ function manholeEarthworks(r, live, A) {
     lines.push({ key: `wttest|${nm || g[0].Id}`, kind: "test", item: { section: "SANS 1200 G", clause: "8.21", heading: "Watertightness testing", description: `Watertightness test${nm ? `: ${nm}` : " of the manhole"}`, unit: "Sum" },
       reason: "Inferred: one test for each manhole with watertight concrete in it.", check: "", qty: 1, elements: w, parts: w.map((e) => ({ id: e.Id, qty: 1 / w.length })) });
   }
+  // Rock in the excavation: only from a borehole log he classified, for the manhole's structure (by its label) or the
+  // model's structure in the project. With no log, none is billed (decided for manholes: no provisional rock).
+  const I = opts.inputs, lk = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const rock = new Map();
+  for (const x of holes) {
+    const nm = label(x), st = (nm && I?.byLabel?.[lk(nm)]) || I?.structure;
+    const g = st && typeof geoShares === "function" ? geoShares(st.raw, x.depth) : null;
+    if (!g) continue;
+    for (const [k, cls, desc] of [["rock", "hard", "Extra over for excavation in hard rock for manholes (provisional)"], ["inter", "intermediate", "Extra over for excavation in intermediate material for manholes (provisional)"]]) {
+      const q = x.exc * g.shares[cls]; if (!(q > 0)) continue;
+      const id = `${k}|${nm}`, cur = rock.get(id) || { k, nm, desc, qty: 0, els: [], parts: [], why: [] };
+      cur.qty += q; cur.els.push(x.fp.e); cur.parts.push({ id: x.fp.e.Id, qty: q });
+      cur.why.push(`${Math.round(g.shares[cls] * 100)}% of ${fmt2(x.exc)} m³ (${fmt2(x.depth)} m deep), from ${g.method === "log" ? "the log of" : "the logs of"} ${g.holes.join(", ")}${g.pages.length ? ` (${g.pages.join(", ")})` : ""}`);
+      rock.set(id, cur);
+    }
+  }
+  for (const v of rock.values()) lines.push({ key: `earth|${v.k}${v.nm ? "|" + v.nm : ""}`, kind: "earth", item: item("8.3.3", "Restricted excavation", v.nm ? `${v.desc} (${v.nm})` : v.desc),
+    reason: `Inferred: ${v.why.join("; ")}: your SANS 1200 D classification of the logs.`, check: "", qty: v.qty, elements: v.els, parts: v.parts });
   const deep = holes.reduce((a, b) => (b.depth > a.depth ? b : a));
   return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil: false, manhole: true, depth: deep.depth, top: deep.top, bottom: deep.bottom, footprints: holes.length, area: sum("exc") / Math.max(deep.depth, 1e-9), perimeter: holes.reduce((s, x) => s + x.fp.perim, 0) } };
 }
@@ -5898,6 +6327,8 @@ const MISSING_SCHEMA = { type: "object", additionalProperties: false, required: 
 //   projects/{pid}/certificates/{cid}/parts/{n}     its lines, 250 per document (Firestore documents are capped at 1 MB)
 //   projects/{pid}/reviews/{cid}                    the engineer's decision on each finding: { items: { key: { status, note, by, at } } }
 //   projects/{pid}/masters/{mid}                    a master BoQ: his lines, quantity columns and links to the model
+//   projects/{pid}/notes/{id}                      his note on a generated bill line: his figure, SolvBoQ's, why (notes.js)
+//   projects/{pid}/inputs/main                     the project's inputs: method, stage, policy, structures and geotech (inputs.js)
 //   projects/{pid}/models/{mid}                     a model extract: title, date, element count, and parts/{n} with the
 //                                                   extract gzip-compressed in 900 KB pieces (the large ones are 12–18 MB)
 const Store = (() => {
@@ -6072,6 +6503,15 @@ const Store = (() => {
     }),
     deleteMaster: (pid, id) => wrap(async () => { need(); await F.deleteDoc(F.doc(db, "projects", pid, "masters", id)); }),
 
+    // The project's inputs (inputs.js): method of measurement, stage, policy, and each structure's kind, defaults and geotech
+    loadInputs: (pid) => wrap(async () => { need(); const d = await F.getDoc(F.doc(db, "projects", pid, "inputs", "main")); return d.exists() ? d.data() : null; }),
+    saveInputs: (pid, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "inputs", "main"), JSON.parse(JSON.stringify(doc))); }),
+
+    // His notes on generated bill lines (notes.js): one document each
+    listNotes: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "notes")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
+    saveNote: (pid, n) => wrap(async () => { need(); const { id, ...rest } = n; await F.setDoc(F.doc(db, "projects", pid, "notes", id), JSON.parse(JSON.stringify(rest))); }),
+    deleteNote: (pid, id) => wrap(async () => { need(); await F.deleteDoc(F.doc(db, "projects", pid, "notes", id)); }),
+
     loadReviews: (pid, cid) => wrap(async () => {
       need();
       const d = await F.getDoc(F.doc(db, "projects", pid, "reviews", cid));
@@ -6086,7 +6526,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", createProject: "project", joinProject: "project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", createProject: "project", joinProject: "project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -6192,9 +6632,9 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
-  state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts() }); noteCheckTitles();
+  state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
   if (meta.ptype) $("fType").value = meta.ptype;
   const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -6280,15 +6720,18 @@ function render() {
   $("viewClaims").hidden = state.view !== "claims";
   $("viewMaster").hidden = state.view !== "master";
   $("viewStd").hidden = state.view !== "std";
+  $("viewProj").hidden = state.view !== "proj";
   $("navStd").setAttribute("aria-current", state.view === "std" ? "page" : "false");
+  $("navProj").setAttribute("aria-current", state.view === "proj" ? "page" : "false");
   $("navReady").setAttribute("aria-current", state.view === "overview" || state.view === "detail" ? "page" : "false");
   $("navMap").setAttribute("aria-current", state.view === "map" ? "page" : "false");
   $("navMaster").setAttribute("aria-current", state.view === "master" ? "page" : "false");
   $("navClaims").setAttribute("aria-current", state.view === "claims" ? "page" : "false");
   $("btnConv").setAttribute("aria-current", state.view === "conv" ? "page" : "false");
-  $("pageTitle").textContent = { overview: "Readiness", detail: "Readiness", map: "Map to SANS", conv: "Conventions", claims: "Claims", master: "Master BoQ", std: "Standards" }[state.view] || "Readiness";
+  $("pageTitle").textContent = { overview: "Readiness", detail: "Readiness", map: "Map to SANS", conv: "Conventions", claims: "Claims", master: "Master BoQ", std: "Standards", proj: "Project" }[state.view] || "Readiness";
   // Claims works on certificates, not the model: no model switcher or fix list there. The master BoQ needs the model.
-  document.querySelector(".modelpick").hidden = false; $("btnGoFix").hidden = ["claims", "master", "std"].includes(state.view);
+  document.querySelector(".modelpick").hidden = false; $("btnGoFix").hidden = ["claims", "master", "std", "proj"].includes(state.view);
+  if (state.view === "proj") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderProj(); }
   if (state.view === "claims") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderClaims(); }
   if (state.view === "std") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderStandards(); }
   if (state.view === "master") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderMaster(); }
@@ -6461,7 +6904,7 @@ const cleanName = (n) => String(n || "").replace(/_\d{8}_\d{6}/, "").replace(/\.
 function modelTitle() { return [state.name, state.desc].filter(Boolean).join(" ").replace(/_\d{8}_\d{6}|\.(json|csv|rvt)$/gi, " "); }
 // Reinforcement kg/m³ and mild steel share entered for this model (kept with the earthworks assumptions)
 function rebarOpts() { const e = state.earth || {}; return { kg: Number.isFinite(e.rebarKg) ? e.rebarKg : undefined, mild: Number.isFinite(e.rebarMild) ? e.rebarMild : undefined }; }
-function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts() }); noteCheckTitles(); } }
+function rerunChecks() { if (state.records) { state.result = runChecks(state.records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles(); } }
 function noteCheckTitles() { for (const i of state.result.issues) CHECK_TITLES[i.key] = i.title; }
 function gradePanel(iss) {
   const mats = {};
@@ -6739,6 +7182,133 @@ ${past}` : undefined });
 }
 
 
+// ===== His notes on the bill: where his own measure differs from SolvBoQ's, and why =====
+// As he checks a generated bill line by line (Map to SANS), he records his figure and the reason (“a beam should have
+// been deducted”). Each note keeps SolvBoQ's figure at the time, the line, its elements and the build, so it can be worked
+// through later without him: each becomes a measuring rule, a card or live warning, or stays a decision for that job.
+// Saved to the project (projects/{pid}/notes/{id}) when one is open, else in this browser (solvboq-notes-v1) until
+// he moves them. web/vendor-build/notes.mjs reads them with the project code.
+const LN = { pid: null, cloud: {}, err: "", edit: null };
+const LN_LOCAL = "solvboq-notes-v1";
+const LN_KINDS = [["rule", "How I measure it"], ["model", "The model is wrong"], ["job", "Only on this job"], ["unsure", "Not sure why"]];
+const LN_STATUS = { open: "Waiting", learned: "Learned", card: "Now a modelling rule", kept: "Kept as a job decision", noted: "Noted" };
+const lnLocal = (v) => { try { if (v === undefined) return JSON.parse(localStorage.getItem(LN_LOCAL) || "{}") || {}; localStorage.setItem(LN_LOCAL, JSON.stringify(v)); } catch (e) { return {}; } };
+const lnHash = (s) => { let x = 0x811c9dc5; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 0x01000193) >>> 0; } return x.toString(16).padStart(8, "0"); };
+const lnId = (model, key) => "n-" + lnHash(String(model) + "|" + key) + lnHash(key + "|" + model);
+const lnOnCloud = () => !!(Store.user && CL.pid);
+
+// Every note this browser can see: the project's, then any kept only here
+function lnAll() { return { ...lnLocal(), ...(LN.pid === CL.pid ? LN.cloud : {}) }; }
+function lnFor(L) { return lnAll()[lnId(state.name, L.key)] || null; }
+function lnForModel() { return Object.values(lnAll()).filter((n) => n.model === state.name); }
+
+async function lnLoad() {
+  const pid = CL.pid;
+  if (!Store.user || !pid) { LN.pid = null; LN.cloud = {}; return; }
+  try {
+    const list = await Store.listNotes(pid);
+    if (CL.pid !== pid) return;
+    LN.pid = pid; LN.cloud = Object.fromEntries(list.map((n) => [n.id, n])); LN.err = "";
+  } catch (e) { LN.err = e.message; }
+  if (state.view === "map" && state.result) renderMap();
+}
+
+// The note is learning data, never an override: the bill keeps SolvBoQ's own figure, so how far the engine still is from
+// his measure stays visible until a rule fixes it (the goal is the whole bill automated, within 5%)
+async function lnSave(L, his, reason, kind) {
+  reason = String(reason || "").trim().slice(0, 2000);
+  const x = his === "" || his == null ? null : parseFloat(his);
+  if (his !== "" && his != null && (!Number.isFinite(x) || x < 0)) return toast("Enter your quantity as a number, or leave it empty.");
+  if (!reason) return toast("Say why it differs: that’s what SolvBoQ learns from.");
+  const ids = L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id));
+  const old = lnFor(L);
+  const n = {
+    id: lnId(state.name, L.key), model: state.name, modelId: state.pmid || "", structure: state.result.structure || "",
+    line: { key: L.key, n: L.n, section: L.section || "", clause: L.clause || "", heading: L.heading || "", description: L.description, unit: L.unit || "",
+      basis: L.expected ? "not in model" : L.inferred || L.groups.some((g) => g.inferred) ? "inferred" : "modelled", rule: [...new Set(L.groups.map((g) => g.ruleId || g.method || "").filter(Boolean))].join(", ") },
+    ours: Number.isFinite(L.modelQty) ? Math.round(L.modelQty * 1000) / 1000 : null, his: x, reason, kind: kind || "unsure",
+    elements: ids.slice(0, 400), elementCount: ids.length,
+    status: old?.status && old.his === x && old.reason === reason ? old.status : "open", reply: old?.reply || "",
+    by: Store.user?.email || (Store.user?.isAnonymous ? "guest" : ""), at: new Date().toISOString(), created: old?.created || new Date().toISOString(),
+    build: document.querySelector('meta[name="solvboq-build"]')?.content || "",
+  };
+  LN.edit = null;
+  if (lnOnCloud()) {
+    try { await Store.saveNote(CL.pid, n); LN.pid = CL.pid; LN.cloud[n.id] = n; const loc = lnLocal(); if (loc[n.id]) { delete loc[n.id]; lnLocal(loc); } toast(`Note saved to ${CL.projects.find((p) => p.id === CL.pid)?.name || "the project"}`); }
+    catch (e) { const loc = lnLocal(); loc[n.id] = n; lnLocal(loc); toast(`Saved in this browser only: ${e.message}`); }
+  } else { const loc = lnLocal(); loc[n.id] = n; lnLocal(loc); toast("Note saved in this browser. Open a project so it reaches SolvBoQ."); }
+  renderMap();
+}
+async function lnRemove(n) {
+  if (!confirm("Remove this note?")) return;
+  const loc = lnLocal(); if (loc[n.id]) { delete loc[n.id]; lnLocal(loc); }
+  if (LN.cloud[n.id] && lnOnCloud()) { try { await Store.deleteNote(CL.pid, n.id); delete LN.cloud[n.id]; } catch (e) { return toast(e.message); } }
+  toast("Note removed"); renderMap();
+}
+// Notes made before a project was open: move them into it
+async function lnMoveLocal() {
+  const loc = lnLocal(), list = Object.values(loc);
+  if (!list.length || !lnOnCloud()) return;
+  try { for (const n of list) { await Store.saveNote(CL.pid, n); LN.cloud[n.id] = n; delete loc[n.id]; } LN.pid = CL.pid; lnLocal(loc); toast(`${plural(list.length, "note")} moved to the project`); }
+  catch (e) { lnLocal(loc); toast(e.message); }
+  renderMap();
+}
+function lnDownload() {
+  const list = lnForModel().sort((a, b) => (a.line.n || 0) - (b.line.n || 0));
+  const q = (v) => (/[",\n\r]/.test(String(v ?? "")) ? `"${String(v).replace(/"/g, '""')}"` : String(v ?? ""));
+  const rows = [["Item", "Section", "Clause", "Description", "Unit", "SolvBoQ", "Yours", "Difference %", "Why", "Kind", "Status", "Reply", "By", "Date", "Element IDs"],
+    ...list.map((n) => [n.line.n, n.line.section, n.line.clause, n.line.description, n.line.unit, n.ours ?? "", n.his ?? "", lnPct(n) ?? "", n.reason, (LN_KINDS.find((k) => k[0] === n.kind) || [, ""])[1], LN_STATUS[n.status] || n.status, n.reply || "", n.by, n.at.slice(0, 10), (n.elements || []).join(";")])];
+  saveFile(`${state.name} - notes for SolvBoQ.csv`, "﻿" + rows.map((r) => r.map(q).join(",")).join("\r\n"));
+}
+const lnPct = (n) => (Number.isFinite(n.ours) && Number.isFinite(n.his) && n.ours ? Math.round(((n.his - n.ours) / n.ours) * 1000) / 10 : null);
+
+// The note in the line editor: what he wrote, or the form
+function lnEditorBox(L) {
+  const n = lnFor(L), editing = LN.edit === L.key || (!n && LN.edit === L.key);
+  const ours = Number.isFinite(L.modelQty) ? `${mapQty(L.modelQty, L.unit)} ${L.unit}` : "nothing (not in the model)";
+  if (!editing) {
+    if (!n) return h("div", { class: "edfield lnbox" }, h("span", { class: "edlabel" }, "Your measure"),
+      h("p", { class: "edtext" }, "Measured it differently? Note your figure and why. SolvBoQ learns from it, and the next model gets it right."),
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = L.key; renderMap(); setTimeout(() => $("lnHis")?.focus(), 0); } }, "Add a note")));
+    const pct = lnPct(n);
+    return h("div", { class: "edfield lnbox has" }, h("span", { class: "edlabel" }, "Your note ", h("span", { class: "edsub" }, `· ${LN_STATUS[n.status] || n.status}${LN.cloud[n.id] ? "" : " · in this browser only"}`)),
+      n.his != null ? h("p", { class: "edtext" }, h("b", {}, `Yours ${mapQty(n.his, n.line.unit)} ${n.line.unit}`), ` · SolvBoQ ${n.ours == null ? "nothing" : mapQty(n.ours, n.line.unit) + " " + n.line.unit}${pct != null ? ` (${pct > 0 ? "+" : ""}${pct}%)` : ""}`) : null,
+      h("p", { class: "edtext lnreason" }, n.reason),
+      h("span", { class: "edsub" }, `${(LN_KINDS.find((k) => k[0] === n.kind) || [, ""])[1]} · ${n.by || "guest"}, ${n.at.slice(0, 10)}`),
+      n.reply ? h("p", { class: "edtext lnreply" }, h("b", {}, "SolvBoQ: "), n.reply) : null,
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = L.key; renderMap(); } }, "Edit"), h("button", { type: "button", class: "link", onclick: () => lnRemove(n) }, "Remove")));
+  }
+  let kind = n?.kind || "rule";
+  const chips = h("div", { class: "lnkinds", role: "radiogroup", "aria-label": "Why it differs" }, ...LN_KINDS.map(([k, l]) => h("button", { type: "button", role: "radio", "aria-checked": String(k === kind), onclick: (e) => { kind = k; for (const b of e.currentTarget.parentNode.children) b.setAttribute("aria-checked", String(b === e.currentTarget)); } }, l)));
+  return h("div", { class: "edfield lnbox has" },
+    h("label", { class: "edlabel", for: "lnHis" }, "Your figure ", h("span", { class: "edsub" }, `· SolvBoQ has ${ours}`)),
+    h("div", { class: "edqty" }, h("input", { id: "lnHis", inputmode: "decimal", class: "edinput big", value: n?.his ?? "", placeholder: "Your quantity (optional)" }), h("span", {}, L.unit)),
+    h("label", { class: "edlabel", for: "lnWhy" }, "Why it differs"),
+    h("textarea", { id: "lnWhy", class: "lnwhy", rows: 3, placeholder: "For example: the beam over the opening should be deducted from the wall area." }, n?.reason || ""),
+    chips,
+    h("span", { class: "edsub" }, "The bill keeps SolvBoQ’s figure: your note teaches it to get this right, rather than changing this one line."),
+    h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn sm dark", onclick: () => lnSave(L, $("lnHis").value.trim(), $("lnWhy").value, kind) }, "Save note"),
+      h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = null; renderMap(); } }, "Cancel")));
+}
+
+// In the overview: how many notes, where they're kept, and the download
+function lnOverview() {
+  const list = lnForModel(), loc = Object.values(lnLocal());
+  if (!list.length && !loc.length) return null;
+  const open = list.filter((n) => n.status === "open").length;
+  return h("div", { class: "lnover" },
+    h("span", { class: "edtitle sm" }, "Your notes for SolvBoQ"),
+    h("p", { class: "edtext" }, list.length ? `${plural(list.length, "note")} on this model, ${open ? `${open} waiting to be worked through` : "all worked through"}. ${lnOnCloud() ? "Saved with the project, so SolvBoQ can read them." : "Kept in this browser: open a project so they reach SolvBoQ."}` : "No notes on this model."),
+    loc.length && lnOnCloud() ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(loc.length, "note")} only in this browser`), h("span", {}, "Made before a project was open.")), h("button", { type: "button", class: "btn sm dark", onclick: lnMoveLocal }, "Move to the project")) : null,
+    list.length ? h("div", { class: "howlist" }, ...list.sort((a, b) => (a.line.n || 0) - (b.line.n || 0)).slice(0, 8).map((n) => h("button", { type: "button", class: "lnlink", onclick: () => { const L = state.mapLines.find((x) => x.key === n.line.key); if (L) selectLine(L); else toast("That line isn’t in this bill any more."); } },
+      h("span", {}, n.line.description), h("b", {}, lnPct(n) != null ? `${lnPct(n) > 0 ? "+" : ""}${lnPct(n)}%` : "note")))) : null,
+    list.length ? h("button", { type: "button", class: "link accent", onclick: lnDownload }, "Download the notes (CSV)") : null);
+}
+
+const lnIcon = () => svg('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--accent)" stroke-width="2.2" aria-label="Has your note"><path d="M4 5h16v11H9l-5 4z"></path></svg>');
+Store.onUser(() => lnLoad());
+
 // ===== Map to SANS: the bill as a tree (sections › clause headings › lines), and an item editor beside it =====
 // Built from the Claude Design redesign. Lines come from mapping.js (boqLines) and the engine's inferred and expected
 // items; this file only presents them and records decisions in `state`.
@@ -6792,6 +7362,7 @@ function renderMap() {
     for (const sec of new Set(lines.map((L) => L.section))) if (!lines.some((L) => L.section === sec && OPEN.has(L.status))) state.coll.add(sec);
   }
   if (state.sel && !lines.some((L) => L.key === state.sel)) state.sel = null;
+  $("mInputs").replaceChildren(mapInputsBanner());
   renderTree(lines, groups);
   renderEditor(lines, groups);
 }
@@ -6800,9 +7371,11 @@ function renderTree(lines, groups) {
   const need = lines.filter((L) => OPEN.has(L.status)).length, flags = lines.filter((L) => L.status === "flag" || L.status === "unmapped").length, out = lines.filter((L) => L.status === "out").length;
   const f = state.mFilter2 || "all";
   const filters = [["all", "All", lines.length], ["need", "Needs you", need], ["flag", "Model problems", flags], ...(out ? [["out", "Left out", out]] : [])];
+  const noted = lines.filter((L) => lnFor(L)).length;
+  if (noted) filters.push(["notes", "Your notes", noted]);
   $("mFilter").replaceChildren(...filters.map(([k, l, n]) => h("button", { type: "button", "aria-pressed": String(f === k), onclick: () => { state.mFilter2 = k; renderMap(); } }, l, h("span", { class: "segn" }, String(n)))));
   const q = (state.mQ || "").trim().toLowerCase();
-  const show = (L) => (f === "all" ? L.status !== "out" : f === "need" ? OPEN.has(L.status) || L.key === state.sel : f === "flag" ? L.status === "flag" || L.status === "unmapped" : L.status === "out")
+  const show = (L) => (f === "all" ? L.status !== "out" : f === "need" ? OPEN.has(L.status) || L.key === state.sel : f === "flag" ? L.status === "flag" || L.status === "unmapped" : f === "notes" ? !!lnFor(L) || L.key === state.sel : L.status === "out")
     && (!q || [L.description, L.heading, L.section, L.clause, ...L.groups.flatMap((g) => [g.sample.Family, g.sample.Type, g.sample.Material])].some((x) => String(x || "").toLowerCase().includes(q)));
   const rows = [];
   const summary = (ls) => {
@@ -6835,8 +7408,8 @@ function renderTree(lines, groups) {
       const [label, cls] = STATUS[L.status];
       const ai = L.status === "claude" ? L.groups.find((g) => g.method === "claude") : null;
       rows.push(h("button", { type: "button", class: "mrow line" + (L.key === state.sel ? " sel" : "") + (L.status === "out" ? " struck" : ""), "aria-pressed": String(L.key === state.sel), "data-key": L.key,
-        onclick: () => { state.sel = L.key === state.sel ? null : L.key; state.showEls = false; state.itemMenu = false; renderMap(); } },
-        h("span", { class: "nlabel", style: "padding-left:50px" }, statusIcon(L.status), h("span", { class: "lnum" }, String(L.n)), h("span", { class: "ldesc" }, L.description)),
+        onclick: () => { state.sel = L.key === state.sel ? null : L.key; state.showEls = false; LN.edit = null; state.itemMenu = false; renderMap(); } },
+        h("span", { class: "nlabel", style: "padding-left:50px" }, statusIcon(L.status), h("span", { class: "lnum" }, String(L.n)), h("span", { class: "ldesc" }, L.description), lnFor(L) ? h("span", { class: "lnmark", title: lnFor(L).his != null ? `Your figure: ${mapQty(lnFor(L).his, L.unit)} ${L.unit}. ${lnFor(L).reason}` : lnFor(L).reason }, lnIcon()) : null),
         h("span", { class: "lunit" }, L.unit || ""),
         h("span", { class: "r lqty" + (L.edited ? " edited" : L.shownQty == null ? " none" : "") }, L.status === "out" ? "—" : L.status === "prov" ? "Prov." : L.shownQty == null ? "—" : mapQty(L.shownQty, L.unit)),
         h("span", {}, h("span", { class: "stpill " + cls }, ai && ai.confidence != null ? `${label} · ${Math.round(ai.confidence * 100)}%` : label))));
@@ -6870,7 +7443,7 @@ function nextOpenAfter(L) {
 }
 function selectLine(L) {
   if (!L) { state.sel = null; renderMap(); return; }
-  state.sel = L.key; state.showEls = false; state.itemMenu = false;
+  state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null;
   state.coll.delete(L.section); state.coll.delete(L.section + "|" + L.clause + "|" + L.heading);
   renderMap();
   const esc = window.CSS && CSS.escape ? CSS.escape(L.key) : L.key.replace(/["\\]/g, "\\$&");
@@ -6921,6 +7494,30 @@ function setAssumption(k, v) {
   const x = parseFloat(v); state.earth = { ...(state.earth || {}) };
   if (v === "" || !Number.isFinite(x)) delete state.earth[k]; else state.earth[k] = x;
   saveEarth(state.name, state.earth); rerunChecks(); renderMap();
+}
+
+// Where the earthworks figures came from: the structure's inputs in the project, this model, or assumed
+function mapEvidence(a) {
+  const S = state.result.inputs?.structure, rows = [];
+  const word = { model: "set for this model", project: "from the project", default: "assumed", geotech: "from the borehole logs" };
+  if (!a.manhole) {
+    const k = a.civil ? "replacementDepth" : "buildingDepth";
+    rows.push(`${a.civil ? "Replacement depth" : "Excavation depth"} ${fmt2(a[k])} m: ${a.srcText?.[k] || word[a.src?.[k]] || "assumed"}.`);
+  }
+  if (a.geo) rows.push(`Rock: ${SANS_D_CLASSES.filter(([c]) => a.geo.shares[c] > 0).map(([c, l]) => `${l.toLowerCase()} ${Math.round(a.geo.shares[c] * 100)}%`).join(", ") || "none"} over ${fmt2(a.geo.depth)} m, from ${a.geo.where}${a.src?.rockShare === "model" ? " (hard rock set for this model instead)" : ""}.`);
+  else if (!a.manhole) rows.push(`Hard rock ${Math.round((a.rockShare || 0) * 100)}%: ${a.src?.rockShare === "model" ? "set for this model" : "his provisional allowance; classify the borehole logs under Project to bill it from them"}.`);
+  return h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Where these figures come from"),
+    ...rows.map((t) => h("p", { class: "edtext" }, t)),
+    a.geo?.check ? h("p", { class: "edtext warn" }, a.geo.check + ".") : null,
+    S ? h("span", { class: "edsub" }, `This model is ${S.name || "a structure"} in the project: ${(S.kindTitle || "kind not set").toLowerCase()}.`)
+      : h("span", { class: "edsub" }, "This model isn’t linked to a structure in the project, so these are assumed. ", h("button", { type: "button", class: "link accent", onclick: () => goProj() }, "Set it up under Project")));
+}
+// A banner over the bill when the project's inputs change how to read it
+function mapInputsBanner() {
+  const I = state.result?.inputs, out = [];
+  if (I?.methodSet && I.method !== "sans1200") out.push(`The project calls up ${MEASUREMENT_METHODS.find((m) => m.id === I.method)?.title || I.method}. SolvBoQ bills to SANS 1200 Clause 8 so far: these items and clause numbers are SANS 1200’s.`);
+  if (I && !I.structure && I.count) out.push("This model isn’t linked to one of the project’s structures, so its kind, grade and geotech are guessed or assumed.");
+  return out.length ? h("div", { class: "banner" }, h("span", null, out.join(" "), " ", h("button", { type: "button", class: "link accent", onclick: () => goProj() }, "Open Project"))) : null;
 }
 
 // ----- The item editor -----
@@ -6975,6 +7572,8 @@ function editorFor(L, lines) {
       L.edited ? h("span", { class: "edhint warn" }, `Edited. The model gives ${mapQty(L.modelQty, L.unit)}. `, h("button", { type: "button", class: "link", onclick: () => setQty(L, "") }, "Reset")) : null,
       L.expected ? h("span", { class: "edhint" }, `Not in the model. ${L.why}`) : null));
   }
+  // His own measure, and why it differs: a note SolvBoQ learns from (notes.js)
+  if (!L.unmapped) body.push(lnEditorBox(L));
   // Assumptions behind inferred lines, changed right here
   const num = (k, lbl, unit, val, scale = 1) => h("label", { class: "edrow" }, lbl, h("span", {}, h("input", { class: "edinput", inputmode: "decimal", value: val == null ? "" : String(Math.round(val * scale * 100) / 100),
     onchange: (e) => setAssumption(k, e.target.value.trim() === "" ? "" : String(parseFloat(e.target.value) / scale)) }), h("span", { class: "eunit" }, unit)));
@@ -6985,13 +7584,17 @@ function editorFor(L, lines) {
         num("g5Share", "G5 share of the fill", "%", a.g5Share, 100), num("rockShare", "Hard rock", "%", a.rockShare, 100), num("handShare", "Hand excavation", "%", a.handShare, 100),
         num("stockShare", "Stockpiling", "%", a.stockShare, 100), num("wsPerMetre", "Working space per metre", "m³", a.wsPerMetre)]
         : [num("buildingDepth", "Excavation depth", "m", a.buildingDepth), num("fillThickness", "Fill thickness", "mm", a.fillThickness, 1000)]),
-      h("span", { class: "edsub" }, a.manhole ? `Manhole: dug from ground level (the top of the cover, ${fmt2(a.top)} m) to the underside of the lowest part (${fmt2(a.bottom)} m), ${fmt2(a.depth)} m deep.` : a.civil ? "His tender rule from Gravity Thickeners. The replacement depth comes from the geotechnical report for each site." : "His rule from the Incinerator building BoQ.")));
+      h("span", { class: "edsub" }, a.manhole ? `Manhole: dug from ground level (the top of the cover, ${fmt2(a.top)} m) to the underside of the lowest part (${fmt2(a.bottom)} m), ${fmt2(a.depth)} m deep.` : a.civil ? "His tender rule from Gravity Thickeners. The replacement depth comes from the geotechnical report for each site." : "His rule from the Incinerator building BoQ."),
+      mapEvidence(a)));
   }
   if (kind === "rebar") {
     const rc = L.groups[0].elements.reduce((s, e) => s + (e.Volume || 0), 0), e = state.earth || {};
     const kg = Number.isFinite(e.rebarKg) ? e.rebarKg : CONV.rebar[state.result.structure === "civil" ? "civil" : "building"], mild = Number.isFinite(e.rebarMild) ? e.rebarMild : CONV.rebar.mildShare;
+    const St = state.result.inputs?.structure, sKg = St && Number.isFinite(St.rebarKg) ? St.rebarKg : null;
+    const kgShown = Number.isFinite(e.rebarKg) ? e.rebarKg : sKg != null ? sKg : kg;
     body.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Reinforcement estimate ", h("span", { class: "edsub" }, `· ${fmtN(rc, 1)} m³ reinforced concrete`)),
-      num("rebarKg", "Steel per m³", "kg", kg), num("rebarMild", "Mild steel share", "%", mild, 100)));
+      num("rebarKg", "Steel per m³", "kg", kgShown), num("rebarMild", "Mild steel share", "%", mild, 100),
+      h("span", { class: "edsub" }, Number.isFinite(e.rebarKg) ? "Steel per m³: set for this model." : sKg != null ? `Steel per m³: the rate for ${St.name || "the structure"} in the project, ${srcWords(St.srcOf("rebarKg"))}.` : `Steel per m³: assumed (${kg} kg/m³ for ${state.result.structure === "civil" ? "tanks" : "buildings"}). Set the structure’s rate under Project.`)));
   }
   // Why a built-in rule chose this item (only while the item is still the rule's own)
   const why = [...new Set(L.groups.filter((g) => !g.inferred && (g.method === "rule" || g.method === "check")).flatMap((g) => explainRule(g, state.result)))];
@@ -7052,6 +7655,7 @@ function editorOverview(lines, groups) {
     ...batches.map((l) => bulkRow(`${plural(l.length, "group")} of ${(TRADE[l[0].trade]?.label || "other items").toLowerCase()}`, l[0].reason || "Matched by a rule.", () => confirmBatch(l))),
     unmatched.length && sampleFn ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(unmatched.length, "unmatched group")}`), h("span", {}, state.aiMsg || "Claude can suggest an item for each one.")),
       mapCtl ? h("button", { type: "button", class: "btn sm", onclick: () => mapCtl && mapCtl.abort() }, "Stop") : h("button", { type: "button", class: "btn sm accent", onclick: () => askClaude(unmatched) }, "Ask Claude")) : null,
+    lnOverview(),
     h("span", { class: "edtitle sm" }, "How lines were mapped"),
     h("div", { class: "howlist" }, ...how.map(([l, n]) => h("div", {}, h("span", {}, l), h("b", {}, String(n))))))];
 }
@@ -7364,7 +7968,8 @@ async function loadProjects() {
   CL.loaded = true;
   if (state.view === "claims") renderClaims();
   if (typeof mbList === "function") mbList(); // the master BoQs live in the same project
-  if (typeof pvAfterProjects === "function") pvAfterProjects(); // the header's project list and the project's models
+  if (typeof pvAfterProjects === "function") pvAfterProjects();
+  if (typeof lnLoad === "function") lnLoad(); // the header's project list and the project's models
 }
 function chooseProject(pid) {
   CL.pid = pid; CL.open = null; CL.certs = [];
@@ -8375,7 +8980,7 @@ Store.onUser(() => { MB.saved = []; if (state && state.view === "master") mbList
 
 // ----- Standards: the modelling standard as cards, the BoQ codes for Revit, and how much of his bills it covers -----
 // The cards are data (cards.js); this page only shows them. Print gives the card pack for the modeller.
-const STD = { q: "", group: "all" };
+const STD = { q: "", group: "all", who: "all" };
 // The add-in zip sits beside the published page (publish.mjs); a full address, so it also works from the page Revit opens
 const ADDIN_URL = "https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip";
 
@@ -8441,7 +9046,9 @@ function renderStandards() {
       h("div", { class: "tools" },
         h("a", { class: "btn dark", href: ADDIN_URL, download: "SolvBoQ-Revit2025.zip", title: "The SolvBoQ add-in for Revit 2025, the same version as this page" }, "Download the Revit add-in"),
         h("button", { type: "button", class: "btn", onclick: () => saveFile("SolvBoQ Assembly Codes.txt", assemblyCodeFile()), title: "In Revit: Manage › Additional Settings › Assembly Code, then load this file" }, "Download the codes for Revit"),
-        h("button", { type: "button", class: "btn", onclick: stdPrint }, "Print the cards")),
+        h("button", { type: "button", class: "btn", onclick: stdPrint }, "Print the cards"),
+        h("button", { type: "button", class: "btn", onclick: () => saveFile("SolvBoQ modelling standard.ids", idsFile(), "application/xml"), title: "For outside designers: check a model against the SolvBoQ standard in a tool that reads IDS 1.0 (IDS4Revit, IDS Inspector, or an IFC checker)" }, "Download for outside designers (IDS)")),
+      h("p", { class: "sub" }, "The IDS file (buildingSMART IDS 1.0) carries the per-element rules: every billed element has a SolvBoQ code, each code suits its category, and graded concrete names its grade. Rules between elements and the labels are checked by SolvBoQ itself. Not yet tried in an IDS checker."),
       h("p", { class: "sub" }, "Install: close Revit, unzip the add-in, and double-click install.cmd inside it. If Windows says it protected your PC, choose More info › Run anyway (the add-in isn’t signed yet)."),
       h("div", { class: "edai" }, h("b", null, "Set up in one click. "), "In Revit, on the SolvBoQ tab, click ", h("b", null, "Set up SolvBoQ"),
         ": it loads the BoQ codes, adds the four labels and creates the standard materials in the open model. It never changes an element, skips what’s already there, and one undo takes it all out. Then, in each type’s properties, Assembly Code › pick its SolvBoQ code."),
@@ -8457,7 +9064,11 @@ function renderStandards() {
         h("div", { class: "seg", role: "group", "aria-label": "Section" }, [["all", "All"], ...groups.map(([g, sec]) => [g, g === "X" ? "Not billed" : sec.replace("SANS 1200 ", "")])].map(([k, l]) =>
           h("button", { type: "button", "aria-pressed": String(STD.group === k), onclick: () => { STD.group = k; renderStandards(); } }, l))),
         h("div", { class: "search" }, h("label", { class: "sr", for: "stdSearch" }, "Search the cards"), svg(ICON.search), (search.id = "stdSearch", search))),
+      h("div", { class: "maphead" }, h("span", { class: "sub" }, "Information it needs, from:"),
+        h("div", { class: "seg", role: "group", "aria-label": "Who supplies it" }, [["all", "Everyone"], ["modeller", "The modeller"], ["designer", "The engineer’s design"], ["geotech", "The geotechnical report"]].map(([k, l]) =>
+          h("button", { type: "button", "aria-pressed": String(STD.who === k), onclick: () => { STD.who = k; renderStandards(); } }, l)))),
       list),
+    stdKinds(),
     h("section", { class: "card stdbody stdmats stdlabels" },
       h("div", { class: "stdintro" }, h("h2", null, "Labels: four parameters that take out the last guesses"),
         h("p", { class: "sub" }, "Revit shared parameters, added once to the template. Without them SolvBoQ goes by position; with them it bills exactly what they say.")),
@@ -8494,9 +9105,18 @@ function stdBills(rows) {
   return h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Billed as"), h("th", null, "Unit"), h("th", null, "Clause"))),
     h("tbody", null, rows.map(([what, unit, clause]) => h("tr", null, h("td", null, what), h("td", null, unit), h("td", null, clause || "—")))));
 }
+// The information a card needs: what, who supplies it, by when, and what SolvBoQ does until then (ISO 7817-1's shape)
+function stdNeeds(list) {
+  const shown = STD.who === "all" ? list : list.filter((n) => n.who === STD.who);
+  if (!shown.length) return null;
+  return [h("span", { class: "edlabel" }, "The information it needs"),
+    h("table", { class: "stdtable stdneeds" }, h("thead", null, h("tr", null, h("th", null, "What"), h("th", null, "Who, and where"), h("th", null, "By"), h("th", null, "Until then"))),
+      h("tbody", null, shown.map((n) => h("tr", null, h("td", null, h("b", null, n.what), h("div", { class: "sub" }, n.why)), h("td", null, ACTORS[n.who] || n.who, h("div", { class: "sub" }, n.where)), h("td", null, stageTitle(n.by)), h("td", null, IF_MISSING[n.missing] || "")))))];
+}
 function stdCard(c) {
+  const uni = UNICLASS[c.code];
   return h("details", { class: "stdcard", id: "card-" + c.code },
-    h("summary", null, h("code", { class: "stdcode" }, c.code), h("b", null, c.title), h("span", { class: "sub" }, c.cats.map((x) => CARD_CAT[x] || x).join(" · ") || "Any category")),
+    h("summary", null, h("code", { class: "stdcode" }, c.code), h("b", null, c.title), h("span", { class: "sub" }, c.cats.map((x) => CARD_CAT[x] || x).join(" · ") || "Any category"), uni ? h("span", { class: "stduni", title: `Uniclass 2015: ${uni[1]}` }, uni[0]) : null),
     h("div", { class: "stdgrid" },
       h("div", null,
         h("span", { class: "edlabel" }, "Model it"),
@@ -8509,14 +9129,32 @@ function stdCard(c) {
         stdBills(c.bills),
         c.avoid.length ? [h("span", { class: "edlabel" }, "Seen in real models"), h("ul", { class: "stdavoid" }, c.avoid.map(([x, seen]) => h("li", null, x, seen ? h("span", { class: "sub" }, ` ${seen}`) : null)))] : null,
         c.checks.length ? h("p", { class: "sub" }, "SolvBoQ checks: ", stdChecks(c.checks).join(", "), ".") : null,
-        c.his.length ? h("p", { class: "sub" }, "In his bills: ", c.his.join("; ")) : null)));
+        c.his.length ? h("p", { class: "sub" }, "In his bills: ", c.his.join("; ")) : null,
+        uni ? h("p", { class: "sub" }, `Uniclass 2015: ${uni[0]} ${uni[1]}.`) : null)),
+    h("div", { class: "stdgrid one" }, stdNeeds(cardNeeds(c))));
 }
 function stdWorked(w) {
   return h("details", { class: "stdcard worked", id: "card-" + w.id },
     h("summary", null, h("code", { class: "stdcode none" }, "worked out"), h("b", null, w.title), h("span", { class: "sub" }, w.from.length ? `from ${w.from.join(", ")}` : "")),
     h("div", { class: "stdgrid" },
       h("div", null, h("span", { class: "edlabel" }, "The model must get right"), h("ul", null, w.needs.map((x) => h("li", null, x)))),
-      h("div", null, h("span", { class: "edlabel" }, "What SolvBoQ works out"), stdBills(w.bills), w.his.length ? h("p", { class: "sub" }, w.his.join("; ")) : null)));
+      h("div", null, h("span", { class: "edlabel" }, "What SolvBoQ works out"), stdBills(w.bills), w.his.length ? h("p", { class: "sub" }, w.his.join("; ")) : null)),
+    h("div", { class: "stdgrid one" }, stdNeeds(workedNeeds(w))));
+}
+// The kinds of structure, each a module with its own rules and needs (Uniclass 2015 Entities)
+function stdKinds() {
+  const wn = Object.fromEntries(Object.values(WORKED_NEEDS).flat().map((n) => [n.id, n]));
+  return h("section", { class: "card stdbody stdmats" },
+    h("div", { class: "stdintro" }, h("h2", null, "Structures and what each needs"),
+      h("p", { class: "sub" }, "Set per structure under Project, by the engineer. The kinds follow the Uniclass 2015 Entities table (a manhole is a system under a pipeline there). Tables of April 2022: check the codes against NBS before relying on them.")),
+    h("table", { class: "stdtable stdneeds" }, h("thead", null, h("tr", null, h("th", null, "Kind"), h("th", null, "Uniclass"), h("th", null, "How it’s billed"), h("th", null, "The engineer supplies"))),
+      h("tbody", null, STRUCTURE_KINDS.map((k) => h("tr", null, h("td", null, h("b", null, k.title), k.grade ? h("div", { class: "sub" }, `Standard grade ${k.grade}`) : null),
+        h("td", null, k.uniclass.map(([c, t]) => h("div", null, h("span", { class: "stduni" }, c), " ", t))), h("td", null, k.rule),
+        h("td", null, k.needs.length ? h("ul", null, k.needs.map((id) => wn[id] ? h("li", null, wn[id].what) : null)) : "—"))))),
+    h("span", { class: "edlabel" }, "For the whole project"),
+    h("table", { class: "stdtable stdneeds" }, h("tbody", null, PROJECT_NEEDS.map((n) => h("tr", null, h("td", null, h("b", null, n.what), h("div", { class: "sub" }, n.why)), h("td", null, ACTORS[n.who]), h("td", null, IF_MISSING[n.missing]))))),
+    h("span", { class: "edlabel" }, "Methods of measurement"),
+    h("ul", { class: "stdsteps" }, MEASUREMENT_METHODS.map((m) => h("li", null, h("b", null, m.title), m.built ? " (what SolvBoQ bills to)" : " (not built yet)", h("div", { class: "sub" }, m.note)))));
 }
 // Print opens every card first, then puts them back as they were
 function stdPrint() {
@@ -8559,7 +9197,7 @@ $("projSel").addEventListener("change", async (e) => {
 $("projCode").addEventListener("click", () => copyText(CL.pid, "Project code copied. On another computer, or in the page Revit opens, choose Join with a code and paste it."));
 
 // Called when the project list loads or the project changes (claimsview.js)
-function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); }
+function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); }
 
 // ----- The project's models -----
 // The model last used in each project, so choosing a project (or reloading the page) opens it again
@@ -8706,6 +9344,259 @@ document.addEventListener("click", (e) => { if (!$("savePanel").hidden && !e.tar
 Store.onStatus(renderSaveState);
 setInterval(renderSaveState, 1500);
 renderSaveState();
+
+// ===== Project: the top of the bill's information, entered once by the engineer =====
+// The project's method of measurement, stage, particular specification and policy items; then each structure: its kind
+// (Uniclass), the models it covers, its grade and reinforcement rate, and its geotech as he works it out from the report
+// (boreholes, layers and his SANS 1200 D reading of each). The data and its rules are in inputs.js; the engine reads it
+// through piEngine(). Saved to the project (projects/{pid}/inputs/main), else in this browser until a project is open.
+const PI = { pid: undefined, doc: null, loaded: false, saving: "", err: "", open: new Set(), proposed: {}, reading: "", timer: null };
+const PI_LOCAL = "solvboq-inputs-v1";
+const piLocal = (v) => { try { const all = JSON.parse(localStorage.getItem(PI_LOCAL) || "{}") || {}; if (v === undefined) return all.local || null; all.local = v; localStorage.setItem(PI_LOCAL, JSON.stringify(all)); } catch (e) { return null; } };
+const piOnCloud = () => !!(Store.user && CL.pid);
+const piWho = () => Store.user?.email || (Store.user?.isAnonymous ? "guest" : "");
+const piDoc = () => (PI.doc ||= normInputs(piLocal() || inputsBlank()));
+
+// The engine's view of the inputs for the model that's open (app.js passes it to runChecks)
+function piEngine() { return typeof engineInputs === "function" ? engineInputs(piDoc(), cleanName(state.name)) : null; }
+
+async function piLoad() {
+  const pid = CL.pid;
+  if (!piOnCloud()) { PI.pid = null; PI.doc = normInputs(piLocal() || inputsBlank()); PI.loaded = true; return piAfter(); }
+  if (PI.pid === pid && PI.loaded) return;
+  try {
+    const d = await Store.loadInputs(pid);
+    if (CL.pid !== pid) return;
+    // Inputs entered in this browser before the project existed go into the project the first time it has none
+    const loc = !d ? piLocal() : null;
+    PI.pid = pid; PI.doc = normInputs(d || loc || inputsBlank()); PI.loaded = true; PI.err = "";
+    if (loc && (loc.structures?.length || loc.project?.method)) piSave();
+  } catch (e) { PI.err = e.message; }
+  piAfter();
+}
+// After the inputs change: the model is checked again with them, and the page shown again
+function piAfter() {
+  if (state.records && typeof rerunChecks === "function") rerunChecks();
+  if (state.view === "proj") renderProj(); else if (["overview", "detail", "map"].includes(state.view)) render();
+}
+function piChanged(rerender = true) {
+  PI.doc = normInputs(PI.doc);
+  clearTimeout(PI.timer);
+  PI.timer = setTimeout(piSave, 500);
+  if (state.records && typeof rerunChecks === "function") rerunChecks();
+  if (rerender) renderProj();
+}
+async function piSave() {
+  const doc = normInputs(PI.doc);
+  if (piOnCloud()) {
+    try { PI.saving = "Saving…"; await Store.saveInputs(CL.pid, doc); PI.pid = CL.pid; PI.saving = `Saved to ${CL.projects.find((p) => p.id === CL.pid)?.name || "the project"}`; PI.err = ""; }
+    catch (e) { piLocal(doc); PI.err = `Saved in this browser only: ${e.message}`; PI.saving = ""; }
+  } else { piLocal(doc); PI.saving = "Saved in this browser. Open a project so it’s kept with the project."; }
+  if (state.view === "proj") { const s = $("piSaveLine"); if (s) s.textContent = PI.err || PI.saving; }
+}
+// A value changed: keep who changed it and when, with the source he gave
+function piStamp(s, field) { s.src ||= {}; const cur = s.src[field] || {}; s.src[field] = { ...cur, by: piWho(), at: new Date().toISOString() }; s.by = piWho(); s.at = new Date().toISOString(); }
+
+// ----- The page -----
+function renderProj() {
+  const v = $("viewProj"); if (!v) return;
+  const d = piDoc(), p = d.project, focus = document.activeElement?.id;
+  const proj = CL.projects?.find((x) => x.id === CL.pid);
+  const stage = p.stage || "tender";
+  const missing = inputsMissing(d, stage);
+  v.replaceChildren(
+    h("section", { class: "card stdhead" },
+      h("div", { class: "stdintro" },
+        h("h2", null, "Project inputs"),
+        h("p", null, "The top of the bill’s information, set once: how the contract measures, the stage, and each structure with its kind, grade and geotech. Types and elements stay in Revit; the ", h("b", null, "SolvBoQ Structure"), " label on the elements joins them to a structure here."),
+        h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
+      h("div", { class: "pigrid" },
+        h("div", { class: "pifield" },
+          h("span", { class: "edlabel" }, "Method of measurement"),
+          ...MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" }, h("input", { type: "radio", name: "piMethod", checked: (p.method || "sans1200") === m.id ? true : null, onchange: () => { p.method = m.id; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
+            h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"), h("span", { class: "sub" }, m.note)))),
+          p.method && !MEASUREMENT_METHODS.find((m) => m.id === p.method)?.built ? h("div", { class: "edprob" }, "SolvBoQ bills to SANS 1200 Clause 8 so far: the items and clause numbers in Map to SANS are SANS 1200’s, not this method’s.") : null,
+          !p.method ? h("span", { class: "edsub" }, "Not set: SANS 1200 Clause 8 is assumed.") : null),
+        h("div", { class: "pifield" },
+          h("span", { class: "edlabel" }, "Stage of the bill"),
+          h("div", { class: "seg", role: "group", "aria-label": "Stage" }, ...STAGES.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(stage === k), onclick: () => { p.stage = k; piChanged(); } }, l))),
+          h("span", { class: "edsub" }, "What’s still needed is listed for this stage."),
+          h("label", { class: "edlabel", for: "piSpec" }, "Client’s particular specification"),
+          h("input", { id: "piSpec", class: "piinput", value: p.spec, placeholder: "For example: PD particular specification, rev 2", onchange: (e) => { p.spec = e.target.value; piChanged(); } }),
+          h("label", { class: "edlabel", for: "piAmend" }, "Amendments to the method in the contract"),
+          h("textarea", { id: "piAmend", class: "lnwhy", rows: 2, placeholder: "As the pricing assumptions word them", onchange: (e) => { p.amendments = e.target.value; piChanged(); } }, p.amendments)),
+        h("div", { class: "pifield" },
+          h("span", { class: "edlabel" }, "Policy: provisional sums and contingencies"),
+          h("span", { class: "edsub" }, "Priced from the specification, so they’re listed here for the general bill, not generated from the model."),
+          h("label", { class: "edrow" }, "Contingencies", h("span", null, h("input", { id: "piCont", class: "edinput", inputmode: "decimal", value: p.contingency ?? "", onchange: (e) => { p.contingency = e.target.value; piChanged(); } }), h("span", { class: "eunit" }, "%"))),
+          ...p.provisional.map((x, i) => h("div", { class: "pirow" },
+            h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
+            h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
+            h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
+          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum"))))),
+
+    h("section", { class: "card stdbody stdmats" },
+      h("div", { class: "stdintro" }, h("h2", null, "Structures"),
+        h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it. Kinds follow the Uniclass 2015 Entities table.")),
+      d.structures.length ? null : h("p", { class: "sub" }, "None yet. Without them, each model is one structure and its kind is taken from its title."),
+      ...d.structures.map((s, i) => piStructure(s, i)),
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: piAddStructure }, "Add a structure"))),
+
+    h("section", { class: "card stdbody stdmats" },
+      h("div", { class: "stdintro" }, h("h2", null, `Still needed for the ${stage} bill`),
+        h("p", { class: "sub" }, "Who supplies it, and what SolvBoQ does until then. The modeller’s part is in Revit (the Standards page and the add-in’s issues panel).")),
+      missing.length ? h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "For"), h("th", null, "What"), h("th", null, "Who"), h("th", null, "Until then"))),
+        h("tbody", null, missing.map((m) => h("tr", null, h("td", null, m.level), h("td", null, h("b", null, m.need.what), h("div", { class: "sub" }, m.need.why)), h("td", null, ACTORS[m.need.who] || m.need.who), h("td", null, IF_MISSING[m.need.missing] || "")))))
+        : h("p", null, "Nothing missing for this stage at the project level.")));
+  if (focus && $(focus)) $(focus).focus();
+}
+
+function piAddStructure() {
+  const d = piDoc(), n = d.structures.length + 1;
+  const model = state.records ? cleanName(state.name) : "";
+  const s = { id: "s" + Date.now().toString(36), name: model && !d.structures.some((x) => x.models.includes(model)) ? model : `Structure ${n}`, kind: "", models: model && !d.structures.some((x) => x.models.includes(model)) ? [model] : [],
+    grade: "", rebarKg: null, earthworks: {}, geotech: { report: {}, method: "average", limitations: "", holes: [] }, src: {}, by: piWho(), at: new Date().toISOString() };
+  d.structures.push(s); PI.open.add(s.id);
+  piChanged();
+  setTimeout(() => $(`piName${d.structures.length - 1}`)?.select(), 0);
+}
+
+// The models in the project, for choosing which belong to a structure
+function piModels() {
+  const set = new Set((typeof PV !== "undefined" ? PV.models : []).map((x) => x.title || x.fileName).filter(Boolean));
+  if (state.records && !state.fromSample) set.add(cleanName(state.name));
+  for (const s of piDoc().structures) s.models.forEach((m) => set.add(m));
+  return [...set];
+}
+
+function piSourceRow(s, field, i) {
+  const c = s.src?.[field] || {};
+  const set = (k, v) => { s.src ||= {}; s.src[field] = { ...(s.src[field] || {}), [k]: v }; piStamp(s, field); piChanged(); };
+  return h("div", { class: "pisrc" },
+    h("select", { "aria-label": "Where it comes from", id: `piSrc${field}${i}`, onchange: (e) => set("from", e.target.value) }, h("option", { value: "" }, "Source…"), ...INPUT_SOURCES.map(([k, l]) => h("option", { value: k, selected: c.from === k ? true : null }, l))),
+    h("input", { class: "piinput sm", id: `piRef${field}${i}`, value: c.ref || "", placeholder: "Page or clause", onchange: (e) => set("ref", e.target.value) }),
+    h("input", { class: "piinput", id: `piWhy${field}${i}`, value: c.why || "", placeholder: "How you worked it out", onchange: (e) => set("why", e.target.value) }),
+    c.by || c.at ? h("span", { class: "edsub" }, `${c.by || "guest"}${c.at ? ", " + c.at.slice(0, 10) : ""}`) : null);
+}
+
+function piStructure(s, i) {
+  const k = KIND_BY_ID.get(s.kind), open = PI.open.has(s.id), models = piModels();
+  const num = (label, unit, val, set, id) => h("label", { class: "edrow" }, label, h("span", null, h("input", { id, class: "edinput", inputmode: "decimal", value: val ?? "", onchange: (e) => set(e.target.value.trim() === "" ? null : e.target.value) }), h("span", { class: "eunit" }, unit)));
+  const g = s.geotech, depth = k?.module === "building" ? s.earthworks.buildingDepth ?? CONV.earthworks.buildingDepth : s.earthworks.replacementDepth ?? CONV.earthworks.replacementDepth;
+  const sh = geoShares(s, depth);
+  const prop = PI.proposed[s.id];
+  return h("details", { class: "stdcard", open: open ? true : null, ontoggle: (e) => { e.target.open ? PI.open.add(s.id) : PI.open.delete(s.id); } },
+    h("summary", null, h("b", null, s.name || "Unnamed structure"), h("span", { class: "sub" }, [k ? k.title : "kind not set", k?.uniclass?.[0]?.[0], s.models.length ? plural(s.models.length, "model") : "", g.holes.length ? plural(g.holes.length, "borehole") : ""].filter(Boolean).join(" · "))),
+    h("div", { class: "stdgrid" },
+      h("div", null,
+        h("label", { class: "edlabel", for: `piName${i}` }, "Name (the SolvBoQ Structure label)"),
+        h("input", { id: `piName${i}`, class: "piinput", value: s.name, onchange: (e) => { s.name = e.target.value; piStamp(s, "name"); piChanged(); } }),
+        h("label", { class: "edlabel", for: `piKind${i}` }, "Kind"),
+        h("select", { id: `piKind${i}`, class: "piinput", onchange: (e) => { s.kind = e.target.value; piStamp(s, "kind"); piChanged(); } },
+          h("option", { value: "" }, "Choose the kind…"), ...STRUCTURE_KINDS.map((x) => h("option", { value: x.id, selected: s.kind === x.id ? true : null }, x.title))),
+        k ? h("p", { class: "sub" }, `Uniclass: ${k.uniclass.map(([c, t]) => `${c} ${t}`).join("; ")}. ${k.rule}`) : null,
+        h("span", { class: "edlabel" }, "Models it covers"),
+        models.length ? h("div", { class: "pichecks" }, ...models.map((m) => h("label", { class: "edcheck" }, h("input", { type: "checkbox", checked: s.models.includes(m) ? true : null,
+          onchange: (e) => { s.models = e.target.checked ? [...new Set([...s.models, m])] : s.models.filter((x) => x !== m); piStamp(s, "models"); piChanged(); } }), m)))
+          : h("span", { class: "edsub" }, "No models in the project yet."),
+        h("label", { class: "edlabel", for: `piGrade${i}` }, "Standard grade for its concrete"),
+        h("select", { id: `piGrade${i}`, class: "piinput", onchange: (e) => { s.grade = e.target.value; piStamp(s, "grade"); piChanged(); } },
+          h("option", { value: "" }, `The kind’s standard${k?.grade ? ` (${k.grade})` : ""}`), ...[20, 25, 30, 35, 40, 45, 50].map((x) => h("option", { value: `${x} MPa`, selected: s.grade === `${x} MPa` ? true : null }, `${x} MPa`))),
+        s.grade ? piSourceRow(s, "grade", i) : null,
+        num("Reinforcement rate", "kg/m³", s.rebarKg, (v) => { s.rebarKg = v; piStamp(s, "rebarKg"); piChanged(); }, `piRebar${i}`),
+        s.rebarKg != null ? piSourceRow(s, "rebarKg", i) : h("span", { class: "edsub" }, `Not set: ${CONV.rebar[k?.module === "building" ? "building" : "civil"]} kg/m³ is assumed.`),
+        h("div", { class: "tools" }, h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${s.name || "this structure"} and its geotech?`)) { piDoc().structures.splice(i, 1); piChanged(); } } }, "Remove this structure"))),
+      h("div", null,
+        h("span", { class: "edlabel" }, "Geotech for this structure"),
+        k?.module === "building"
+          ? num("Excavation depth", "m", s.earthworks.buildingDepth, (v) => { s.earthworks.buildingDepth = v; piStamp(s, "buildingDepth"); piChanged(); }, `piBDepth${i}`)
+          : k?.module === "manhole" ? h("p", { class: "sub" }, "A manhole is dug from the top of its cover to the underside of its base: the depth comes from the model. Rock comes from the log below.")
+          : num("Replacement depth", "m", s.earthworks.replacementDepth, (v) => { s.earthworks.replacementDepth = v; piStamp(s, "replacementDepth"); piChanged(); }, `piDepth${i}`),
+        (k?.module === "building" ? s.earthworks.buildingDepth : s.earthworks.replacementDepth) != null && k?.module !== "manhole" ? piSourceRow(s, k?.module === "building" ? "buildingDepth" : "replacementDepth", i) : null,
+        h("label", { class: "edlabel", for: `piRep${i}` }, "Geotechnical report"),
+        h("input", { id: `piRep${i}`, class: "piinput", value: g.report.title || "", placeholder: "Title, firm and date of the report", onchange: (e) => { g.report.title = e.target.value; piStamp(s, "report"); piChanged(); } }),
+        h("input", { id: `piRepRef${i}`, class: "piinput", value: g.report.ref || "", placeholder: "Its reference number", onchange: (e) => { g.report.ref = e.target.value; piStamp(s, "report"); piChanged(); } }),
+        h("div", { class: "tools" },
+          h("span", { class: "edsub" }, "Rock from the logs:"),
+          h("div", { class: "seg", role: "group", "aria-label": "How the logs are used" }, [["average", "Average of the boreholes"], ["log", "The first log only"]].map(([mk, ml]) =>
+            h("button", { type: "button", "aria-pressed": String(g.method === mk), onclick: () => { g.method = mk; piStamp(s, "geomethod"); piChanged(); } }, ml)))),
+        ...g.holes.map((bh, j) => piHole(s, bh, i, j)),
+        h("div", { class: "tools" },
+          h("button", { type: "button", class: "btn sm", onclick: () => { g.holes.push({ id: `BH${g.holes.length + 1}`, ground: null, water: null, page: "", strata: [{ top: 0, base: 1, desc: "", cls: "" }] }); piStamp(s, "holes"); piChanged(); } }, "Add a borehole log"),
+          h("label", { class: "btn sm", tabindex: "0", for: `piPdf${i}`, title: sampleFn ? "Claude reads the logs from the report; you check each one" : "Add a Claude API key under Conventions › Claude first" }, "Read the logs from the report (PDF)"),
+          h("input", { class: "sr", type: "file", id: `piPdf${i}`, accept: ".pdf,application/pdf", disabled: sampleFn ? null : true, onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) piReadReport(s, f); } })),
+        PI.reading && PI.reading.startsWith(s.id + ":") ? h("p", { class: "edsub" }, PI.reading.slice(s.id.length + 1)) : null,
+        prop ? piProposal(s, prop) : null,
+        sh ? h("div", { class: "edbox" }, h("span", { class: "edlabel" }, `Over the ${fmt2(depth)} m dug`),
+          h("p", { class: "edtext" }, SANS_D_CLASSES.filter(([c]) => sh.shares[c] > 0).map(([c, l]) => `${l} ${Math.round(sh.shares[c] * 100)}%`).join(" · ") || "No classified layers in that depth."),
+          sh.short.length ? h("p", { class: "edtext warn" }, `${sh.short.join("; ")}: below that, no rock is billed.`) : null,
+          sh.unclassed > 0.005 ? h("p", { class: "edtext warn" }, `${fmt2(sh.unclassed)} m of it has no SANS 1200 D class yet (counted as soft).`) : null) : null,
+        h("label", { class: "edlabel", for: `piLim${i}` }, "Limitations"),
+        h("textarea", { id: `piLim${i}`, class: "lnwhy", rows: 2, placeholder: "For example: two boreholes for a 400 m² footprint; refusal at 4.2 m in BH2", onchange: (e) => { g.limitations = e.target.value; piStamp(s, "limitations"); piChanged(); } }, g.limitations))));
+}
+
+function piHole(s, bh, i, j) {
+  const upd = (f) => (e) => { bh[f] = e.target.value; piStamp(s, "holes"); piChanged(); };
+  return h("div", { class: "pihole" },
+    h("div", { class: "pirow" },
+      h("input", { id: `piBh${i}_${j}`, class: "piinput sm", value: bh.id, "aria-label": "Borehole", onchange: upd("id") }),
+      h("label", { class: "edsub" }, "page ", h("input", { id: `piBhP${i}_${j}`, class: "edinput", value: bh.page || "", onchange: upd("page") })),
+      h("label", { class: "edsub" }, "water at ", h("input", { id: `piBhW${i}_${j}`, class: "edinput", inputmode: "decimal", value: bh.water ?? "", onchange: upd("water") }), " m"),
+      h("button", { type: "button", class: "link", onclick: () => { s.geotech.holes.splice(j, 1); piStamp(s, "holes"); piChanged(); } }, "Remove")),
+    h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "From (m)"), h("th", null, "To (m)"), h("th", null, "Description"), h("th", null, "SANS 1200 D class"), h("th", null, ""))),
+      h("tbody", null, bh.strata.map((t, k) => h("tr", null,
+        h("td", null, h("input", { id: `piT${i}_${j}_${k}`, class: "edinput", inputmode: "decimal", value: t.top ?? "", onchange: (e) => { t.top = e.target.value; piStamp(s, "holes"); piChanged(); } })),
+        h("td", null, h("input", { id: `piB${i}_${j}_${k}`, class: "edinput", inputmode: "decimal", value: t.base ?? "", onchange: (e) => { t.base = e.target.value; piStamp(s, "holes"); piChanged(); } })),
+        h("td", null, h("input", { id: `piD${i}_${j}_${k}`, class: "piinput", value: t.desc, placeholder: "As the log describes it", onchange: (e) => { t.desc = e.target.value; piStamp(s, "holes"); piChanged(); } })),
+        h("td", null, h("select", { id: `piC${i}_${j}_${k}`, onchange: (e) => { t.cls = e.target.value; piStamp(s, "holes"); piChanged(); } }, h("option", { value: "" }, "Not classified"), ...SANS_D_CLASSES.map(([c, l]) => h("option", { value: c, selected: t.cls === c ? true : null }, l)))),
+        h("td", null, h("button", { type: "button", class: "link", "aria-label": "Remove this layer", onclick: () => { bh.strata.splice(k, 1); piStamp(s, "holes"); piChanged(); } }, "×")))))),
+    h("button", { type: "button", class: "link accent", onclick: () => { const last = bh.strata[bh.strata.length - 1]; const top = last ? (inNum(last.base) ?? 0) : 0; bh.strata.push({ top, base: top + 1, desc: "", cls: "" }); piStamp(s, "holes"); piChanged(); } }, "Add a layer"));
+}
+
+// ----- Claude reads the borehole logs from the report; he checks each one before it's used -----
+const PI_LOG_SCHEMA = { type: "object", additionalProperties: false, required: ["id", "page", "ground", "water", "strata"], properties: {
+  id: { type: "string" }, page: { type: "string" }, ground: { type: ["number", "null"] }, water: { type: ["number", "null"] },
+  strata: { type: "array", items: { type: "object", additionalProperties: false, required: ["top", "base", "desc", "cls"], properties: {
+    top: { type: "number" }, base: { type: "number" }, desc: { type: "string" }, cls: { type: "string", enum: ["soft", "intermediate", "hard", "boulderA", "boulderB", ""] } } } } } };
+async function piReadReport(s, file) {
+  if (!sampleFn) return toast("Add a Claude API key under Conventions › Claude first.");
+  if (!globalThis.pdfjsLib) return toast("The PDF reader isn’t in this copy of the page.");
+  const say = (m) => { PI.reading = s.id + ":" + m; renderProj(); };
+  try {
+    say("Reading the report…");
+    const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), verbosity: 0, isEvalSupported: false }).promise;
+    let text = "";
+    for (let n = 1; n <= doc.numPages && text.length < 300000; n++) {
+      const tc = await (await doc.getPage(n)).getTextContent();
+      text += `\n--- page ${n} ---\n` + tc.items.map((t) => t.str + (t.hasEOL ? "\n" : " ")).join("");
+    }
+    if (text.replace(/--- page \d+ ---/g, "").trim().length < 200) { PI.reading = ""; return toast("The report has no readable text (a scan?): enter the logs by hand."); }
+    say(`Claude is reading ${doc.numPages} pages for the borehole logs (about a minute)…`);
+    const out = await sampleFn.json(
+      "Below is the text of a geotechnical report for a South African site. Soil profiles there follow the Jennings, Brink and Williams description (moisture, colour, consistency, structure, soil type, origin).\n" +
+      "List every borehole, trial pit or test pit log in it. For each: its id as the report writes it; the page it's on (\"p. 12\"); the ground level in metres if the log gives one, else null; the depth to water below ground in metres if found, else null; and each layer from the top down: its top and base depth below ground in metres, its description as written (shortened to 200 characters), and a proposed SANS 1200 D excavation class:\n" +
+      "soft (can be dug by excavator), intermediate (needs ripping), hard (needs blasting, or wedging and splitting: hard rock, refusal of the rig), boulderA (boulders 0.03 to 20 m³ making up over 40% of the volume, in a soft matrix), boulderB (boulders in other material), or an empty string when the words don't say. Base the class only on the log's own words (consistency, rock hardness, refusal, ripping or blasting notes). Don't invent layers or logs; leave out anything that isn't a log.\n\n" +
+      text.slice(0, 300000),
+      { schema: PI_LOG_SCHEMA, effort: "high", maxTokens: 16000 });
+    const logs = (out?.items || []).map((x) => normInputs({ structures: [{ name: "x", geotech: { holes: [x] } }] }).structures[0]?.geotech.holes[0]).filter((x) => x && x.strata.length);
+    PI.reading = "";
+    if (!logs.length) { toast("Claude found no borehole logs in that report."); return renderProj(); }
+    PI.proposed[s.id] = { logs, file: file.name };
+    renderProj();
+  } catch (e) { PI.reading = ""; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
+}
+function piProposal(s, prop) {
+  return h("div", { class: "edai" },
+    h("b", null, `Claude read ${plural(prop.logs.length, "log")} from ${prop.file}. `), "Check each layer and its class before using them: the classes are Claude’s proposal from the descriptions, and the reading of the logs is yours.",
+    h("ul", null, prop.logs.map((bh) => h("li", null, h("b", null, `${bh.id}${bh.page ? ` (${bh.page})` : ""}: `), bh.strata.map((t) => `${t.top}–${t.base} m ${(SANS_D_CLASSES.find((c) => c[0] === t.cls) || [, "not classified"])[1].toLowerCase()}`).join("; ")))),
+    h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn sm dark", onclick: () => { s.geotech.holes = prop.logs; s.src ||= {}; s.src.holes = { from: "report", ref: prop.file, why: "Read by Claude from the report, checked by me", by: piWho(), at: new Date().toISOString() }; if (!s.geotech.report.title) s.geotech.report.title = prop.file; delete PI.proposed[s.id]; piChanged(); } }, "Use these logs"),
+      h("button", { type: "button", class: "btn sm", onclick: () => { delete PI.proposed[s.id]; renderProj(); } }, "Discard")));
+}
+
+function goProj() { state.view = "proj"; render(); window.scrollTo(0, 0); }
+$("navProj").addEventListener("click", goProj);
+Store.onUser(() => piLoad());
 
 // ===== Conventions profiles and corrections =====
 // Shared mode (inside Claude, with the db capability): profiles/<id> documents and a corrections collection that
