@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-06T11:03:00Z">
+<meta name="solvboq-build" content="2026-11-06T15:02:15Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -763,6 +763,17 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .stduni{font:500 11px/1.6 ui-monospace,Consolas,monospace;color:var(--muted)}
 .stdgrid.one{grid-template-columns:minmax(0,1fr);padding-top:0}.stdgrid.one:empty{display:none}
 #mInputs:empty{display:none}#mInputs{padding:0 28px 12px}
+/* Quick project set-up (inputsview.js) */
+.pisettings > summary { cursor: pointer; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; list-style: none; font-size: 14px }
+.pisettings > summary::-webkit-details-marker { display: none }
+.pisettings[open] > summary { margin-bottom: 14px }
+.piprops { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px }
+.piprop { display: grid; grid-template-columns: auto minmax(0, 1.2fr) minmax(0, 1.4fr) minmax(0, 1fr); gap: 8px 10px; align-items: center }
+.piprop.off { opacity: .5 }
+@media (max-width: 760px) { .piprop { grid-template-columns: auto minmax(0, 1fr) } .piprop select, .piprop .edsub { grid-column: 2 } }
+.piread { margin: 8px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px }
+.pilogs { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 }
+.pilogs .edcheck { align-items: flex-start; font-size: 13px; line-height: 1.45 }
 </style>
 </head>
 <body>
@@ -3698,6 +3709,43 @@ function inputsMissing(inputs, stage) {
   }
   return out;
 }
+
+// ===== Quick set-up: structures proposed from the model, one report reading for all of them =====
+// He confirms rather than types: the model's Structure labels (or the model itself) become proposed structures with their
+// kind guessed, and one reading of the geotechnical report gives every structure its depth, water level and logs.
+const KIND_WORDS = [
+  ["manhole", /\bmh\s*-?\d|manhole|chamber|inspection/i],
+  ["pumpstation", /pump\s*station|pumping\s*station|wet\s*well|pump\s*house/i],
+  ["building", /building|\bhouse\b|office|workshop|\bstore\b|substation|incinerator|control\s*room/i],
+  ["tank", /tank|thickener|reservoir|digester|clarifier|basin|sump|lagoon|reactor|aeration|settl/i],
+];
+function guessKind(name, fallback) { for (const [k, rx] of KIND_WORDS) if (rx.test(String(name || ""))) return k; return fallback || ""; }
+// m: { title, labels: [{ name, n }], kind } — the open model's title, its Structure labels with element counts, and the
+// engine's reading of it (tank, building or manhole). Labels each become a structure; with none, the model does.
+function proposeStructures(inputs, m) {
+  const have = new Set((inputs?.structures || []).map((s) => inKey(s.name)));
+  const labels = (m.labels || []).filter((l) => inStr(l.name));
+  if (labels.length) return labels.filter((l) => !have.has(inKey(l.name))).map((l) => ({ name: inStr(l.name, 80), kind: guessKind(l.name, m.kind),
+    models: labels.length === 1 && m.title ? [m.title] : [], why: `${l.n} element${l.n === 1 ? "" : "s"} labelled “${inStr(l.name, 80)}”` }));
+  if (!m.title || structureFor(inputs, m.title)) return [];
+  return [{ name: inStr(m.title, 80), kind: guessKind(m.title, m.kind), models: [m.title], why: "this model (no Structure labels in it)" }];
+}
+// One reading of the report applied to a structure: the depth to the field its kind uses (none for manholes: their depth
+// is the model's), the water level, and the logs he kept, each with the report's page and words as its source. Pure.
+function applyReport(s, read, keep, who, at) {
+  const k = KIND_BY_ID.get(s.kind), field = k?.module === "building" ? "buildingDepth" : k?.module === "manhole" ? null : "replacementDepth";
+  const out = JSON.parse(JSON.stringify(s)); out.src ||= {}; out.earthworks ||= {}; out.geotech ||= { report: {}, holes: [] }; out.geotech.report ||= {};
+  const why = (q) => `read by Claude from the report, checked by ${who || "the engineer"}${q ? `: “${inStr(q, 300)}”` : ""}`;
+  if (field && read.depth != null) { out.earthworks[field] = read.depth; out.src[field] = { from: "report", ref: read.depthPage || read.file, why: why(read.depthQuote), by: who, at }; }
+  if (read.water != null) { out.geotech.water = read.water; out.src.water = { from: "report", ref: read.waterPage || read.file, why: why(""), by: who, at }; }
+  const logs = (read.logs || []).filter((l, i) => keep.includes(i)).map(({ near, ...hole }) => hole);
+  if (logs.length) { out.geotech.holes = logs; out.src.holes = { from: "report", ref: read.file, why: why(""), by: who, at }; }
+  if (!out.geotech.report.title) out.geotech.report.title = read.file;
+  out.by = who; out.at = at;
+  return out;
+}
+// A repeated structure (the second thickener): everything but its name and models
+function copyStructure(s, id, who, at) { const c = JSON.parse(JSON.stringify(s)); return { ...c, id, name: `${s.name || "Structure"} (copy)`, models: [], by: who, at }; }
 
 
 // ===== Readiness checks: a line-for-line mirror of Core/ReadinessChecks.cs, working on ElementRecords =====
@@ -9441,7 +9489,9 @@ renderSaveState();
 // (Uniclass), the models it covers, its grade and reinforcement rate, and its geotech as he works it out from the report
 // (boreholes, layers and his SANS 1200 D reading of each). The data and its rules are in inputs.js; the engine reads it
 // through piEngine(). Saved to the project (projects/{pid}/inputs/main), else in this browser until a project is open.
-const PI = { pid: undefined, doc: null, loaded: false, saving: "", err: "", open: new Set(), proposed: {}, reading: "", timer: null };
+// read: Claude's reading of the geotech report (shown for him to check); keep: the logs he keeps; to: the structures it's for;
+// props: his edits to the structures proposed from the model (name and kind), by the proposed name
+const PI = { pid: undefined, doc: null, loaded: false, saving: "", err: "", open: new Set(), reading: "", timer: null, read: null, keep: new Set(), to: new Set(), props: {} };
 const PI_LOCAL = "solvboq-inputs-v1";
 const piLocal = (v) => { try { const all = JSON.parse(localStorage.getItem(PI_LOCAL) || "{}") || {}; if (v === undefined) return all.local || null; all.local = v; localStorage.setItem(PI_LOCAL, JSON.stringify(all)); } catch (e) { return null; } };
 const piOnCloud = () => !!(Store.user && CL.pid);
@@ -9495,12 +9545,16 @@ function renderProj() {
   const proj = CL.projects?.find((x) => x.id === CL.pid);
   const stage = p.stage || "tender";
   const missing = inputsMissing(d, stage);
+  const method = MEASUREMENT_METHODS.find((m) => m.id === (p.method || "sans1200"));
+  const settingsLine = [method.id === "sans1200" ? "SANS 1200 Clause 8" : method.title, (STAGES.find((x) => x[0] === stage) || [, stage])[1], p.spec || "no particular specification", p.provisional.length ? plural(p.provisional.length, "provisional sum") : ""].filter(Boolean).join(" · ");
   v.replaceChildren(
     h("section", { class: "card stdhead" },
       h("div", { class: "stdintro" },
         h("h2", null, "Project inputs"),
-        h("p", null, "The top of the bill’s information, set once: how the contract measures, the stage, and each structure with its kind, grade and geotech. Types and elements stay in Revit; the ", h("b", null, "SolvBoQ Structure"), " label on the elements joins them to a structure here."),
+        h("p", null, "A few minutes, mostly checking: confirm the structures SolvBoQ found in the model, give it the geotechnical report once, and check what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."),
         h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
+      h("details", { class: "pisettings", open: PI.settingsOpen ? true : null, ontoggle: (e) => { PI.settingsOpen = e.target.open; } },
+        h("summary", null, h("b", null, "Project settings: "), settingsLine, h("span", { class: "sub" }, " · change")),
       h("div", { class: "pigrid" },
         h("div", { class: "pifield" },
           h("span", { class: "edlabel" }, "Method of measurement"),
@@ -9524,7 +9578,10 @@ function renderProj() {
             h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
             h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
             h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
-          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum"))))),
+          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum")))))),
+
+    piProposals(),
+    piReportCard(),
 
     h("section", { class: "card stdbody stdmats" },
       h("div", { class: "stdintro" }, h("h2", null, "Structures"),
@@ -9575,7 +9632,6 @@ function piStructure(s, i) {
   const num = (label, unit, val, set, id) => h("label", { class: "edrow" }, label, h("span", null, h("input", { id, class: "edinput", inputmode: "decimal", value: val ?? "", onchange: (e) => set(e.target.value.trim() === "" ? null : e.target.value) }), h("span", { class: "eunit" }, unit)));
   const g = s.geotech, depth = k?.module === "building" ? s.earthworks.buildingDepth ?? CONV.earthworks.buildingDepth : s.earthworks.replacementDepth ?? CONV.earthworks.replacementDepth;
   const sh = geoShares(s, depth);
-  const prop = PI.proposed[s.id];
   return h("details", { class: "stdcard", open: open ? true : null, ontoggle: (e) => { e.target.open ? PI.open.add(s.id) : PI.open.delete(s.id); } },
     h("summary", null, h("b", null, s.name || "Unnamed structure"), h("span", { class: "sub" }, [k ? k.title : "kind not set", k?.uniclass?.[0]?.[0], s.models.length ? plural(s.models.length, "model") : "", g.holes.length ? plural(g.holes.length, "borehole") : ""].filter(Boolean).join(" · "))),
     h("div", { class: "stdgrid" },
@@ -9596,7 +9652,9 @@ function piStructure(s, i) {
         s.grade ? piSourceRow(s, "grade", i) : null,
         num("Reinforcement rate", "kg/m³", s.rebarKg, (v) => { s.rebarKg = v; piStamp(s, "rebarKg"); piChanged(); }, `piRebar${i}`),
         s.rebarKg != null ? piSourceRow(s, "rebarKg", i) : h("span", { class: "edsub" }, `Not set: ${CONV.rebar[k?.module === "building" ? "building" : "civil"]} kg/m³ is assumed.`),
-        h("div", { class: "tools" }, h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${s.name || "this structure"} and its geotech?`)) { piDoc().structures.splice(i, 1); piChanged(); } } }, "Remove this structure"))),
+        h("div", { class: "tools" },
+          h("button", { type: "button", class: "btn sm", title: "A repeated structure (the second thickener): the same kind, grade, rate and geotech under a new name", onclick: () => { const c = copyStructure(s, "s" + Date.now().toString(36), piWho(), new Date().toISOString()); piDoc().structures.splice(i + 1, 0, c); PI.open.add(c.id); piChanged(); setTimeout(() => $(`piName${i + 1}`)?.select(), 30); } }, "Copy this structure"),
+          h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${s.name || "this structure"} and its geotech?`)) { piDoc().structures.splice(i, 1); piChanged(); } } }, "Remove this structure"))),
       h("div", null,
         h("span", { class: "edlabel" }, "Geotech for this structure"),
         k?.module === "building"
@@ -9613,11 +9671,8 @@ function piStructure(s, i) {
             h("button", { type: "button", "aria-pressed": String(g.method === mk), onclick: () => { g.method = mk; piStamp(s, "geomethod"); piChanged(); } }, ml)))),
         ...g.holes.map((bh, j) => piHole(s, bh, i, j)),
         h("div", { class: "tools" },
-          h("button", { type: "button", class: "btn sm", onclick: () => { g.holes.push({ id: `BH${g.holes.length + 1}`, ground: null, water: null, page: "", strata: [{ top: 0, base: 1, desc: "", cls: "" }] }); piStamp(s, "holes"); piChanged(); } }, "Add a borehole log"),
-          h("label", { class: "btn sm", tabindex: "0", for: `piPdf${i}`, title: sampleFn ? "Claude reads the logs from the report; you check each one" : "Add a Claude API key under Conventions › Claude first" }, "Read the logs from the report (PDF)"),
-          h("input", { class: "sr", type: "file", id: `piPdf${i}`, accept: ".pdf,application/pdf", disabled: sampleFn ? null : true, onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) piReadReport(s, f); } })),
-        PI.reading && PI.reading.startsWith(s.id + ":") ? h("p", { class: "edsub" }, PI.reading.slice(s.id.length + 1)) : null,
-        prop ? piProposal(s, prop) : null,
+          h("button", { type: "button", class: "btn sm", onclick: () => { g.holes.push({ id: `BH${g.holes.length + 1}`, ground: null, water: null, page: "", strata: [{ top: 0, base: 1, desc: "", cls: "" }] }); piStamp(s, "holes"); piChanged(); } }, "Add a log by hand"),
+          g.holes.length ? null : h("span", { class: "edsub" }, "Or read the report above: its logs come in here.")),
         sh ? h("div", { class: "edbox" }, h("span", { class: "edlabel" }, `Over the ${fmt2(depth)} m dug`),
           h("p", { class: "edtext" }, SANS_D_CLASSES.filter(([c]) => sh.shares[c] > 0).map(([c, l]) => `${l} ${Math.round(sh.shares[c] * 100)}%`).join(" · ") || "No classified layers in that depth."),
           sh.short.length ? h("p", { class: "edtext warn" }, `${sh.short.join("; ")}: below that, no rock is billed.`) : null,
@@ -9644,15 +9699,52 @@ function piHole(s, bh, i, j) {
     h("button", { type: "button", class: "link accent", onclick: () => { const last = bh.strata[bh.strata.length - 1]; const top = last ? (inNum(last.base) ?? 0) : 0; bh.strata.push({ top, base: top + 1, desc: "", cls: "" }); piStamp(s, "holes"); piChanged(); } }, "Add a layer"));
 }
 
-// ----- Claude reads the borehole logs from the report; he checks each one before it's used -----
-const PI_LOG_SCHEMA = { type: "object", additionalProperties: false, required: ["id", "page", "ground", "water", "strata"], properties: {
-  id: { type: "string" }, page: { type: "string" }, ground: { type: ["number", "null"] }, water: { type: ["number", "null"] },
+// ----- Step 1: the structures in the open model, proposed for him to confirm -----
+// Its Structure labels (one structure each), or with none the model itself; the kind guessed from the name, else from the
+// engine's reading of the model (tank, building or manhole). Samples are never proposed.
+function piModelProposals() {
+  const r = state.result;
+  if (!r || !state.records || state.fromSample) return [];
+  const n = {};
+  for (const e of r.elements) if (e.Structure && r.status[e.Id] !== "excluded") n[e.Structure] = (n[e.Structure] || 0) + 1;
+  const kind = r.derived?.earthworks?.manhole ? "manhole" : r.structure === "building" ? "building" : "tank";
+  return proposeStructures(piDoc(), { title: cleanName(state.name), labels: Object.entries(n).map(([name, c]) => ({ name, n: c })), kind });
+}
+function piProposals() {
+  const list = piModelProposals();
+  if (!list.length) return null;
+  const edit = (x) => (PI.props[x.name] ||= { name: x.name, kind: x.kind, skip: false });
+  const add = (xs) => {
+    const d = piDoc(), at = new Date().toISOString();
+    for (const x of xs) { const e = edit(x); if (e.skip) continue;
+      d.structures.push({ id: "s" + Date.now().toString(36) + d.structures.length, name: e.name, kind: e.kind, models: x.models, grade: "", rebarKg: null, earthworks: {},
+        geotech: { report: {}, method: "average", limitations: "", holes: [] }, src: { kind: { from: "judgement", why: "Proposed by SolvBoQ from the model, confirmed", by: piWho(), at } }, by: piWho(), at }); }
+    PI.props = {}; piChanged(); toast(`${plural(xs.filter((x) => !edit(x).skip).length, "structure")} added`);
+  };
+  return h("section", { class: "card stdbody stdmats" },
+    h("div", { class: "stdintro" }, h("h2", null, `1. The structures in ${cleanName(state.name)}`),
+      h("p", { class: "sub" }, "Found in the model. Check each name and kind, then add them: the kind decides the earthworks rule, the standard grade and what else it needs.")),
+    h("div", { class: "piprops" }, list.map((x, i) => { const e = edit(x);
+      return h("div", { class: "piprop" + (e.skip ? " off" : "") },
+        h("label", { class: "edcheck" }, h("input", { type: "checkbox", id: `ppOn${i}`, checked: e.skip ? null : true, onchange: (ev) => { e.skip = !ev.target.checked; renderProj(); } }), h("span", { class: "sr" }, "Add this one")),
+        h("input", { id: `ppName${i}`, class: "piinput", value: e.name, "aria-label": "Name", onchange: (ev) => { e.name = ev.target.value.trim() || x.name; } }),
+        h("select", { id: `ppKind${i}`, class: "piinput", "aria-label": "Kind", onchange: (ev) => { e.kind = ev.target.value; } }, STRUCTURE_KINDS.map((k) => h("option", { value: k.id, selected: k.id === e.kind ? true : null }, k.title))),
+        h("span", { class: "edsub" }, x.why)); })),
+    h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: () => add(list) }, list.length === 1 ? "Add this structure" : `Add these ${list.filter((x) => !edit(x).skip).length} structures`)));
+}
+
+// ----- Step 2: the geotechnical report, read once by Claude for every structure; he checks it before it's used -----
+const PI_LOG_ITEM = { type: "object", additionalProperties: false, required: ["id", "page", "near", "ground", "water", "strata"], properties: {
+  id: { type: "string" }, page: { type: "string" }, near: { type: "string" }, ground: { type: ["number", "null"] }, water: { type: ["number", "null"] },
   strata: { type: "array", items: { type: "object", additionalProperties: false, required: ["top", "base", "desc", "cls"], properties: {
     top: { type: "number" }, base: { type: "number" }, desc: { type: "string" }, cls: { type: "string", enum: ["soft", "intermediate", "hard", "boulderA", "boulderB", ""] } } } } } };
-async function piReadReport(s, file) {
+const PI_REPORT_SCHEMA = { type: "object", additionalProperties: false, required: ["depth", "depthKind", "depthPage", "depthQuote", "water", "waterPage", "logs"], properties: {
+  depth: { type: ["number", "null"] }, depthKind: { type: "string", enum: ["replacement", "founding", "excavation", ""] }, depthPage: { type: "string" }, depthQuote: { type: "string" },
+  water: { type: ["number", "null"] }, waterPage: { type: "string" }, logs: { type: "array", items: PI_LOG_ITEM } } };
+async function piReadReport(file) {
   if (!sampleFn) return toast("Add a Claude API key under Conventions › Claude first.");
   if (!globalThis.pdfjsLib) return toast("The PDF reader isn’t in this copy of the page.");
-  const say = (m) => { PI.reading = s.id + ":" + m; renderProj(); };
+  const say = (m) => { PI.reading = m; renderProj(); };
   try {
     say("Reading the report…");
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), verbosity: 0, isEvalSupported: false }).promise;
@@ -9661,28 +9753,66 @@ async function piReadReport(s, file) {
       const tc = await (await doc.getPage(n)).getTextContent();
       text += `\n--- page ${n} ---\n` + tc.items.map((t) => t.str + (t.hasEOL ? "\n" : " ")).join("");
     }
-    if (text.replace(/--- page \d+ ---/g, "").trim().length < 200) { PI.reading = ""; return toast("The report has no readable text (a scan?): enter the logs by hand."); }
-    say(`Claude is reading ${doc.numPages} pages for the borehole logs (about a minute)…`);
+    if (text.replace(/--- page \d+ ---/g, "").trim().length < 200) { PI.reading = ""; return toast("The report has no readable text (a scan?): enter the depth and logs by hand under each structure."); }
+    const names = piDoc().structures.map((s) => s.name).filter(Boolean);
+    say(`Claude is reading ${doc.numPages} pages (about a minute)…`);
     const out = await sampleFn.json(
       "Below is the text of a geotechnical report for a South African site. Soil profiles there follow the Jennings, Brink and Williams description (moisture, colour, consistency, structure, soil type, origin).\n" +
-      "List every borehole, trial pit or test pit log in it. For each: its id as the report writes it; the page it's on (\"p. 12\"); the ground level in metres if the log gives one, else null; the depth to water below ground in metres if found, else null; and each layer from the top down: its top and base depth below ground in metres, its description as written (shortened to 200 characters), and a proposed SANS 1200 D excavation class:\n" +
-      "soft (can be dug by excavator), intermediate (needs ripping), hard (needs blasting, or wedging and splitting: hard rock, refusal of the rig), boulderA (boulders 0.03 to 20 m³ making up over 40% of the volume, in a soft matrix), boulderB (boulders in other material), or an empty string when the words don't say. Base the class only on the log's own words (consistency, rock hardness, refusal, ripping or blasting notes). Don't invent layers or logs; leave out anything that isn't a log.\n\n" +
-      text.slice(0, 300000),
-      { schema: PI_LOG_SCHEMA, effort: "high", maxTokens: 16000 });
-    const logs = (out?.items || []).map((x) => normInputs({ structures: [{ name: "x", geotech: { holes: [x] } }] }).structures[0]?.geotech.holes[0]).filter((x) => x && x.strata.length);
+      "Return one item with:\n" +
+      "- depth: the depth below ground, in metres, that the report recommends excavating to under the structures' foundations (a replacement depth: dig out the poor ground and replace it; or a founding depth). null if it gives none as a depth below ground (an elevation alone doesn't count). depthKind: replacement, founding or excavation (empty if none). depthPage: its page (\"p. 12\"). depthQuote: the sentence it's in, up to 200 characters; where the report gives different depths for different structures, give the main one and name the others in depthQuote.\n" +
+      "- water: the depth to the water table below ground in metres, if the report gives one (else null), and waterPage.\n" +
+      "- logs: every borehole, trial pit or test pit log. For each: its id as the report writes it; its page; near: the structure the report places it at, if it says (" + (names.length ? `this project's structures are: ${names.join(", ")}` : "as the report names it") + "), else an empty string; the ground level in metres if the log gives one, else null; the depth to water below ground, else null; and each layer from the top down: its top and base depth below ground in metres, its description as written (shortened to 200 characters), and a proposed SANS 1200 D excavation class: " +
+      "soft (can be dug by excavator), intermediate (needs ripping), hard (needs blasting, or wedging and splitting: hard rock, refusal of the rig), boulderA (boulders 0.03 to 20 m³ making up over 40% of the volume, in a soft matrix), boulderB (boulders in other material), or an empty string when the words don't say. Base the class only on the log's own words (consistency, rock hardness, refusal, ripping or blasting notes).\n" +
+      "Don't invent anything: leave a value empty or null when the report doesn't say it.\n\n" + text.slice(0, 300000),
+      { schema: PI_REPORT_SCHEMA, effort: "high", maxTokens: 16000 });
+    const it = out?.items?.[0];
     PI.reading = "";
-    if (!logs.length) { toast("Claude found no borehole logs in that report."); return renderProj(); }
-    PI.proposed[s.id] = { logs, file: file.name };
+    if (!it) { toast("Claude couldn’t read that report. Enter the depth and logs by hand under each structure."); return renderProj(); }
+    const logs = (it.logs || []).map((x) => { const hole = normInputs({ structures: [{ name: "x", geotech: { holes: [x] } }] }).structures[0]?.geotech.holes[0]; return hole && hole.strata.length ? { ...hole, near: inStr(x.near, 80) } : null; }).filter(Boolean);
+    const num = (v, lo, hi) => (typeof v === "number" && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null);
+    PI.read = { file: file.name, depth: num(it.depth, 0.1, 30), depthKind: it.depthKind || "", depthPage: inStr(it.depthPage, 40), depthQuote: inStr(it.depthQuote, 300), water: num(it.water, 0, 100), waterPage: inStr(it.waterPage, 40), logs };
+    PI.keep = new Set(logs.map((l, i) => i));
+    PI.to = new Set(piDoc().structures.filter((s) => s.kind !== "linear").map((s) => s.id));
     renderProj();
   } catch (e) { PI.reading = ""; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
 }
-function piProposal(s, prop) {
-  return h("div", { class: "edai" },
-    h("b", null, `Claude read ${plural(prop.logs.length, "log")} from ${prop.file}. `), "Check each layer and its class before using them: the classes are Claude’s proposal from the descriptions, and the reading of the logs is yours.",
-    h("ul", null, prop.logs.map((bh) => h("li", null, h("b", null, `${bh.id}${bh.page ? ` (${bh.page})` : ""}: `), bh.strata.map((t) => `${t.top}–${t.base} m ${(SANS_D_CLASSES.find((c) => c[0] === t.cls) || [, "not classified"])[1].toLowerCase()}`).join("; ")))),
-    h("div", { class: "tools" },
-      h("button", { type: "button", class: "btn sm dark", onclick: () => { s.geotech.holes = prop.logs; s.src ||= {}; s.src.holes = { from: "report", ref: prop.file, why: "Read by Claude from the report, checked by me", by: piWho(), at: new Date().toISOString() }; if (!s.geotech.report.title) s.geotech.report.title = prop.file; delete PI.proposed[s.id]; piChanged(); } }, "Use these logs"),
-      h("button", { type: "button", class: "btn sm", onclick: () => { delete PI.proposed[s.id]; renderProj(); } }, "Discard")));
+function piReportCard() {
+  const d = piDoc(), r = PI.read, cls = (c) => (SANS_D_CLASSES.find((x) => x[0] === c) || [, "not classified"])[1].toLowerCase();
+  const head = h("div", { class: "stdintro" }, h("h2", null, "2. The geotechnical report"),
+    h("p", { class: "sub" }, "Give it once: Claude reads the excavation depth, the water table and every borehole log with a proposed SANS 1200 D class for each layer, all with their pages. You check it, choose the structures it’s for, and use it. The rock classes stay your call: check each one."));
+  const pick = h("div", { class: "tools" },
+    h("label", { class: "btn" + (sampleFn ? " dark" : ""), tabindex: "0", for: "piPdf", title: sampleFn ? "" : "Add a Claude API key under Conventions › Claude first" }, r ? "Read another report" : "Read the report (PDF)"),
+    h("input", { class: "sr", type: "file", id: "piPdf", accept: ".pdf,application/pdf", disabled: sampleFn ? null : true, onchange: (e) => { const f = e.target.files?.[0]; e.target.value = ""; if (f) piReadReport(f); } }),
+    sampleFn ? null : h("span", { class: "edsub" }, "Needs a Claude API key (Conventions › Claude). Without it, enter the depth and logs by hand under each structure."),
+    PI.reading ? h("span", { class: "edsub" }, PI.reading) : null);
+  if (!r) {
+    const done = d.structures.filter((s) => s.geotech.holes.length || s.earthworks.replacementDepth != null || s.earthworks.buildingDepth != null);
+    return h("section", { class: "card stdbody stdmats" }, head, pick, done.length ? h("p", { class: "sub" }, `Geotech entered for ${done.map((s) => s.name).join(", ")}.`) : null);
+  }
+  const targets = d.structures.filter((s) => s.kind !== "linear");
+  const use = () => {
+    const keep = [...PI.keep], who = piWho(), at = new Date().toISOString();
+    d.structures = d.structures.map((s) => (PI.to.has(s.id) ? applyReport(s, r, keep, who, at) : s));
+    const n = PI.to.size; PI.read = null; piChanged(); toast(`The report’s figures are in ${plural(n, "structure")}, with their pages`);
+  };
+  return h("section", { class: "card stdbody stdmats" }, head,
+    h("div", { class: "edai" },
+      h("b", null, `Claude read ${r.file}. `), "Check it before using it.",
+      h("ul", { class: "piread" },
+        h("li", null, h("b", null, "Excavation depth: "), r.depth != null ? `${fmt2(r.depth)} m below ground (${r.depthKind || "depth"}${r.depthPage ? ", " + r.depthPage : ""})` : "none found as a depth below ground", r.depthQuote ? h("div", { class: "sub" }, `“${r.depthQuote}”`) : null),
+        h("li", null, h("b", null, "Water table: "), r.water != null ? `${fmt2(r.water)} m below ground${r.waterPage ? ` (${r.waterPage})` : ""}` : "not given")),
+      r.logs.length ? h("div", { class: "pilogs" }, h("span", { class: "edlabel" }, `${plural(r.logs.length, "log")}: keep the ones for these structures`),
+        r.logs.map((l, i) => h("label", { class: "edcheck" }, h("input", { type: "checkbox", id: `rdLog${i}`, checked: PI.keep.has(i) ? true : null, onchange: (e) => { e.target.checked ? PI.keep.add(i) : PI.keep.delete(i); } }),
+          h("span", null, h("b", null, `${l.id}${l.page ? ` (${l.page})` : ""}${l.near ? `, at ${l.near}` : ""}: `), l.strata.map((t) => `${t.top}–${t.base} m ${cls(t.cls)}`).join("; ")))))
+        : h("p", { class: "edtext" }, "No borehole logs found."),
+      targets.length ? h("div", { class: "pilogs" }, h("span", { class: "edlabel" }, "Use it for"),
+        targets.map((s) => h("label", { class: "edcheck" }, h("input", { type: "checkbox", id: `rdTo${s.id}`, checked: PI.to.has(s.id) ? true : null, onchange: (e) => { e.target.checked ? PI.to.add(s.id) : PI.to.delete(s.id); } }),
+          `${s.name}${KIND_BY_ID.get(s.kind)?.module === "manhole" ? " (logs only: a manhole’s depth is the model’s)" : ""}`)))
+        : h("p", { class: "edtext warn" }, "Add the structures first (step 1, or Add a structure below), then use the report for them."),
+      h("div", { class: "tools" },
+        h("button", { type: "button", class: "btn sm dark", disabled: !targets.length ? true : null, onclick: use }, "Use it"),
+        h("button", { type: "button", class: "btn sm", onclick: () => { PI.read = null; renderProj(); } }, "Discard"))),
+    pick);
 }
 
 function goProj() { state.view = "proj"; render(); window.scrollTo(0, 0); }
