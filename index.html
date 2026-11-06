@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-06T10:28:35Z">
+<meta name="solvboq-build" content="2026-11-06T11:03:00Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3371,9 +3371,64 @@ function sharedParamFile() {
 }
 const CRLF_ = String.fromCharCode(13, 10);
 
+// ===== Revit types made ready: code, material and finish already on them =====
+// The modeller picks a type instead of making one and then setting its code, material and labels: Set up creates the
+// standard set below, and his own BoQ can give one type per line of his bill (typesFromBoq), which the add-in's
+// “Types from BoQ” creates. Only system-family types SolvBoQ can make itself (walls, floors, foundation slabs, one
+// structural layer); footings, columns, beams, stairs and doors are loadable families and stay the template's.
+const TYPE_KIND = { "G.WALL.WT": "wall", "G.WALL": "wall", "G.SLAB.GB.WT": "floor", "G.SLAB.GB": "floor", "G.SLAB.SUS.WT": "floor", "G.SLAB.SUS": "floor",
+  "G.FTG.WT": "foundation", "G.BLIND": "floor", "G.SCREED": "floor", "G.NOFINES": "floor", "G.APRON": "floor", "G.BENCH": "floor" };
+// Top finish set on the type where the card is clear about it (the same as SolvBoQ assumes without it)
+const TYPE_TOP = { "G.SLAB.GB.WT": "Wood-floated", "G.FTG.WT": "Wood-floated", "G.SLAB.SUS.WT": "Steel-floated", "G.SLAB.SUS": "Steel-floated", "G.SLAB.GB": "Steel-floated",
+  "G.BLIND": "None", "G.NOFINES": "None", "G.BENCH": "None" };
+const TYPE_WORD = { "G.WALL.WT": "RC Wall", "G.WALL": "RC Wall", "G.SLAB.GB.WT": "RC Ground Slab", "G.SLAB.GB": "Surface Bed", "G.SLAB.SUS.WT": "RC Suspended Slab", "G.SLAB.SUS": "RC Suspended Slab",
+  "G.FTG.WT": "RC Base", "G.BLIND": "Blinding", "G.SCREED": "Granolithic Screed", "G.NOFINES": "No-fines", "G.APRON": "Apron", "G.BENCH": "Benching" };
+const TYPE_THICK = { "G.WALL.WT": 250, "G.WALL": 250, "G.SLAB.GB.WT": 250, "G.SLAB.GB": 170, "G.SLAB.SUS.WT": 250, "G.SLAB.SUS": 250, "G.FTG.WT": 400, "G.BLIND": 75, "G.SCREED": 50, "G.NOFINES": 200, "G.APRON": 100, "G.BENCH": 300 };
+const TYPE_GRADE = { "G.WALL.WT": 35, "G.WALL": 30, "G.SLAB.GB.WT": 35, "G.SLAB.GB": 30, "G.SLAB.SUS.WT": 35, "G.SLAB.SUS": 35, "G.FTG.WT": 35, "G.BLIND": 15, "G.APRON": 25, "G.BENCH": 25 };
+const typeMaterial = (code, grade) => code === "G.SCREED" ? "Granolithic 35 MPa/10 mm" : code === "G.NOFINES" ? "No-fines concrete" : `Concrete ${grade} MPa/19 mm`;
+// Revit refuses \ : { } [ ] | ; < > ? ` ~ in type names
+const typeName = (s) => String(s).replace(/[\\:{}[\]|;<>?`~]/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+function revitType(code, mm, grade, part) {
+  const g = grade ?? TYPE_GRADE[code], wt = /\.WT$/.test(code);
+  const head = ["G.BLIND", "G.SCREED", "G.NOFINES", "G.APRON", "G.BENCH"].includes(code) ? `${TYPE_WORD[code]} ${mm}` : `${mm} ${TYPE_WORD[code]}`;
+  const spec = code === "G.SCREED" ? "35 MPa/10 mm" : code === "G.NOFINES" ? "" : `${g} MPa${wt ? " WT" : ""}`;
+  return { name: typeName(`${head}${part ? ` – ${part}` : ""}${spec ? ` · ${spec}` : ""}`), code, kind: TYPE_KIND[code], thickness: mm / 1000,
+    material: typeMaterial(code, g), strength: code === "G.NOFINES" ? null : code === "G.SCREED" ? 35 : g, top: TYPE_TOP[code] || "" };
+}
+const STANDARD_TYPES = [
+  ...[200, 250, 300, 400].map((t) => revitType("G.WALL.WT", t)), ...[200, 250].map((t) => revitType("G.WALL", t)),
+  ...[200, 250, 300].map((t) => revitType("G.SLAB.GB.WT", t)), revitType("G.SLAB.GB", 170),
+  ...[200, 250].map((t) => revitType("G.SLAB.SUS.WT", t)), ...[200, 250].map((t) => revitType("G.SLAB.SUS", t)), revitType("G.SLAB.SUS", 250, 30),
+  ...[400, 450].map((t) => revitType("G.FTG.WT", t)),
+  revitType("G.BLIND", 75), revitType("G.SCREED", 50), revitType("G.NOFINES", 200), revitType("G.APRON", 100), revitType("G.BENCH", 300),
+];
+// One type per line of his bill that a system-family type can carry. lines: { description, heading, section, unit,
+// thickness (m, from the model elements mapped to it, when there are) }. The thickness comes from the model, else from
+// the line ("300 mm"), else the card's usual one, and each type says which, so the modeller checks the guessed ones.
+function typesFromBoq(lines) {
+  const out = new Map(), skipped = [];
+  for (const L of lines) {
+    const text = [L.heading, L.description].filter(Boolean).join(" ");
+    const c = coverLine(text, L.unit, L.section);
+    if (!c.code || !TYPE_KIND[c.code]) continue;
+    if (!/m³|m3|m²|m2/i.test(String(L.unit || ""))) { skipped.push(L.description); continue; }
+    const g = Number((text.match(/(\d{2})\s*mpa/i) || [])[1]) || TYPE_GRADE[c.code];
+    const inText = (String(L.description || "").match(/\b(\d{2,3}(?:\.\d)?)\s*mm\b(?!\s*(nominal|bore|dia|stone))/i) || [])[1];
+    const mm = Number.isFinite(L.thickness) && L.thickness > 0 ? Math.round(L.thickness * 1000) : inText && +inText >= 40 ? +inText : TYPE_THICK[c.code];
+    const from = Number.isFinite(L.thickness) && L.thickness > 0 ? "model" : inText && +inText >= 40 ? "line" : "usual";
+    // His line's own words, without “(i)” numbering, cut at a word so the type name stays readable
+    let part = typeName(String(L.description || "").replace(/^\(?[ivx\d]+\)\s*/i, "").replace(/^(strength|reinforced|unreinforced)\b.*?(concrete|mm)\)?\s*/i, ""));
+    if (part.length > 48) part = part.slice(0, 48).replace(/\s+\S*$/, "");
+    const t = { ...revitType(c.code, mm, g, part), line: String(L.description || "").slice(0, 200), item: L.item || "", thicknessFrom: from };
+    if (!out.has(t.name)) out.set(t.name, t);
+  }
+  return { kind: "solvboq-types", types: [...out.values()], skipped };
+}
+
 // The rules the add-in checks per element, with who fixes each and what it changes in the bill (shown in its issues panel).
 // NoStructure is for the panel only: a just-placed element has no label yet, so it isn't a live warning.
 const LIVE_RULES = {
+  Unjoined: { who: "modeller", by: "design", affects: "The shared concrete is billed twice until they’re joined." },
   NoCode: { who: "modeller", by: "design", affects: "The item, what it is and what’s worked out from it." },
   BadCode: { who: "modeller", by: "design", affects: "It may be billed as the wrong item." },
   WrongCategory: { who: "modeller", by: "design", affects: "Formwork, finishes and joints follow the category." },
@@ -3390,7 +3445,7 @@ function cardRules() {
     codes: Object.fromEntries(CARDS.map((c) => [c.code, { title: c.title, cats: c.cats, grade: cardNeedsGrade(c), uniclass: UNICLASS[c.code]?.[0] || "",
       needs: cardNeeds(c).map((n) => ({ what: n.what, who: ACTORS[n.who], by: stageTitle(n.by), missing: IF_MISSING[n.missing] })) }])),
     rules: Object.fromEntries(Object.entries(LIVE_RULES).map(([k, v]) => [k, { who: ACTORS[v.who], by: stageTitle(v.by), affects: v.affects }])),
-    structureParam: "SolvBoQ Structure",
+    structureParam: "SolvBoQ Structure", standardTypes: STANDARD_TYPES,
     // For the add-in's “Set up SolvBoQ” command (one click: codes, labels and materials into the open model)
     assemblyCodes: assemblyCodeFile(), sharedParameters: sharedParamFile(),
     labels: LABELS.map((p) => ({ name: p.name, guid: p.guid, instance: p.on === "instance",
@@ -3673,7 +3728,7 @@ const RX = {
 };
 // Order for "Start here": wrong quantities first, then things that can't be billed, then missing spec, then classification to confirm
 const TIERS = [
-  { key: 1, label: "Quantity could be wrong", checks: ["dup", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
+  { key: 1, label: "Quantity could be wrong", checks: ["dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
   { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
   { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode", "nostructure"] },
@@ -3901,7 +3956,23 @@ function runChecks(input, opts = {}) {
     `These match another slab of the same type in size and outline, but hold more concrete: ${fmt1(twinExtra)} m³ more in all. Usually the larger one isn’t joined to the concrete it overlaps, so the overlap is measured twice.`,
     "Compare each with its twin in Revit. Join it to the elements it overlaps (Modify › Join), or explain the difference, before billing it.", twins, { impact: twinExtra });
 
-  const overlapping = live.filter((e) => !dupIds.has(e.Id) && (e.Warnings || []).some((w) => RX.overlapWarn.test(w)));
+  // Concrete that overlaps other concrete without being joined (the add-in measures the shared solid exactly): the shared
+  // volume is in both elements' quantities. Each pair once; pairs that are full duplicates are left to the check above.
+  const liveIds = new Set(live.map((e) => e.Id)), byIdL = new Map(live.map((e) => [e.Id, e]));
+  const pairs = new Map();
+  for (const e of live) for (const o of e.Overlaps || []) {
+    if (!liveIds.has(o.Id) || (dupIds.has(e.Id) && dupIds.has(o.Id))) continue;
+    const k = e.Id < o.Id ? e.Id + "|" + o.Id : o.Id + "|" + e.Id;
+    if (!pairs.has(k)) pairs.set(k, { a: e, b: byIdL.get(o.Id), v: o.Volume });
+  }
+  const pl = [...pairs.values()], shared = pl.reduce((t, p) => t + (p.v || 0), 0), unknownV = pl.filter((p) => p.v == null).length;
+  const unjoined = [...new Set(pl.flatMap((p) => [p.a, p.b]))];
+  const big = [...pl].sort((x, y) => (y.v || 0) - (x.v || 0))[0];
+  add("unjoined", "eyes", "Concrete that overlaps without being joined",
+    pl.length ? `${plural2(pl.length, "pair")} of concrete elements overlap but aren’t joined, so ${fmt2(shared)} m³ is in the quantities twice${unknownV ? ` (and ${plural2(unknownV, "pair")} whose overlap Revit couldn’t measure)` : ""}. The largest: “${nameOf(big.a)}” and “${nameOf(big.b)}”${big.v != null ? `, ${fmt2(big.v)} m³` : ""}.` : "",
+    "Join them in Revit: the SolvBoQ issues panel lists the pairs with a Join button (or Modify › Join Geometry). Joined, the shared part is counted once.", unjoined, { impact: shared });
+  const unjoinedIds = new Set(unjoined.map((e) => e.Id));
+  const overlapping = live.filter((e) => !dupIds.has(e.Id) && !unjoinedIds.has(e.Id) && (e.Warnings || []).some((w) => RX.overlapWarn.test(w)));
   add("overlapwarn", "eyes", "Revit says these elements overlap",
     "Revit warns that these overlap other elements. Where they overlap, the shared part is measured twice. Usually that’s a small corner, but a large overlap changes the quantity.",
     "Check the overlaps in Revit (Manage › Warnings), and join or trim the elements so shared volume is counted once.", overlapping, { impact: 0 });
@@ -4347,7 +4418,7 @@ const CAT_TO_BIC = { "floors": "OST_Floors", "walls": "OST_Walls", "structural f
   "areas": "OST_Areas", "spaces": "OST_MEPSpaces", "pipes": "OST_PipeCurves", "pipe fittings": "OST_PipeFitting", "railings": "OST_StairsRailing",
   "doors": "OST_Doors", "windows": "OST_Windows" };
 const FIELDS = ["Id", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
-  "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Openings", "Stair",
+  "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Overlaps", "Openings", "Stair",
   "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails", "Structure", "FinishOuter", "FinishInner", "FinishTop"];
 
 function normaliseRecord(raw) {
@@ -4370,6 +4441,7 @@ function normaliseRecord(raw) {
   r.MaterialDetails = Array.isArray(r.MaterialDetails) ? r.MaterialDetails.map(low).map((m) => ({ Name: String(m.name || ""), Class: String(m.class || ""), Description: String(m.description || ""),
     Strength: m.strength == null || m.strength === "" || !isFinite(Number(m.strength)) ? null : Number(m.strength), Volume: num(m.volume), Area: num(m.area) })) : null;
   r.JoinedTo = Array.isArray(r.JoinedTo) ? r.JoinedTo.map(String) : null;
+  r.Overlaps = Array.isArray(r.Overlaps) ? r.Overlaps.map(low).map((o) => ({ Id: String(o.id ?? ""), Volume: o.volume == null || o.volume === "" || !isFinite(Number(o.volume)) ? null : Number(o.volume) })).filter((o) => o.Id) : null;
   r.Openings = Array.isArray(r.Openings) ? r.Openings.map(low).map((o) => ({ Id: String(o.id ?? ""), Kind: String(o.kind || "other"), W: num(o.w), H: num(o.h) })).filter((o) => o.W > 0 && o.H > 0)
     : "openings" in lower ? [] : null;
   const st = r.Stair && typeof r.Stair === "object" ? low(r.Stair) : null;
@@ -8959,8 +9031,25 @@ function mbOverview(lines) {
       h("div", null, h("span", null, "Model"), h("b", null, cleanName(state.name))), h("div", null, h("span", null, "Saved"), h("b", null, mbCloud() ? "In the project (cloud)" : "In this browser")))),
     h("div", { class: "edfoot" },
       h("button", { type: "button", class: "btn dark", onclick: () => mbDownload(lines) }, "Download"),
+      h("button", { type: "button", class: "btn", onclick: () => mbTypes(lines), title: "One wall, slab or base type per line of your bill, for Revit’s Types from BoQ button: named after the line, with its thickness, material, BoQ code and finish" }, "Revit types from this BoQ"),
       h("label", { class: "btn", for: "mbFile2", tabindex: "0" }, "Import a new copy", h("input", { class: "sr", type: "file", id: "mbFile2", accept: ".xlsx,.xlsm", onchange: (e) => { const f = e.target.files[0]; e.target.value = ""; mbImport(f); } })),
       h("button", { type: "button", class: "btn sm", onclick: async () => { if (!confirm(`Delete “${m.name}” and its mapping?`)) return; try { if (mbCloud()) await Store.deleteMaster(CL.pid, m.id); else { const all = mbLocal(); delete all[m.id]; localStorage.setItem(MB_LOCAL, JSON.stringify(all)); } } catch (e) { return toast(e.message); } MB.master = null; mbList(); renderMaster(); } }, "Delete"))];
+}
+
+// The modelling brief as Revit types: one per line a wall, slab or base type can carry, thickness from the elements the
+// line is mapped to (the most common one), else from the line, else the card's usual one (and the add-in says which)
+function mbTypes(lines) {
+  const thick = (L) => {
+    const t = (L.lq?.elements || []).map(({ e }) => e.Thickness).filter((x) => x > 0).map((x) => Math.round(x * 1000) / 1000);
+    if (!t.length) return null;
+    const n = {}; for (const x of t) n[x] = (n[x] || 0) + 1;
+    return +Object.keys(n).sort((a, b) => n[b] - n[a])[0];
+  };
+  const out = typesFromBoq(lines.map((L) => ({ description: L.description, heading: [L.clause, L.heading].filter(Boolean).join(" "), section: L.section, unit: L.unitText || L.unit, item: L.item, thickness: thick(L) })));
+  if (!out.types.length) return toast("No line of this bill is a wall, slab, base, blinding or screed that a Revit type can carry.");
+  saveFile(`${MB.master.name} - Revit types.json`, JSON.stringify({ ...out, source: MB.master.name, made: new Date().toISOString() }, null, 1), "application/json");
+  const guessed = out.types.filter((t) => t.thicknessFrom === "usual").length;
+  toast(`${plural(out.types.length, "type")} for Revit${guessed ? `; ${guessed} with a usual thickness to check` : ""}. In Revit: SolvBoQ › Types from BoQ.`);
 }
 
 function mbDownload(lines) {
@@ -9051,7 +9140,8 @@ function renderStandards() {
       h("p", { class: "sub" }, "The IDS file (buildingSMART IDS 1.0) carries the per-element rules: every billed element has a SolvBoQ code, each code suits its category, and graded concrete names its grade. Rules between elements and the labels are checked by SolvBoQ itself. Not yet tried in an IDS checker."),
       h("p", { class: "sub" }, "Install: close Revit, unzip the add-in, and double-click install.cmd inside it. If Windows says it protected your PC, choose More info › Run anyway (the add-in isn’t signed yet)."),
       h("div", { class: "edai" }, h("b", null, "Set up in one click. "), "In Revit, on the SolvBoQ tab, click ", h("b", null, "Set up SolvBoQ"),
-        ": it loads the BoQ codes, adds the four labels and creates the standard materials in the open model. It never changes an element, skips what’s already there, and one undo takes it all out. Then, in each type’s properties, Assembly Code › pick its SolvBoQ code."),
+        ": it loads the BoQ codes, adds the four labels, creates the standard materials and makes the standard wall, slab and base types (code, material and top finish already on them) in the open model. It never changes an element, skips what’s already there, and one undo takes it all out. Draw with those types; give loadable families (footings, columns, beams, stairs) their code in the type’s Assembly Code. ",
+        h("b", null, "Types from BoQ"), " makes one type per line of your bill instead: download the file from Master BoQ › Overview › Revit types from this BoQ."),
       h("p", { class: "sub" }, "By hand instead (if Set up can’t load the codes): download the codes, then Manage › Additional Settings › Assembly Code › load the file."),
       h("div", { class: "stdcovs" },
         ms ? h("div", { class: "stdcov" }, h("b", null, `This model: ${cleanName(state.name)}`),
@@ -9083,6 +9173,7 @@ function renderStandards() {
         h("p", { class: "sub" }, "Three layers, from instant to thorough. Nothing here changes the model.")),
       h("ol", { class: "stdsteps" },
         h("li", null, h("b", null, "Live check (the add-in). "), "On the SolvBoQ tab, “Live check” is on by default. Once the model uses SolvBoQ codes, Revit warns as you place an element or change its type: no BoQ code, a code that doesn’t suit the category (a beam drawn as a wall), concrete whose material gives no grade, an in-place family in a billed category. The rules are the cards’ own."),
+        h("li", null, h("b", null, "The issues panel (the add-in). "), "SolvBoQ › Issues lists everything to fix, kept up to date as you model, with who fixes it and what it changes in the bill. In every model, Set up or not, it lists concrete that overlaps without being joined, with the volume billed twice, and a Join button (one undo)."),
         h("li", null, h("b", null, "The BoQ check view (set up once in the template). "), "A 3D view that colours what isn’t ready:",
           h("ul", null,
             h("li", null, "View › 3D View, duplicate it and name it “SolvBoQ check”."),
