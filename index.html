@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-06T19:38:30Z">
+<meta name="solvboq-build" content="2026-11-07T07:31:13Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4296,7 +4296,7 @@ function runChecks(input, opts = {}) {
   out.reveals = input.filter((e) => e.Bic === "OST_Reveals");   // chamfers modelled as reveals are billed from these
   out.inputs = opts.inputs || null;   // the project's inputs used (inputs.js): the structure, its kind, its geotech
   out.structureWhy = structureWhy;
-  out.derived = deriveItems(out, opts);
+  out.derived = deriveItems(out, { ...opts, annotations: input.annotations });
   out.derived.expected = expectedItems(out, out.derived.lines);
   return out;
 }
@@ -4382,6 +4382,7 @@ function deriveItems(r, opts = {}) {
   }
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
   const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
+  r.layout = jointLayout(opts.annotations);
   const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
@@ -4506,29 +4507,55 @@ function recordsFromJSON(data) {
   return recs;
 }
 
-// His joint layout as drawn: lines in views or on sheets, each joint labelled A, B… nearby. Each short label (“A”, “Joint A”,
-// a mark symbol carrying “A”) claims the nearest line in its view, within about 30 mm on paper; lines are also totalled by
-// line style. Read to see his layout and calibrate the joint rules on it; not yet used for a quantity.
+// His joint layout as drawn (6 Nov 2026): lines in a plan, each joint labelled “JOINT A”, “B”, or a mark symbol carrying the
+// letter, beside it. One view is read: the one named for joints, else the one with most labelled lines (his layout was also
+// copied into “Level 0” with its detailing; counting both would double it). Each label is paired with its own line, nearest
+// first, within about 30 mm on paper; a label that finds no line is counted as loose (his Joint B labels mark the wall base).
 function jointLayout(ann) {
   if (!ann || !Array.isArray(ann.Lines ?? ann.lines)) return null;
   const g = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)];
   const lines = g(ann, "Lines") || [], labels = g(ann, "Labels") || [], views = new Map((g(ann, "Views") || []).map((v) => [String(g(v, "Id")), v]));
   const mark = (t) => { const x = String(t || "").split(" | ").map((p) => p.trim()); for (const p of x.reverse()) { const m = p.match(/^(?:joint|jnt|type)?\s*([A-Z]{1,2}\d?)$/i); if (m) return m[1].toUpperCase(); } return null; };
   const dist = (p, l) => { const [x1, y1, , x2, y2] = g(l, "Points"), dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((p[0] - x1) * dx + (p[1] - y1) * dy) / L2)) : 0; return Math.hypot(p[0] - x1 - t * dx, p[1] - y1 - t * dy); };
-  const byLabel = {}, byStyle = {}, claimed = new Set();
-  for (const l of lines) { const st = g(l, "Style") || "(no style)"; byStyle[st] = byStyle[st] || { length: 0, count: 0 }; byStyle[st].length += g(l, "Length") || 0; byStyle[st].count++; }
-  for (const lb of labels) {
-    const m = mark(g(lb, "Text")), at = g(lb, "At"); if (!m || !at) continue;
-    const vid = String(g(lb, "View")), v = views.get(vid), paper = /sheet/i.test(String(g(v, "Kind") || ""));
-    const near = paper ? 0.03 : Math.max(0.5, 0.03 * (g(v, "Scale") || 50));
-    let best = null, bd = Infinity;
-    for (const l of lines) if (String(g(l, "View")) === vid && g(l, "Points")) { const d = dist(at, l); if (d < bd) { bd = d; best = l; } }
-    if (!best || bd > near) { (byLabel[m] = byLabel[m] || { length: 0, lines: [], loose: 0 }).loose++; continue; }
-    const e = (byLabel[m] = byLabel[m] || { length: 0, lines: [], loose: 0 });
-    if (!claimed.has(best)) { claimed.add(best); e.length += g(best, "Length") || 0; e.lines.push(g(best, "Id")); }
-  }
-  return { lines: lines.length, labels: labels.length, views: [...views.values()].map((v) => g(v, "Sheet") || g(v, "Name")), byLabel, byStyle };
+  // Pair labels and lines in one view: a maximum matching within reach, trying each label's nearest line first
+  const pairUp = (vid) => {
+    const v = views.get(vid), paper = /sheet/i.test(String(g(v, "Kind") || "")), near = paper ? 0.03 : Math.max(0.5, 0.03 * (g(v, "Scale") || 50));
+    const ls = lines.filter((l) => String(g(l, "View")) === vid && g(l, "Points")), lbs = labels.map((lb) => ({ lb, m: mark(g(lb, "Text")) })).filter((x) => x.m && g(x.lb, "At") && String(g(x.lb, "View")) === vid);
+    const opts = lbs.map((x) => ls.map((l, k) => [k, dist(g(x.lb, "At"), l)]).filter(([, d]) => d <= near).sort((a, b) => a[1] - b[1]).map(([k]) => k));
+    const owner = new Array(ls.length).fill(-1);
+    const tryL = (li, seen) => { for (const k of opts[li]) { if (seen.has(k)) continue; seen.add(k); if (owner[k] < 0 || tryL(owner[k], seen)) { owner[k] = li; return true; } } return false; };
+    lbs.forEach((_, li) => tryL(li, new Set()));
+    return { v, ls, lbs, owner };
+  };
+  const cands = [...new Set(labels.map((lb) => String(g(lb, "View"))))].map(pairUp).filter((p) => p.lbs.length);
+  if (!cands.length) return { lines: lines.length, labels: labels.length, view: null, views: [], byLabel: {}, segs: [] };
+  const best = cands.sort((a, b) => (/joint/i.test(g(b.v, "Name") || "") - /joint/i.test(g(a.v, "Name") || "")) || b.owner.filter((o) => o >= 0).length - a.owner.filter((o) => o >= 0).length)[0];
+  const byLabel = {}, segs = [];
+  best.lbs.forEach((x) => { (byLabel[x.m] = byLabel[x.m] || { length: 0, lines: [], loose: 0 }); });
+  best.owner.forEach((li, k) => { if (li < 0) return; const l = best.ls[k], m = best.lbs[li].m; byLabel[m].length += g(l, "Length") || 0; byLabel[m].lines.push(g(l, "Id")); segs.push({ label: m, id: g(l, "Id"), pts: g(l, "Points"), length: g(l, "Length") || 0 }); });
+  best.lbs.forEach((x, li) => { if (!best.owner.includes(li)) byLabel[x.m].loose++; });
+  const vname = g(best.v, "Sheet") || g(best.v, "Name") || "";
+  return { lines: lines.length, labels: labels.length, view: vname, views: [vname], level: g(best.v, "LevelElevation") ?? null, paper: /sheet/i.test(String(g(best.v, "Kind") || "")), byLabel, segs };
 }
+
+// The length of his layout's joint lines inside a slab's plan outline (its box), at the slab's level: by label, and in all.
+// Null when there's no layout in model coordinates at that level, so the estimate stands.
+function layoutJoints(r, e) {
+  const L = r.layout;
+  if (!L || !L.segs.length || L.paper || !e.Box) return null;
+  if (L.level != null && Math.abs(L.level - e.Box[5]) > 1.0) return null;
+  const [x0, y0, , x1, y1] = e.Box, byLabel = {};
+  let total = 0;
+  for (const sg of L.segs) {
+    const [ax, ay, , bx, by] = sg.pts; let t0 = 0, t1 = 1; const dx = bx - ax, dy = by - ay;
+    const clip = (p, q) => { if (Math.abs(p) < 1e-12) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+    if (!(clip(-dx, ax - x0) && clip(dx, x1 - ax) && clip(-dy, ay - y0) && clip(dy, y1 - ay))) continue;
+    const len = Math.max(0, t1 - t0) * Math.hypot(dx, dy);
+    if (len > 0.01) { byLabel[sg.label] = (byLabel[sg.label] || 0) + len; total += len; }
+  }
+  return { total, byLabel, view: L.view };
+}
+const layoutText = (lj) => `from your joint layout (${lj.view}): ${Object.entries(lj.byLabel).map(([m, v]) => `Joint ${m} ${v.toFixed(2)} m`).join(", ")}`;
 // Older CSV extracts: one row per element per material. Combine into one record per element.
 function recordsFromCSVRows(rows) {
   const by = new Map();
@@ -4698,9 +4725,9 @@ function inferLines(r, ctx) {
   }
   // Stop ends at the construction joints in floor slabs (his “sides of sump footing” adds joints B and D × 200 mm)
   if (r.structure === "civil") for (const e of ground.filter((e) => conc.includes(e))) {
-    const len = floorJoints(r, e, slabs), t = e.Thickness || height(e);
+    const lj = layoutJoints(r, e), len = lj ? lj.total : floorJoints(r, e, slabs), t = e.Thickness || height(e);
     add(`fwedge|stop|${typeKey(e)}`, item(true, `Vertical formwork to stop ends at construction joints in floor slabs (${typeName(e)})`),
-      "Inferred: the estimated joint length in the floor × the slab thickness. Replace it with the joint layout when it’s available.", e, len * t);
+      lj ? `Inferred: the joint length in the floor ${layoutText(lj)}, × the slab thickness (${(t * 1000).toFixed(0)} mm).` : "Inferred: the estimated joint length in the floor × the slab thickness. Replace it with the joint layout when it’s available.", e, len * t);
   }
 
   // Stairs, from the riser count and run widths the add-in reads from Revit: risers (narrow widths), the sloping soffit of
@@ -5049,9 +5076,13 @@ function inferMore(r, ctx) {
       if (len > 0) add("jslab", "joint", G("8.5", "Joints", "Watertight construction joints where slabs meet walls", "m"),
         "Inferred: the length of the walls a suspended slab is cast against partway up, up to the slab’s perimeter.", s, Math.min(len, s.Perimeter || len));
     }
-    for (const e of ground) add("jfloor", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs (estimate)", "m"),
-      "Inferred: 0.5 m of joint per m² of floor up to 300 mm thick (bays of about 4 m), 0.33 m per m² of thicker bases (about 6 m); slabs under 30 m² and narrow rings are one pour. Replace it with the joint layout when it’s available.",
-      e, floorJoints(r, e, slabs));
+    for (const e of ground) {
+      const lj = layoutJoints(r, e);
+      if (lj) add("jfloorlayout", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs", "m"), `Inferred: ${layoutText(lj)}.`, e, lj.total);
+      else add("jfloor", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs (estimate)", "m"),
+        "Inferred: 0.5 m of joint per m² of floor up to 300 mm thick (bays of about 4 m), 0.33 m per m² of thicker bases (about 6 m); slabs under 30 m² and narrow rings are one pour. Replace it with the joint layout when it’s available.",
+        e, floorJoints(r, e, slabs));
+    }
   } else if (groundArea > 0) {
     for (const e of ground) {
       // His Incinerator floor: 67 m of saw-cut joints in 170 m² (0.4 m/m²), sealant over the same length
@@ -7858,9 +7889,9 @@ function jointLayoutNote() {
   const j = jointLayout(state.records?.annotations);
   if (!j) return h("p", { class: "edtext edsub" }, "Your joint layout isn’t in this model data: it comes with the next run of BoQ readiness from Revit (add-in of 6 Nov 2026 or later).");
   const marks = Object.entries(j.byLabel).sort(([a], [b]) => a.localeCompare(b));
-  return h("p", { class: "edtext edsub" }, `Your joint layout: ${plural(j.lines, "line")} and ${plural(j.labels, "label")} read from ${j.views.length ? j.views.slice(0, 3).join(", ") : "the model"}. `,
+  return h("p", { class: "edtext edsub" }, `Your joint layout: ${plural(j.lines, "line")} and ${plural(j.labels, "label")} in the model. `,
     marks.length ? "Joints found by their label: " + marks.map(([m, x]) => `${m} ${x.length.toFixed(2)} m (${plural(x.lines.length, "line")}${x.loose ? `, ${x.loose} label${x.loose === 1 ? "" : "s"} with no line near` : ""})`).join("; ") + ". " : "No labels like A or B found next to a line. ",
-    "Not used for this figure yet: we’re checking it against your measure first.");
+    j.segs?.length ? `Read from ${j.view}; the floor joints and their stop ends come from it.` : "No joint lines found to use, so the floor joints are estimated.");
 }
 
 // ===== Readiness: a verdict, three steps, and the current step's checks (from the Claude Design redesign) =====
