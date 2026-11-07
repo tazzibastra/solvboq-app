@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-07T07:31:13Z">
+<meta name="solvboq-build" content="2026-11-07T07:44:24Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4528,14 +4528,15 @@ function jointLayout(ann) {
     return { v, ls, lbs, owner };
   };
   const cands = [...new Set(labels.map((lb) => String(g(lb, "View"))))].map(pairUp).filter((p) => p.lbs.length);
-  if (!cands.length) return { lines: lines.length, labels: labels.length, view: null, views: [], byLabel: {}, segs: [] };
+  if (!cands.length) return { lines: lines.length, labels: labels.length, view: null, views: [], byLabel: {}, segs: [], loose: [] };
   const best = cands.sort((a, b) => (/joint/i.test(g(b.v, "Name") || "") - /joint/i.test(g(a.v, "Name") || "")) || b.owner.filter((o) => o >= 0).length - a.owner.filter((o) => o >= 0).length)[0];
   const byLabel = {}, segs = [];
   best.lbs.forEach((x) => { (byLabel[x.m] = byLabel[x.m] || { length: 0, lines: [], loose: 0 }); });
   best.owner.forEach((li, k) => { if (li < 0) return; const l = best.ls[k], m = best.lbs[li].m; byLabel[m].length += g(l, "Length") || 0; byLabel[m].lines.push(g(l, "Id")); segs.push({ label: m, id: g(l, "Id"), pts: g(l, "Points"), length: g(l, "Length") || 0 }); });
-  best.lbs.forEach((x, li) => { if (!best.owner.includes(li)) byLabel[x.m].loose++; });
+  const loose = [];
+  best.lbs.forEach((x, li) => { if (!best.owner.includes(li)) { byLabel[x.m].loose++; loose.push({ label: x.m, at: g(x.lb, "At") }); } });
   const vname = g(best.v, "Sheet") || g(best.v, "Name") || "";
-  return { lines: lines.length, labels: labels.length, view: vname, views: [vname], level: g(best.v, "LevelElevation") ?? null, paper: /sheet/i.test(String(g(best.v, "Kind") || "")), byLabel, segs };
+  return { lines: lines.length, labels: labels.length, view: vname, views: [vname], level: g(best.v, "LevelElevation") ?? null, paper: /sheet/i.test(String(g(best.v, "Kind") || "")), near: 0.03 * (g(best.v, "Scale") || 50), byLabel, segs, loose };
 }
 
 // The length of his layout's joint lines inside a slab's plan outline (its box), at the slab's level: by label, and in all.
@@ -4554,6 +4555,20 @@ function layoutJoints(r, e) {
     if (len > 0.01) { byLabel[sg.label] = (byLabel[sg.label] || 0) + len; total += len; }
   }
   return { total, byLabel, view: L.view };
+}
+// The joint letter his layout puts by a wall (a label with no line of its own, within reach of the wall in plan, on the
+// wall's base level): his Joint B labels sit by the chamber walls. Null when the layout says nothing about the wall.
+function layoutWallMark(r, w) {
+  const L = r.layout;
+  if (!L || L.paper || !w.Box || !L.loose?.length) return null;
+  if (L.level != null && Math.abs(L.level - w.Box[2]) > 1.0) return null;
+  const reach = Math.max(1.5, L.near || 1.5);
+  let best = null, bd = Infinity;
+  for (const x of L.loose) {
+    const [px, py] = x.at, dx = Math.max(w.Box[0] - px, 0, px - w.Box[3]), dy = Math.max(w.Box[1] - py, 0, py - w.Box[4]), d = Math.hypot(dx, dy);
+    if (d < bd) { bd = d; best = x.label; }
+  }
+  return bd <= reach ? best : null;
 }
 const layoutText = (lj) => `from your joint layout (${lj.view}): ${Object.entries(lj.byLabel).map(([m, v]) => `Joint ${m} ${v.toFixed(2)} m`).join(", ")}`;
 // Older CSV extracts: one row per element per material. Combine into one record per element.
@@ -5066,8 +5081,20 @@ function inferMore(r, ctx) {
     const walls = live.filter((e) => e.Bic === "OST_Walls" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Length > 0);
     for (const e of walls) {
       const base = tops.find((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
-      if (base && !(suspended.includes(base) && e.Box[5] - e.Box[2] <= 1)) add("jwall", "joint", G("8.5", "Joints", "Watertight construction joints with water bar, at the base of walls", "m"),
-        "Inferred: the length of each wall that stands on a slab or footing, except short upstands cast with a suspended slab. Joint types and any other lifts come from the joint drawings.", e, e.Length);
+      if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= 1)) continue;
+      // His joint layout can name it (Joint B by the chamber walls); measured along the wall's centreline, where the water bar sits
+      const mk = layoutWallMark(r, e);
+      add(mk ? `jwall|${mk}` : "jwall", "joint", G("8.5", "Joints", `Watertight construction joints with water bar, at the base of walls${mk ? ` (Joint ${mk})` : ""}`, "m"),
+        `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${mk ? `; Joint ${mk} on your joint layout (${r.layout.view})` : ", except short upstands cast with a suspended slab. Joint types and any other lifts come from the joint drawings"}.`, e, e.Length);
+    }
+    // Where a suspended slab is cast on the tops of walls (a chamber's cover slab): a construction joint along each wall
+    // under it. Not walls that span as beams (cast with the slab they carry). His figure and whether it takes a water bar
+    // are still to come (his note).
+    for (const e of walls) {
+      if (r.concretePart?.[e.Id]?.as === "beams") continue;
+      const over = suspended.find((s) => s.Bic === "OST_Floors" && s.Box && Math.abs(s.Box[2] - e.Box[5]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
+      if (over) add("jwalltop", "joint", G("8.5", "Joints", "Construction joints at the top of walls, under suspended slabs", "m"),
+        "Inferred: the length of each wall a suspended slab is cast on, along its centreline. Check whether this joint is billed, and whether it takes a water bar.", e, e.Length);
     }
     // Where a suspended slab is cast into a wall partway up it (a launder floor against the tank wall, his joint type R)
     for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box)) {
