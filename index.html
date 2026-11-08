@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:19:22Z">
+<meta name="solvboq-build" content="2026-11-08T13:29:33Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4372,7 +4372,22 @@ function deriveItems(r, opts = {}) {
   // A slab carried on columns is suspended too, with nothing modelled under it (a stair landing on columns, his Gravity Thickeners).
   const columns = live.filter((e) => e.Box && e.Bic === "OST_StructuralColumns");
   const onColumns = (s) => columns.some((c) => Math.abs(c.Box[5] - s.Box[2]) <= 0.1 && planShared(s.Box, c.Box) > 0);
-  const hasBelow = (s) => onColumns(s) || structure.some((p) => p !== s && p.Bic === "OST_Floors" && p.Box[5] <= s.Box[2] - 0.5 && planShared(s.Box, p.Box) >= 0.3 * planArea(s.Box));
+  // Fill and no-fines layers the slab rests on, each on the next (floor, blinding, no-fines, G5, G7, pioneer), are its bedding, however
+  // deep the stack goes: his valve chamber of 8 Nov 2026 has a G7 layer 1.2 m under the floor, which read as a slab below, so the
+  // floor was taken as suspended and no excavation was billed. A layer with a gap above it doesn't carry the slab, so it still counts
+  // (GT: a slab 0.57 m over the no-fines, with nothing modelled between, is suspended).
+  const floorsAll = live.filter((e) => e.Box && e.Bic === "OST_Floors");
+  const beddingOf = (s) => {
+    const seen = new Set([s]); let layer = [s];
+    while (layer.length) {
+      const next = floorsAll.filter((p) => !seen.has(p) && layer.some((q) => Math.abs(p.Box[5] - q.Box[2]) <= 0.06 && planShared(q.Box, p.Box) >= 0.3 * Math.min(planArea(q.Box), planArea(p.Box))));
+      next.forEach((p) => seen.add(p)); layer = next;
+    }
+    seen.delete(s);
+    return new Set([...seen].filter((p) => r.tradeOfId[p.Id] !== "concrete" || ["fill", "noFines", "blinding"].includes(r.roles?.[p.Id]?.role)));
+  };
+  const hasBelow = (s) => { if (onColumns(s)) return true; const bed = beddingOf(s);
+    return structure.some((p) => p !== s && p.Bic === "OST_Floors" && !bed.has(p) && p.Box[5] <= s.Box[2] - 0.5 && planShared(s.Box, p.Box) >= 0.3 * planArea(s.Box)); };
   const ground = withBoxes ? slabs.filter((s) => !hasBelow(s)) : hasElev ? slabs.filter((e) => e.LevelElevation <= lowest + 0.5) : [];
   const suspended = withBoxes ? slabs.filter(hasBelow) : hasElev ? slabs.filter((e) => e.LevelElevation > lowest + 0.5) : [];
   // Foundation slabs up on columns are landings or platforms: they get a soffit and a top finish like a suspended slab
