@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-07T07:44:24Z">
+<meta name="solvboq-build" content="2026-11-08T07:10:10Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -774,6 +774,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .piread { margin: 8px 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px }
 .pilogs { display: flex; flex-direction: column; gap: 6px; margin: 10px 0 }
 .pilogs .edcheck { align-items: flex-start; font-size: 13px; line-height: 1.45 }
+
+.coatsel{width:100%;text-align:left;min-height:40px}
 </style>
 </head>
 <body>
@@ -2768,6 +2770,8 @@ const DEFAULT_HINTS = {
   screed: ["screed", "granolithic", "grano", "topping"],
   benching: ["bench"],
   noFines: ["no fines", "no-fines", "nofines"],
+  // Imported fill modelled as its own layer (his valve chamber: “1000mm G5 material”, material Earth)
+  fill: ["g5 material", "g6 material", "g7 material", "g5 layer", "g6 layer", "g7 layer", "pioneer layer", "imported fill", "selected fill", "fill material"],
   subsoilDrain: ["subsoil", "sub-soil", "french drain"],
   chamfer: ["chamfer", "fillet"],
   plinth: ["plinth", "bund"],
@@ -2815,7 +2819,7 @@ const ROLES = {
   column: { label: "Concrete column", trade: "concrete" }, beam: { label: "Concrete beam", trade: "concrete" },
   foundation: { label: "Foundation", trade: "concrete" }, blinding: { label: "Blinding", trade: "concrete" },
   screed: { label: "Screed or topping", trade: "concrete" }, benching: { label: "Benching", trade: "concrete" },
-  noFines: { label: "No-fines concrete", trade: "concrete" }, subsoilDrain: { label: "Subsoil drain", trade: "other" },
+  noFines: { label: "No-fines concrete", trade: "concrete" }, fill: { label: "Imported fill layer", trade: "other" }, subsoilDrain: { label: "Subsoil drain", trade: "other" },
   chamfer: { label: "Chamfer or fillet", trade: "concrete" }, plinth: { label: "Plinth or bund", trade: "concrete" },
   apron: { label: "Apron or ramp", trade: "concrete" }, kerb: { label: "Kerb", trade: "concrete" },
   steel: { label: "Structural steel", trade: "steel" }, timber: { label: "Timber", trade: "timber" },
@@ -3088,6 +3092,23 @@ const CARDS = [
     bills: [["Downpipes, [type]", "m", "HB 8.2.3"]], avoid: [], checks: ["flashnolen", "inplace", "codecat"], his: [] },
 
   // ----- Drainage and pipework -----
+  // ----- Earthworks modelled as layers (his note on the valve chamber, 7 Nov 2026: “the G5 can be extracted from the model”)
+  { code: "D.FILL.G5", group: "D", title: "G5 fill layer", role: "fill", cats: ["OST_Floors"],
+    type: "1000mm G5 material", material: "Material: “Earth” or a fill material (no grade).",
+    model: ["Model each imported layer as its own Floor at its real thickness and extent, under the structure.", "Its volume is the quantity: SolvBoQ bills the layers you model instead of working them out from the excavation."],
+    bills: [["(b) G5 compacted to 98% Mod. AASHTO in 150 mm layers", "m³", "D 8.3.16"]], avoid: [], checks: ["codecat"], his: ["Valve chamber: 1000 mm G5 under the floor"] },
+  { code: "D.FILL.G6", group: "D", title: "G6 fill layer", role: "fill", cats: ["OST_Floors"],
+    type: "300mm G6 material", material: "Material: “Earth” or a fill material (no grade).",
+    model: ["Model as its own Floor at its real thickness and extent."],
+    bills: [["(c) G6 compacted to 95% Mod. AASHTO in 150 mm layers", "m³", "D 8.3.16"]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "D.FILL.G7", group: "D", title: "G7 fill layer", role: "fill", cats: ["OST_Floors"],
+    type: "300mm G7 material", material: "Material: “Earth” or a fill material (no grade).",
+    model: ["Model as its own Floor at its real thickness and extent."],
+    bills: [["G7 compacted to 93% Mod. AASHTO in 150 mm layers", "m³", "D 8.3.16"]], avoid: [], checks: ["codecat"], his: [] },
+  { code: "D.FILL.PIONEER", group: "D", title: "Pioneer layer", role: "fill", cats: ["OST_Floors"],
+    type: "500mm Pioneer layer", material: "Material: rock fill (no grade).",
+    model: ["Model as its own Floor at its real thickness and extent, under the fill."],
+    bills: [["(j) [thickness] mm compacted pioneer layer of 100 mm to 300 mm boulders", "m³", "D 8.3.16"]], avoid: [], checks: ["codecat"], his: ["GT tender: 500 mm pioneer layer"] },
   { code: "LE.SUBSOIL", group: "LE", title: "Subsoil drains", role: "subsoilDrain", cats: ["OST_PipeCurves", "OST_Floors", "OST_GenericModel"],
     type: "Subsoil Drain 300x600 Stone + 110 uPVC", material: "",
     model: ["Model as a Pipe (preferred: the length is read directly) or a line-based family along the drain’s path.", "As a Floor, the length is taken as half its perimeter (GT: 47.75 vs his 48 m), which only works for a narrow ring."],
@@ -3776,7 +3797,7 @@ const RX = {
 };
 // Order for "Start here": wrong quantities first, then things that can't be billed, then missing spec, then classification to confirm
 const TIERS = [
-  { key: 1, label: "Quantity could be wrong", checks: ["dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
+  { key: 1, label: "Quantity could be wrong", checks: ["readerror", "dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
   { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
   { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode", "nostructure"] },
@@ -3892,6 +3913,7 @@ function computeRoles(els) {
     const concrete = inConcretePopulation(e) || isConcreteMat(mat) || !mat;
     const floorLike = e.Bic === "OST_Floors" || e.Bic === "OST_GenericModel";
     if (floorLike && H().noFines.test(name)) set(e, "noFines", "name");
+    else if (e.Bic === "OST_Floors" && !isConcreteMat(mat) && (H().fill.test(name) || (/\b(earth|soil|gravel|fill)\b/i.test(mat) && /\bG[5-7]\b|pioneer|fill/i.test(name)))) set(e, "fill", "name");
     else if (floorLike && H().subsoilDrain.test(name)) set(e, "subsoilDrain", "name");
     else if (e.Bic === "OST_Floors" && H().blinding.test(both) && concrete) set(e, "blinding", "name");
     else if (e.Bic === "OST_Floors" && H().screed.test(both) && !H().benching.test(name) && concrete) set(e, "screed", "name");
@@ -4053,6 +4075,12 @@ function runChecks(input, opts = {}) {
   add("rcconflict", "eyes", "Type and material disagree on reinforcement",
     rcConflict.length ? `For example, “${nameOf(rcConflict[0])}” is named as reinforced concrete but its material is “${rcConflict[0].Material}”. That decides whether it’s billed as reinforced concrete and whether reinforcement is measured for it.` : "",
     "Check the drawings, then correct the type name or the material.", rcConflict);
+
+  // Elements the add-in found but couldn't read: never dropped without a word (a wall missing from his valve chamber, 7 Nov 2026)
+  const unread = input.filter((e) => e.ReadError);
+  add("readerror", "eyes", "Elements the add-in couldn’t read",
+    unread.length ? `Revit gave an error reading “${nameOf(unread[0])}” (${unread[0].Id}): ${unread[0].ReadError}. Its quantities may be missing or incomplete in the bill${unread.length > 1 ? `, and so may ${plural2(unread.length - 1, "other element")}’s` : ""}.` : "",
+    "Send the model's report to SolvBoQ support. Meanwhile, check these elements in Revit (Manage › Select by ID) and measure them by hand.", unread);
 
   // The SolvBoQ standard: once a model uses BoQ codes, every billed type needs one, it must be a SolvBoQ code, and it must
   // suit the Revit category (a beam coded G.BEAM but drawn as a wall gets a wall's formwork). Models without codes aren't checked.
@@ -4383,7 +4411,7 @@ function deriveItems(r, opts = {}) {
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
   const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
   r.layout = jointLayout(opts.annotations);
-  const inferred = inferLines(r, { live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
+  const inferred = inferLines(r, { coat: Math.round(+(opts.earthworks?.coatProduct) || 0), live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
   const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
@@ -4457,7 +4485,18 @@ function deriveItems(r, opts = {}) {
   // Readiness shows the same holding-down bolt count as the BoQ line (only columns standing on concrete)
   const hd = items.find((i) => i.key === "hdbolts"), hdLine = more.find((l) => l.key === "hdbolts");
   if (hd && hdLine) { hd.qty = hdLine.qty; hd.note = `${plural2(hdLine.elements.length, "steel column base")} on concrete, at an assumed 4 bolts each. Confirm bolts per base on the drawings.`; }
-  return { items, fromDrawings, lines: [...earth.lines, ...inferred.lines, ...more], earthworks: earth.assumptions };
+  const all = [...earth.lines, ...inferred.lines, ...more];
+  // The watertightness test: always 1 for each water-retaining structure (his note, 7 Nov 2026), one per Structure label, or one
+  // for the model. Manholes already have theirs.
+  if (civil && !all.some((l) => l.key.startsWith("wttest|"))) {
+    const wt = (e) => r.concretePart?.[e.Id]?.wt || /\.WT$/.test((typeof cardOf === "function" && cardOf(e)?.code) || "");
+    const wet = live.filter((e) => r.tradeOfId[e.Id] === "concrete" && wt(e));
+    const by = new Map(); for (const e of wet) { const k = e.Structure || ""; if (!by.has(k)) by.set(k, []); by.get(k).push(e); }
+    for (const [nm, g] of by) all.push({ key: `wttest|${nm || "model"}`, kind: "test", item: { section: "SANS 1200 G", clause: "8.21", heading: "Watertightness testing",
+      description: `Watertightness test of the water-retaining structure${nm ? ` (${nm})` : ""}`, unit: "Sum" },
+      reason: "Inferred: one test for each water-retaining structure (watertight concrete in it).", check: "", qty: 1, elements: g, parts: g.map((e) => ({ id: e.Id, qty: 1 / g.length })) });
+  }
+  return { items, fromDrawings, lines: all, earthworks: earth.assumptions };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
 
@@ -4466,7 +4505,7 @@ const CAT_TO_BIC = { "floors": "OST_Floors", "walls": "OST_Walls", "structural f
   "structural framing": "OST_StructuralFraming", "stairs": "OST_Stairs", "generic models": "OST_GenericModel", "roofs": "OST_Roofs", "rooms": "OST_Rooms",
   "areas": "OST_Areas", "spaces": "OST_MEPSpaces", "pipes": "OST_PipeCurves", "pipe fittings": "OST_PipeFitting", "railings": "OST_StairsRailing",
   "doors": "OST_Doors", "windows": "OST_Windows" };
-const FIELDS = ["Id", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
+const FIELDS = ["Id", "ReadError", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
   "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Overlaps", "Openings", "Stair",
   "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails", "Structure", "FinishOuter", "FinishInner", "FinishTop"];
 
@@ -4556,6 +4595,24 @@ function layoutJoints(r, e) {
   }
   return { total, byLabel, view: L.view };
 }
+// How many of his layout's joint lines cross a wall: a line that runs across the wall in plan (more across it than along
+// it), on the wall's base level. A line running along a wall isn't a crossing. Curved walls aren't counted yet.
+function layoutCrossings(r, w) {
+  const L = r.layout;
+  if (!L || L.paper || !w.Box || !L.segs?.length) return 0;
+  if (L.level != null && Math.abs(L.level - w.Box[2]) > 1.0) return 0;
+  const [x0, y0, , x1, y1] = w.Box, alongX = x1 - x0 >= y1 - y0;
+  if (w.Length > 1.1 * Math.hypot(x1 - x0, y1 - y0)) return 0;
+  let n = 0;
+  for (const sg of L.segs) {
+    const [ax, ay, , bx, by] = sg.pts, dx = bx - ax, dy = by - ay;
+    if (alongX ? Math.abs(dy) <= Math.abs(dx) : Math.abs(dx) <= Math.abs(dy)) continue;
+    let t0 = 0, t1 = 1;
+    const clip = (p, q) => { if (Math.abs(p) < 1e-12) return q >= 0; const t = q / p; if (p < 0) { if (t > t1) return false; if (t > t0) t0 = t; } else { if (t < t0) return false; if (t < t1) t1 = t; } return true; };
+    if (clip(-dx, ax - x0) && clip(dx, x1 - ax) && clip(-dy, ay - y0) && clip(dy, y1 - ay) && t1 >= t0) n++;
+  }
+  return n;
+}
 // The joint letter his layout puts by a wall (a label with no line of its own, within reach of the wall in plan, on the
 // wall's base level): his Joint B labels sit by the chamber walls. Null when the layout says nothing about the wall.
 function layoutWallMark(r, w) {
@@ -4569,6 +4626,17 @@ function layoutWallMark(r, w) {
     if (d < bd) { bd = d; best = x.label; }
   }
   return bd <= reach ? best : null;
+}
+// Which fill a modelled layer is: from its code (D.FILL.G5…), else its name
+// The coating products he chooses between (his note, 7 Nov 2026); the first is the default
+// In his own wording (his note and his GT bill)
+const COAT_PRODUCTS = ["apply (trowel-on) Sikaguard 720 Epodem (or equivalent) in combination with Sika 63N (or equivalent) to a thickness of 2 mm", "HDPE covering (3 mm thick with anchor knobs cast into concrete with formwork)"];
+function fillKind(e) {
+  const code = (typeof cardOf === "function" && cardOf(e)?.code) || "";
+  const m = code.match(/^D\.FILL\.(G[5-7]|PIONEER)$/);
+  if (m) return m[1] === "PIONEER" ? "pioneer" : m[1];
+  const t = `${e.Type} ${e.Family}`, g = t.match(/\bG([5-7])\b/i);
+  return g ? `G${g[1]}` : /pioneer/i.test(t) ? "pioneer" : "fill";
 }
 const layoutText = (lj) => `from your joint layout (${lj.view}): ${Object.entries(lj.byLabel).map(([m, v]) => `Joint ${m} ${v.toFixed(2)} m`).join(", ")}`;
 // Older CSV extracts: one row per element per material. Combine into one record per element.
@@ -4717,6 +4785,33 @@ function inferLines(r, ctx) {
     const bearing = under.reduce((s, p) => s + plan(p), 0);
     add(`fwsoffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of suspended slabs (${typeName(e)})`),
       `Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it)${bearing > 0 ? ", less the tops of the walls, columns and beams it bears on" : ""}. Sloping soffits aren’t told apart from flat ones.`, e, Math.max(0, (e.Area || 0) - bearing));
+  }
+  // Protective coating to the wetted faces of a water-retaining structure, as three items (his note on the valve chamber,
+  // 7 Nov 2026): the inside faces of its walls (his 160 m²), the soffit of the slab over it (87.9 m²) and the sides and soffits
+  // of the beams under that slab (44.6 m²), each with the product he picks. Walls standing inside the structure are wetted on
+  // both faces, so they're a fourth item. Only structures with watertight walls.
+  if (r.structure === "civil") {
+    const wt = (e) => r.concretePart?.[e.Id]?.wt || /\.WT$/.test((typeof cardOf === "function" && cardOf(e)?.code) || "");
+    const wetWalls = conc.filter((e) => e.Bic === "OST_Walls" && e.Box && e.Length > 0 && wt(e) && r.concretePart?.[e.Id]?.as !== "beams");
+    if (wetWalls.length) {
+      const P = COAT_PRODUCTS[Math.min(COAT_PRODUCTS.length - 1, Math.max(0, ctx.coat || 0))];
+      const C = (what) => ({ section: "SANS 1200 G", clause: "8.23", heading: "Concrete protection", description: `Protective coating to ${what}: ${P}`, unit: "m²" });
+      const floor = ground.filter((g) => g.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
+      // A wall well inside the floor's outline (not along its edge) stands inside the structure
+      const inner = (w) => floor && (w.Box[3] - w.Box[0] >= w.Box[4] - w.Box[1] ? w.Box[1] > floor.Box[1] + 1 && w.Box[4] < floor.Box[4] - 1 : w.Box[0] > floor.Box[0] + 1 && w.Box[3] < floor.Box[3] - 1);
+      for (const w of wetWalls) {
+        const h = w.Box[5] - w.Box[2], t = w.Thickness || 0.3, curved = w.Length > 1.1 * Math.hypot(w.Box[3] - w.Box[0], w.Box[4] - w.Box[1]);
+        if (inner(w)) add("coat|internal", C("both faces of internal walls"), "Inferred: both faces of each wall standing inside the structure (centreline length × height × 2).", w, 2 * w.Length * h);
+        else add("coat|walls", C("internal wall surfaces"), "Inferred: the inside face of each wall: its length less the wall thickness (the corners), × its height.", w, (curved ? w.Length - Math.PI * t : w.Length - t) * h);
+      }
+      // The slab over the structure, and the beams under it: the same faces as their formwork
+      for (const s of suspended.filter((s) => conc.includes(s) && s.Box && wetWalls.some((w) => Math.abs(w.Box[5] - s.Box[2]) <= 0.05 && w.Box[0] < s.Box[3] && w.Box[3] > s.Box[0] && w.Box[1] < s.Box[4] && w.Box[4] > s.Box[1]))) {
+        const under = props.filter((p) => p !== s && p.Box[5] >= s.Box[2] - 0.05 && p.Box[5] <= s.Box[5] + 0.05 && p.Box[2] < s.Box[2] - 0.05 && p.Box[0] >= s.Box[0] - 0.05 && p.Box[1] >= s.Box[1] - 0.05 && p.Box[3] <= s.Box[3] + 0.05 && p.Box[4] <= s.Box[4] + 0.05);
+        const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], s.Box[2]) - p.Box[2], 0.01); };
+        add("coat|soffit", C("the soffit of the cover slab"), "Inferred: the slab's underside, less the tops of the walls and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
+        for (const b of under.filter((p) => p.Bic === "OST_StructuralFraming")) { const g = beamGeom(b); if (g) add("coat|beams", C("sides and soffits of beams"), "Inferred: both sides below the slab and the soffit, along the beam's clear length (as its formwork).", b, (2 * g.below + g.b) * g.len); }
+      }
+    }
   }
   // Edges of slabs and foundations: only the outer edge, and only where nothing is cast against it at the same height
   const solid = conc.filter((e) => e.Box && ["OST_Floors", "OST_StructuralFoundation", "OST_Walls"].includes(e.Bic));
@@ -4911,6 +5006,16 @@ function inferEarthworks(r, ctx, opts) {
     line("g5", item("8.3.16", FILL, `(b) G5 compacted to 98% Mod. AASHTO in 150 mm layers, ${Math.round(A.fillThickness * 1000)} mm thick (assumed)`),
       `footprint × ${fmt2(A.fillThickness)} m. The layers come from the geotechnical report; replace this when it’s available.`),
   ];
+  // Fill layers he modelled (his valve chamber: 1000 mm of G5 under the floor) are billed from the model, by their own
+  // volume, in Map to SANS. Then the fill isn't worked out from the excavation: none of G5, G6 or the pioneer layer, so the
+  // model is the one source (a layer not modelled isn't billed; the excavation line says so)
+  const modelledFill = live.filter((e) => r.roles[e.Id]?.role === "fill");
+  if (modelledFill.length) {
+    const kinds = [...new Set(modelledFill.map(fillKind))];
+    for (let i = lines.length - 1; i >= 0; i--) if (/^earth\|(g5|g6|pioneer)$/.test(lines[i].key)) lines.splice(i, 1);
+    const ex = lines.find((l) => l.key === "earth|exc");
+    if (ex) ex.check = [ex.check, `Fill is billed from your model (${kinds.join(", ")}): layers you haven’t modelled aren’t billed.`].filter(Boolean).join(" ");
+  }
   return { lines: lines.filter((l) => l.qty > 0), assumptions: { ...A, civil, footprints: els.length, area: tot.area || 0, perimeter: tot.perim || 0,
     src: { replacementDepth: from("replacementDepth"), buildingDepth: from("buildingDepth"), rockShare: geo && mine.rockShare == null ? "geotech" : from("rockShare") },
     srcText: { replacementDepth: from("replacementDepth") === "project" ? fromText("replacementDepth") : "", buildingDepth: from("buildingDepth") === "project" ? fromText("buildingDepth") : "" },
@@ -5066,6 +5171,11 @@ function inferMore(r, ctx) {
     const st = e.Stair, a = st.Runs.reduce((s, u) => s + u.Treads * (st.TreadDepth || 0) * u.Width, 0) + (st.LandingArea || 0);
     add("float|stair", "finish", G("8.4.4", FIN, "Steel-floated finish to treads and landings of stairs", "m²"), "Inferred: treads × tread depth × run width, plus the landings, from the stair in Revit.", e, a);
   }
+  // Tops of benching (wood-floated), aprons and plinths (steel-floated), each an item of its own (his notes, 7 Nov 2026)
+  for (const [rl, key, desc, why] of [["benching", "bench", "Wood-floated finish to top of benching", "plan area of the benching"],
+    ["apron", "apron", "Steel-floated finish to top of aprons", "top area of each apron"], ["plinth", "plinth", "Steel-floated finish to top of plinths", "top area of each plinth"]])
+    for (const e of live.filter((e) => role(e) === rl && r.tradeOfId[e.Id] === "concrete" && (e.Area || 0) > 0))
+      add(`float|${key}`, "finish", G("8.4.4", FIN, desc, "m²"), `Inferred: the ${why}.`, e, e.Area);
   // Exposed tops of concrete walls: his “top of walls” is length × thickness of the tank, chamber and launder walls
   const mainFloor = ground.filter(box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
   for (const w of solid.filter((e) => e.Bic === "OST_Walls" && e.Length > 0 && e.Thickness >= 0.1 && (!mainFloor || e.Box[5] > mainFloor.Box[5] + 0.05)))
@@ -5082,19 +5192,18 @@ function inferMore(r, ctx) {
     for (const e of walls) {
       const base = tops.find((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
       if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= 1)) continue;
-      // His joint layout can name it (Joint B by the chamber walls); measured along the wall's centreline, where the water bar sits
-      const mk = layoutWallMark(r, e);
-      add(mk ? `jwall|${mk}` : "jwall", "joint", G("8.5", "Joints", `Watertight construction joints with water bar, at the base of walls${mk ? ` (Joint ${mk})` : ""}`, "m"),
-        `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${mk ? `; Joint ${mk} on your joint layout (${r.layout.view})` : ", except short upstands cast with a suspended slab. Joint types and any other lifts come from the joint drawings"}.`, e, e.Length);
-    }
-    // Where a suspended slab is cast on the tops of walls (a chamber's cover slab): a construction joint along each wall
-    // under it. Not walls that span as beams (cast with the slab they carry). His figure and whether it takes a water bar
-    // are still to come (his note).
-    for (const e of walls) {
-      if (r.concretePart?.[e.Id]?.as === "beams") continue;
-      const over = suspended.find((s) => s.Bic === "OST_Floors" && s.Box && Math.abs(s.Box[2] - e.Box[5]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
-      if (over) add("jwalltop", "joint", G("8.5", "Joints", "Construction joints at the top of walls, under suspended slabs", "m"),
-        "Inferred: the length of each wall a suspended slab is cast on, along its centreline. Check whether this joint is billed, and whether it takes a water bar.", e, e.Length);
+      // Walls over 5 m are cast in lifts of up to 5 m, with a horizontal joint between lifts (his note, 7 Nov 2026)
+      const h = e.Box[5] - e.Box[2], lifts = Math.max(1, Math.ceil((h - 0.01) / 5));
+      add("jwall", "joint", G("8.5", "Joints", "Watertight construction joints with water bar, at the base of walls and between lifts", "m"),
+        `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${lifts > 1 ? `; this wall is ${fmt2(h)} m high, so it’s cast in ${lifts} lifts of up to 5 m, with a joint at the base of each` : ""}. Short upstands cast with a suspended slab have none.`, e, e.Length * lifts);
+      // Vertical joints: where a floor joint on his layout meets a wall, the wall has a vertical joint its full height (his Joint B:
+      // count the crossings × the wall height, 6 × 4 m = 24 m on the valve chamber)
+      const cross = layoutCrossings(r, e);
+      if (cross > 0) {
+        const mk = layoutWallMark(r, e);
+        add("jwallvert", "joint", G("8.5", "Joints", `Vertical construction joints in walls${mk ? ` (Joint ${mk})` : ""}`, "m"),
+          `Inferred: where the floor joints on your joint layout (${r.layout.view}) meet a wall, a vertical joint its full height: crossings × wall height.`, e, cross * h);
+      }
     }
     // Where a suspended slab is cast into a wall partway up it (a launder floor against the tank wall, his joint type R)
     for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box)) {
@@ -5191,7 +5300,7 @@ function expectedItems(r, lines) {
     if (live.some((e) => e.Bic === "OST_Stairs" && !e.Stair?.Runs.length)) add("SANS 1200 G", "8.2.5", "Narrow widths", "Formwork to staircase risers, up to 200 mm", "m", "Riser lengths from the stair drawings.");
     if (civil) {
       if (!lines.some((l) => l.key.startsWith("wttest|"))) add("SANS 1200 G", "8.21", "Watertightness testing", "Watertightness test of each water-retaining structure", "Sum", "One per structure, as the specification describes.");
-      add("SANS 1200 G", "8.23", "Concrete protection", "Protective coating to wetted concrete faces, as specified", "m²", "Which faces get it is in the specification.");
+      if (!lines.some((l) => l.key.startsWith("coat|"))) add("SANS 1200 G", "8.23", "Concrete protection", "Protective coating to wetted concrete faces, as specified", "m²", "Which faces get it is in the specification.");
     } else {
       add("SANS 1200 G", "8.5", "Joints", "Isolation joints, 10 mm thick, with sealant", "m", "Around columns, plinths and walls, from the joint layout.");
       add("SANS 1200 G", "8.23", "Concrete protection and proprietary floor finishes", "Floor finish as specified (for example quartz-encapsulated resin)", "m²", "Which floors get it is in the finishes schedule.");
@@ -5246,6 +5355,15 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
   if (card?.code === "LD.SLAB") return it("SANS 1200 LD", "", "Manholes", `Precast concrete cover slabs and base units, ${e.Type || e.Family}`, "No", "LD-SLAB");
   if (card?.code === "LD.CHANNEL") return it("SANS 1200 LD", "", "Manholes", `Half-round channels formed in benching, ${e.Type || e.Family}`, "m", "LD-CHANNEL", !(e.Length > 0) ? "No length in the data: draw the channel as a line-based family." : "");
   if (card?.code === "LD.COVER") return it("SANS 1200 LD", "", "Manholes", `Manhole frame and cover, ${e.Type || e.Family}`, "No", "LD-COVER");
+  // Imported fill modelled as a layer: billed by its own volume, under the fill item for its material
+  if (role === "fill") {
+    const k = fillKind(e), FILLH = "Importing of materials for fill under floors and foundations";
+    if (k === "G5") return it("SANS 1200 D", "8.3.16", FILLH, "(b) G5 compacted to 98% Mod. AASHTO in 150 mm layers", "m³", "D-FILL");
+    if (k === "G6") return it("SANS 1200 D", "8.3.16", FILLH, "(c) G6 compacted to 95% Mod. AASHTO in 150 mm layers", "m³", "D-FILL");
+    if (k === "G7") return it("SANS 1200 D", "8.3.16", FILLH, "G7 compacted to 93% Mod. AASHTO in 150 mm layers", "m³", "D-FILL");
+    if (k === "pioneer") return it("SANS 1200 D", "8.3.16", FILLH, `(j) ${mm || "[thickness]"} mm compacted pioneer layer of 100 mm to 300 mm boulders`, "m³", "D-FILL");
+    return it("SANS 1200 D", "8.3.16", FILLH, `Imported fill: ${e.Type || e.Family}`, "m³", "D-FILL", "The type doesn’t say which fill it is (G5, G6, G7 or pioneer). Code it D.FILL.G5 and so on.");
+  }
   if (role === "noFines") return it("SANS 1200 G", "8.10", "No-fines concrete", `No-fines concrete layer, ${mm || "[thickness]"} mm thick`, "m³", "G-NOFINES");
   if (role === "subsoilDrain") return it("SANS 1200 LE", "8.2.14", "Subsoil drains", `Supply and install subsoil drains complete${mat ? ` (${mat})` : ""}`, "m", "LE-SUBSOIL",
     e.Bic === "OST_Floors" && !(e.Length > 0) ? "Modelled as a floor, so the length is taken as half its perimeter. Check it against the drawings." : "");
@@ -5284,7 +5402,8 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
     return it("SANS 1200 L", "", "Supply, lay and joint pipes", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : "Pipe"}, ${dia}`, "m", "L-PIPE",
       !e.Diameter ? "No diameter in the data." : /^default$/i.test(e.Type) || !e.Type ? "The pipe type doesn’t say what the pipe is." : !(e.Length > 0) ? "No pipe length in the data." : "");
   }
-  if (trade === "fittings" && /puddle/.test(n)) return it("SANS 1200 G", "8.13", "Casting items in concrete", `Puddle flanges cast into walls or floors${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN",
+  // A puddle pipe coded as a pipe fitting (L.FIT) is his 1200 L item, described as the model names it (his note, 7 Nov 2026)
+  if (trade === "fittings" && /puddle/.test(n) && card?.code !== "L.FIT") return it("SANS 1200 G", "8.13", "Casting items in concrete", `Puddle flanges cast into walls or floors${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN",
     "");
   // A "Default" material only matters when the type name doesn't say what the fitting is (a standard, class or size)
   const namesFitting = /\bpn\s?\d|sans|sabs|\biso\b|astm|ansi|bs\s?en|\bdin\b|class\s?\d|\bdn\s?\d|\d+\s*\/\s*\d|\d{2,4}\s*mm/i.test(`${e.Type} ${e.Family}`);
@@ -7812,6 +7931,13 @@ function editorFor(L, lines) {
         : [num("buildingDepth", "Excavation depth", "m", a.buildingDepth), num("fillThickness", "Fill thickness", "mm", a.fillThickness, 1000)]),
       h("span", { class: "edsub" }, a.manhole ? `Manhole: dug from ground level (the top of the cover, ${fmt2(a.top)} m) to the underside of the lowest part (${fmt2(a.bottom)} m), ${fmt2(a.depth)} m deep.` : a.civil ? "His tender rule from Gravity Thickeners. The replacement depth comes from the geotechnical report for each site." : "His rule from the Incinerator building BoQ."),
       mapEvidence(a)));
+  }
+  // The coating product, for every coating line of this model (his note, 7 Nov 2026)
+  if (kind === "coat") {
+    const cur = Math.round(+(state.earth?.coatProduct) || 0), shared = lines.filter((x) => x.groups.some((g) => g.ruleId === "INFER-coat")).map((x) => x.n);
+    body.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, `· items ${shared.join(", ")}`)),
+      h("select", { id: "coatSel", class: "edinput coatsel", onchange: (e) => setAssumption("coatProduct", e.target.value) },
+        ...COAT_PRODUCTS.map((p, i) => h("option", { value: String(i), selected: i === cur ? true : null }, p[0].toUpperCase() + p.slice(1))))));
   }
   if (kind === "rebar") {
     const rc = L.groups[0].elements.reduce((s, e) => s + (e.Volume || 0), 0), e = state.earth || {};
