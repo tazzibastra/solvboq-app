@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:50:55Z">
+<meta name="solvboq-build" content="2026-11-08T13:56:54Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -795,6 +795,10 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .mrow.subhead{min-height:40px;cursor:default;background:transparent}
 .mrow.subhead:hover{background:transparent}
 .mrow.subhead .ntext{text-decoration:underline;text-underline-offset:3px;font-weight:600;font-size:13.5px}
+/* A heading or section note, shown on a line under it: one short line, not a box that looks like this line's own note */
+.lnhnote{border-left:3px solid var(--accent);padding:2px 0 2px 10px;display:flex;flex-direction:column;gap:2px}
+.lnhnote .edtext{margin:0}
+.lnheadbtns{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -7771,37 +7775,44 @@ async function lnSaveHead(t, reason, kind) {
     build: document.querySelector('meta[name="solvboq-build"]')?.content || "",
   });
 }
-// In the line panel: a note on this line's heading, and one on its section
+// In the line panel: a note on this line's heading (its sub-heading, when it has one), and one on its whole section. The buttons
+// say exactly what a note covers and how many lines are under it (8 Nov 2026: a note on the section looked as if it had been applied
+// to every heading). A note made from another line shows here as one short line, so it isn't taken for this line's own note.
 function lnHeadBox(L) {
   if (L.unmapped) return null;
+  const sub = String(L.heading || "").split(" › ").slice(1).join(" › "), head = String(L.heading || "").split(" › ")[0];
+  const under = (t) => state.mapLines.filter((x) => x.section === L.section && (t.clause == null || (x.clause === L.clause && (x.heading || "") === (L.heading || "")))).length;
   const targets = [
-    { key: lnHeadKey(L.section, L.clause, L.heading), section: L.section, clause: L.clause || "", heading: L.heading || "", label: `${L.clause ? L.clause + " " : ""}${L.heading || ""}`.trim(), what: "heading" },
+    { key: lnHeadKey(L.section, L.clause, L.heading), section: L.section, clause: L.clause || "", heading: L.heading || "", label: sub || `${L.clause ? L.clause + " " : ""}${head}`.trim(), what: "heading" },
     { key: lnHeadKey(L.section), section: L.section, clause: null, label: `${L.section}${typeof SECTION_TITLE !== "undefined" && SECTION_TITLE[L.section] ? " " + SECTION_TITLE[L.section] : ""}`, what: "section" },
   ];
+  for (const t of targets) t.n = under(t);
+  const name = (t) => (t.what === "section" ? `the whole section ${t.label}` : `“${t.label}”`);
   const rows = [];
   for (const t of targets) {
     const n = lnForHead(t.key);
     if (LN.edit === t.key) {
       let kind = n?.kind || "wording";
       rows.push(h("div", { class: "lnbox has" },
-        h("label", { class: "edlabel", for: "lnHead" }, `Note on the ${t.what} `, h("span", { class: "edsub" }, `· ${t.label}`)),
+        h("label", { class: "edlabel", for: "lnHead" }, `Note on ${name(t)} `, h("span", { class: "edsub" }, `· ${plural(t.n, "line")} under it`)),
         h("textarea", { id: "lnHead", class: "lnwhy", rows: 3, placeholder: t.what === "heading" ? "For example: this should read “Smooth vertical formwork to:”, or: chamfers belong under this heading." : "For example: this section should come after the concrete, or: pipework belongs in its own bill." }, n?.reason || ""),
         h("div", { class: "lnkinds", role: "radiogroup", "aria-label": "What the note is about" }, ...LN_HKINDS.map(([k, l]) => h("button", { type: "button", role: "radio", "aria-checked": String(k === kind), onclick: (e) => { kind = k; for (const b of e.currentTarget.parentNode.children) b.setAttribute("aria-checked", String(b === e.currentTarget)); } }, l))),
         h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm dark", onclick: () => lnSaveHead(t, $("lnHead").value, kind) }, "Save note"), h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = null; renderMap(); } }, "Cancel"))));
     } else if (n) {
-      rows.push(h("div", { class: "lnbox has" }, h("span", { class: "edlabel" }, `Your note on the ${t.what} `, h("span", { class: "edsub" }, `· ${t.label} · ${LN_STATUS[n.status] || n.status}${LN.cloud[n.id] ? "" : " · in this browser only"}`)),
-        h("p", { class: "edtext lnreason" }, n.reason), h("span", { class: "edsub" }, `${(LN_HKINDS.find((k) => k[0] === n.kind) || [, ""])[1]} · ${n.by || "guest"}, ${n.at.slice(0, 10)}`),
-        n.reply ? h("p", { class: "edtext lnreply" }, h("b", {}, "SolvBoQ: "), n.reply) : null,
-        h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = t.key; renderMap(); } }, "Edit"), h("button", { type: "button", class: "link", onclick: () => lnRemove(n) }, "Remove"))));
+      rows.push(h("div", { class: "lnhnote" },
+        h("p", { class: "edtext" }, h("b", {}, `On ${name(t)}: `), n.reason),
+        h("span", { class: "edsub" }, `Covers ${plural(t.n, "line")} · ${LN_STATUS[n.status] || n.status}${LN.cloud[n.id] ? "" : " · in this browser only"} · `,
+          h("button", { type: "button", class: "link", onclick: () => { LN.edit = t.key; renderMap(); } }, "Edit"), " · ", h("button", { type: "button", class: "link", onclick: () => lnRemove(n) }, "Remove")),
+        n.reply ? h("p", { class: "edtext lnreply" }, h("b", {}, "SolvBoQ: "), n.reply) : null));
     }
   }
   const missing = targets.filter((t) => !lnForHead(t.key) && LN.edit !== t.key);
   return h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Headings"),
-    missing.length ? h("p", { class: "edtext" }, "Heading worded differently in your bills, in the wrong order, or lines under the wrong one? Note it.") : null,
+    missing.length ? h("p", { class: "edtext" }, "About how the bill is set out: a heading’s wording, the order, or lines under the wrong heading. For this line’s own figure or wording, use Your measure above.") : null,
     ...rows,
-    missing.length ? h("div", { class: "tools" }, ...missing.map((t) => h("button", { type: "button", class: "btn sm", title: t.label, onclick: () => { LN.edit = t.key; renderMap(); setTimeout(() => $("lnHead")?.focus(), 0); } }, `Note on the ${t.what}`))) : null);
+    missing.length ? h("div", { class: "tools lnheadbtns" }, ...missing.map((t) => h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = t.key; renderMap(); setTimeout(() => $("lnHead")?.focus(), 0); } },
+      t.what === "section" ? `Note on the whole section (${plural(t.n, "line")})` : `Note on “${t.label}” (${plural(t.n, "line")})`))) : null);
 }
-
 const lnIcon = () => svg('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--accent)" stroke-width="2.2" aria-label="Has your note"><path d="M4 5h16v11H9l-5 4z"></path></svg>');
 Store.onUser(() => lnLoad());
 
@@ -7899,11 +7910,11 @@ function renderTree(lines, groups) {
         head = hk; lastSub = null;
         const hl = secLines.filter((x) => headKey(x) === hk), hc = state.coll.has(hk) && !searching;
         rows.push(h("button", { type: "button", class: "mrow node head", "aria-expanded": String(!hc), onclick: () => toggle(hk) },
-          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", headOf(L), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
+          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", headOf(L), lnForHead(lnHeadKey(sec, L.clause, headOf(L))) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
           h("span", {}), h("span", {}), summary(hl)));
       }
       if (state.coll.has(hk) && !searching) continue;
-      if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "presentation" }, h("span", { class: "nlabel", style: "padding-left:50px" }, h("span", { class: "ntext" }, sub)))); }
+      if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "presentation" }, h("span", { class: "nlabel", style: "padding-left:50px" }, h("span", { class: "ntext" }, sub), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null))); }
       const [label, cls] = STATUS[L.status];
       const ai = L.status === "claude" ? L.groups.find((g) => g.method === "claude") : null;
       rows.push(h("button", { type: "button", class: "mrow line" + (L.key === state.sel ? " sel" : "") + (L.status === "out" ? " struck" : ""), "aria-pressed": String(L.key === state.sel), "data-key": L.key,
