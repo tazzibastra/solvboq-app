@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T11:36:59Z">
+<meta name="solvboq-build" content="2026-11-08T12:25:30Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -776,6 +776,14 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .pilogs .edcheck { align-items: flex-start; font-size: 13px; line-height: 1.45 }
 
 .coatsel{width:100%;text-align:left;min-height:40px}
+/* Map to SANS shows every description and heading in full, wrapping onto more lines (the engineer couldn't read them cut off, 8 Nov 2026) */
+#mTree .ldesc,#mTree .ntext{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.35;padding:6px 0;overflow-wrap:anywhere}
+#mTree .mrow{height:auto}
+/* The bill's filters wrap on a phone instead of widening the page (four filters since Your notes) */
+.maphead .seg{max-width:100%;min-width:0}
+.maphead>*{min-width:0}
+/* Phone: each part of the page is the screen's width (not its content's), and the rail scrolls sideways on its own */
+@media (max-width:760px){.shell{align-items:stretch}.page{width:100%}.rail{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.rail>*{flex:none}}
 </style>
 </head>
 <body>
