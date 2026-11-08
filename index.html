@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:06:55Z">
+<meta name="solvboq-build" content="2026-11-08T13:12:05Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -8062,6 +8062,7 @@ function editorOverview(lines, groups) {
     unmatched.length && sampleFn ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(unmatched.length, "unmatched group")}`), h("span", {}, state.aiMsg || "Claude can suggest an item for each one.")),
       mapCtl ? h("button", { type: "button", class: "btn sm", onclick: () => mapCtl && mapCtl.abort() }, "Stop") : h("button", { type: "button", class: "btn sm accent", onclick: () => askClaude(unmatched) }, "Ask Claude")) : null,
     lnOverview(),
+    yourConfirmations(groups).length ? h("button", { type: "button", class: "link", onclick: () => undoConfirmations(groups) }, `Undo my confirmations on this model (${plural(yourConfirmations(groups).length, "group")})`) : null,
     h("span", { class: "edtitle sm" }, "How lines were mapped"),
     h("div", { class: "howlist" }, ...how.map(([l, n]) => h("div", {}, h("span", {}, l), h("b", {}, String(n))))))];
 }
@@ -8098,6 +8099,27 @@ function jointLayoutNote() {
   return h("p", { class: "edtext edsub" }, `Your joint layout: ${plural(j.lines, "line")} and ${plural(j.labels, "label")} in the model. `,
     marks.length ? "Joints found by their label: " + marks.map(([m, x]) => `${m} ${x.length.toFixed(2)} m (${plural(x.lines.length, "line")}${x.loose ? `, ${x.loose} label${x.loose === 1 ? "" : "s"} with no line near` : ""})`).join("; ") + ". " : "No labels like A or B found next to a line. ",
     j.segs?.length ? `Read from ${j.view}; the floor joints and their stop ends come from it.` : "No joint lines found to use, so the floor joints are estimated.");
+}
+
+// Confirmations he made on this model: decisions this session, and saved mappings that still hold the item SolvBoQ suggested
+// (an item he changed isn't a plain confirmation and stays). Rules that confirm on their own aren't his, so they're left alone.
+const sameItem = (a, b) => !!a && !!b && ["section", "clause", "heading", "description", "unit"].every((k) => (a[k] || "") === (b[k] || ""));
+function yourConfirmations(groups) {
+  const base = new Map(buildGroups(state.result, {}, {}).map((g) => [g.key, g])), saved = new Map(Profiles.active().mapping.map((x) => [x.key, x.value]));
+  return groups.filter((g) => { const d = state.mapDecisions[g.key], m = saved.get(g.key);
+    return (d && d.confirmed && d.method !== "edited") || (m && sameItem(m.item || m, base.get(g.key)?.item)); });
+}
+// Put them back to To confirm (after the 8 Nov bug that made confirming one box-out line look like confirming them all)
+async function undoConfirmations(groups) {
+  const mine = yourConfirmations(groups), before = state.mapLines.filter((L) => L.status === "done").length;
+  if (!mine.length || !confirm(`Put the lines you confirmed on this model back to To confirm (${plural(mine.length, "group")})? Items you changed, quantities you typed, lines left out and your notes stay. Lines a rule confirms on its own stay confirmed.`)) return;
+  const keys = new Set(mine.map((g) => g.key)), base = new Map(buildGroups(state.result, {}, {}).map((g) => [g.key, g]));
+  for (const k of keys) if (state.mapDecisions[k] && state.mapDecisions[k].method !== "edited") delete state.mapDecisions[k];
+  const p = Profiles.active();
+  p.mapping = p.mapping.filter((x) => !(keys.has(x.key) && sameItem(x.value?.item || x.value, base.get(x.key)?.item)));
+  await Profiles.save(p); rerunChecks(); render();
+  const after = state.mapLines.filter((L) => L.status === "done").length;
+  toast(`${plural(Math.max(0, before - after), "line")} back to To confirm`);
 }
 
 // ===== Readiness: a verdict, three steps, and the current step's checks (from the Claude Design redesign) =====
