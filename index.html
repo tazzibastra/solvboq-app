@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:29:33Z">
+<meta name="solvboq-build" content="2026-11-08T13:44:44Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -791,6 +791,10 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .addinbtn small{font-weight:500;color:var(--muted);font-size:12px}
 .addinbtn small:empty{display:none}
 @media (max-width:760px){.addinbtn span{display:none}}
+/* His sub-headings, on their own line and underlined, as in his bills (8 Nov 2026) */
+.mrow.subhead{min-height:40px;cursor:default;background:transparent}
+.mrow.subhead:hover{background:transparent}
+.mrow.subhead .ntext{text-decoration:underline;text-underline-offset:3px;font-weight:600;font-size:13.5px}
 </style>
 </head>
 <body>
@@ -4444,7 +4448,7 @@ function deriveItems(r, opts = {}) {
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
   const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
   r.layout = jointLayout(opts.annotations);
-  const inferred = inferLines(r, { coat: Math.round(+(opts.earthworks?.coatProduct) || 0), live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
+  const inferred = inferLines(r, { coat: opts.earthworks || {}, live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
   const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
@@ -4664,6 +4668,11 @@ function layoutWallMark(r, w) {
 // The coating products he chooses between (his note, 7 Nov 2026); the first is the default
 // In his own wording (his note and his GT bill)
 const COAT_PRODUCTS = ["apply (trowel-on) Sikaguard 720 Epodem (or equivalent) in combination with Sika 63N (or equivalent) to a thickness of 2 mm", "HDPE covering (3 mm thick with anchor knobs cast into concrete with formwork)"];
+// Which coating product a coating line uses: its own choice (coatProduct_walls…), else the one for all, else the first
+function coatChoice(E, part) {
+  const v = E?.[`coatProduct_${part}`] ?? E?.coatProduct;
+  return Math.min(COAT_PRODUCTS.length - 1, Math.max(0, Math.round(+v || 0)));
+}
 function fillKind(e) {
   const code = (typeof cardOf === "function" && cardOf(e)?.code) || "";
   const m = code.match(/^D\.FILL\.(G[5-7]|PIONEER)$/);
@@ -4827,22 +4836,24 @@ function inferLines(r, ctx) {
     const wt = (e) => r.concretePart?.[e.Id]?.wt || /\.WT$/.test((typeof cardOf === "function" && cardOf(e)?.code) || "");
     const wetWalls = conc.filter((e) => e.Bic === "OST_Walls" && e.Box && e.Length > 0 && wt(e) && r.concretePart?.[e.Id]?.as !== "beams");
     if (wetWalls.length) {
-      const P = COAT_PRODUCTS[Math.min(COAT_PRODUCTS.length - 1, Math.max(0, ctx.coat || 0))];
-      const C = (what) => ({ section: "SANS 1200 G", clause: "8.23", heading: "Concrete protection", description: `Protective coating to ${what}: ${P}`, unit: "m²" });
+      // The product chosen for each coating line (his note, 8 Nov 2026: “I need the option to change item 34 to a different material
+      // than items 35 and 36”), else the one chosen for all of them, else the first
+      const P = (part) => COAT_PRODUCTS[coatChoice(ctx.coat, part)];
+      const C = (what, part) => ({ section: "SANS 1200 G", clause: "8.23", heading: "Concrete protection", description: `Protective coating to ${what}: ${P(part)}`, unit: "m²" });
       const floor = ground.filter((g) => g.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
       // A wall well inside the floor's outline (not along its edge) stands inside the structure
       const inner = (w) => floor && (w.Box[3] - w.Box[0] >= w.Box[4] - w.Box[1] ? w.Box[1] > floor.Box[1] + 1 && w.Box[4] < floor.Box[4] - 1 : w.Box[0] > floor.Box[0] + 1 && w.Box[3] < floor.Box[3] - 1);
       for (const w of wetWalls) {
         const h = w.Box[5] - w.Box[2], t = w.Thickness || 0.3, curved = w.Length > 1.1 * Math.hypot(w.Box[3] - w.Box[0], w.Box[4] - w.Box[1]);
-        if (inner(w)) add("coat|internal", C("both faces of internal walls"), "Inferred: both faces of each wall standing inside the structure (centreline length × height × 2).", w, 2 * w.Length * h);
-        else add("coat|walls", C("internal wall surfaces"), "Inferred: the inside face of each wall: its length less the wall thickness (the corners), × its height.", w, (curved ? w.Length - Math.PI * t : w.Length - t) * h);
+        if (inner(w)) add("coat|internal", C("both faces of internal walls", "internal"), "Inferred: both faces of each wall standing inside the structure (centreline length × height × 2).", w, 2 * w.Length * h);
+        else add("coat|walls", C("internal wall surfaces", "walls"), "Inferred: the inside face of each wall: its length less the wall thickness (the corners), × its height.", w, (curved ? w.Length - Math.PI * t : w.Length - t) * h);
       }
       // The slab over the structure, and the beams under it: the same faces as their formwork
       for (const s of suspended.filter((s) => conc.includes(s) && s.Box && wetWalls.some((w) => Math.abs(w.Box[5] - s.Box[2]) <= 0.05 && w.Box[0] < s.Box[3] && w.Box[3] > s.Box[0] && w.Box[1] < s.Box[4] && w.Box[4] > s.Box[1]))) {
         const under = props.filter((p) => p !== s && p.Box[5] >= s.Box[2] - 0.05 && p.Box[5] <= s.Box[5] + 0.05 && p.Box[2] < s.Box[2] - 0.05 && p.Box[0] >= s.Box[0] - 0.05 && p.Box[1] >= s.Box[1] - 0.05 && p.Box[3] <= s.Box[3] + 0.05 && p.Box[4] <= s.Box[4] + 0.05);
         const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], s.Box[2]) - p.Box[2], 0.01); };
-        add("coat|soffit", C("the soffit of the cover slab"), "Inferred: the slab's underside, less the tops of the walls and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
-        for (const b of under.filter((p) => p.Bic === "OST_StructuralFraming")) { const g = beamGeom(b); if (g) add("coat|beams", C("sides and soffits of beams"), "Inferred: both sides below the slab and the soffit, along the beam's clear length (as its formwork).", b, (2 * g.below + g.b) * g.len); }
+        add("coat|soffit", C("the soffit of the cover slab", "soffit"), "Inferred: the slab's underside, less the tops of the walls and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
+        for (const b of under.filter((p) => p.Bic === "OST_StructuralFraming")) { const g = beamGeom(b); if (g) add("coat|beams", C("sides and soffits of beams", "beams"), "Inferred: both sides below the slab and the soffit, along the beam's clear length (as its formwork).", b, (2 * g.below + g.b) * g.len); }
       }
     }
   }
@@ -5599,10 +5610,21 @@ function buildGroups(result, decisions, learned) {
 // An item as the bill sets it out. Formwork as his bills do it (his notes, 8 Nov 2026): under rough and smooth formwork, a
 // sub-heading for vertical and one for horizontal formwork, with the items listed under it (“Sides of walls”, “Soffits of
 // beams”). The engine's own wording stays on the groups, so calculations and Master BoQ matching are unchanged.
+// The same for concrete (“Reinforced class 30 MPa/19 mm concrete (non-watertight) in:” › “Beams”), floated finishes (“Steel-floated
+// finish to:” › “Top of aprons”) and coatings (“Protective coating to:” › “Internal wall surfaces: <product>”): his notes of 8 Nov
+// 2026, “this can apply for all the headings below”.
 function presentItem(it) {
-  const m = it && it.section === "SANS 1200 G" && /^8.2.[12]$/.test(it.clause) && String(it.description).match(/^(Vertical|Horizontal) formwork to (.+)$/i);
-  return m ? { ...it, heading: `${it.heading} › ${m[1]} formwork to:`, description: m[2][0].toUpperCase() + m[2].slice(1) } : it;
+  if (!it || it.section !== "SANS 1200 G") return it;
+  const d = String(it.description), cap = (x) => x[0].toUpperCase() + x.slice(1), sub = (s, rest) => ({ ...it, heading: `${it.heading} › ${s}`, description: cap(rest) });
+  let m;
+  if (/^8\.2\.[12]$/.test(it.clause) && (m = d.match(/^(Vertical|Horizontal) formwork to (.+)$/i))) return sub(`${m[1]} formwork to:`, m[2]);
+  if (it.clause === "8.4.3" && (m = d.match(/^(.*?concrete(?: \([^)]*\))?) in (.+)$/i))) return sub(`${m[1]} in:`, m[2]);
+  if (it.clause === "8.4.4" && (m = d.match(/^((?:Steel|Wood)-floated finish) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
+  if (it.clause === "8.23" && (m = d.match(/^(Protective coating) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
+  return it;
 }
+// Sub-headings in his order: vertical formwork before horizontal, then as written
+const headingRank = (h) => String(h || "").replace(/› Vertical/, "› 1").replace(/› Horizontal/, "› 2");
 function boqLines(groups, { full = false } = {}) {
   const lines = new Map();
   for (const g of groups) {
@@ -5611,7 +5633,7 @@ function boqLines(groups, { full = false } = {}) {
     if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true, pending: 0 });
     const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++;
   }
-  return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
+  return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || headingRank(a.heading).localeCompare(headingRank(b.heading)) || a.description.localeCompare(b.description));
 }
 
 // ===== Claims: read a contractor's payment certificate and check it =====
@@ -7612,7 +7634,13 @@ const lnOnCloud = () => !!(Store.user && CL.pid);
 // Every note this browser can see: the project's, then any kept only here
 function lnAll() { return { ...lnLocal(), ...(LN.pid === CL.pid ? LN.cloud : {}) }; }
 // Notes made before lines were known by their heading too (8 Nov 2026) were saved under section | clause | description
-function lnFor(L) { const all = lnAll(); return all[lnId(state.name, L.key)] || all[lnId(state.name, [L.section, L.clause, L.description].join("|"))] || null; }
+// and before his sub-headings (also 8 Nov), under the engine's own wording of the line's groups
+function lnFor(L) {
+  const all = lnAll(), ids = [L.key, [L.section, L.clause, L.description].join("|")];
+  for (const g of L.groups || []) if (g.item) ids.push([g.item.section, g.item.clause, g.item.heading || "", g.item.description].join("|"), [g.item.section, g.item.clause, g.item.description].join("|"));
+  for (const k of ids) { const n = all[lnId(state.name, k)]; if (n) return n; }
+  return null;
+}
 function lnForModel() { return Object.values(lnAll()).filter((n) => n.model === state.name); }
 
 async function lnLoad() {
@@ -7804,7 +7832,7 @@ function mapLines(groups) {
   const mapped = boqLines(groups, { full: true });
   const have = new Set(mapped.map(lineKey));
   const expected = [...(state.result.derived.expected || []), ...(state.aiExpected || [])].filter((x) => !have.has(lineKey(x))).map((x) => ({ ...x, groups: [], elements: 0, expected: true, qty: null }));
-  const lines = [...mapped, ...expected].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
+  const lines = [...mapped, ...expected].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || headingRank(a.heading).localeCompare(headingRank(b.heading)) || a.description.localeCompare(b.description));
   const unmapped = groups.filter((g) => !g.item && !isLeftGroup(g)).map((g) => ({ unmapped: true, section: "Not mapped", clause: "", heading: "Choose an item for these", unit: "",
     description: `${g.sample.Family || g.sample.Category} : ${g.sample.Type || "no type name"}`, qty: null, groups: [g], elements: g.elements.length, key: "unmapped|" + g.key }));
   const all = [...lines, ...unmapped];
@@ -7862,17 +7890,20 @@ function renderTree(lines, groups) {
       h("span", { class: "nlabel" }, chev(!sc), folder(secLines.some((L) => OPEN.has(L.status))), h("span", { class: "ntext" }, h("span", { class: "ncode" }, SECTION_LABEL(sec)), " ", sec === "Not mapped" ? "" : SECTION_TITLE[sec] || "", lnForHead(lnHeadKey(sec)) ? h("span", { class: "lnmark", title: "Your note on this section" }, lnIcon()) : null), h("span", { class: "ncount" }, plural(secLines.length, "item"))),
       h("span", {}), h("span", {}), summary(secLines)));
     if (sc) continue;
-    let head = null;
+    let head = null, lastSub = null;
     for (const L of vis) {
-      const hk = sec + "|" + L.clause + "|" + L.heading;
+      // His layout (8 Nov 2026): the clause and its heading on one line, a sub-heading (“Vertical formwork to:”) on the next,
+      // underlined, then the items. The fold is on the clause and heading.
+      const hk = headKey(L), sub = subHeadOf(L);
       if (hk !== head) {
-        head = hk;
-        const hl = secLines.filter((x) => x.clause + "|" + x.heading === L.clause + "|" + L.heading), hc = state.coll.has(hk) && !searching;
+        head = hk; lastSub = null;
+        const hl = secLines.filter((x) => headKey(x) === hk), hc = state.coll.has(hk) && !searching;
         rows.push(h("button", { type: "button", class: "mrow node head", "aria-expanded": String(!hc), onclick: () => toggle(hk) },
-          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", L.heading || "", lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
+          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", headOf(L), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
           h("span", {}), h("span", {}), summary(hl)));
       }
       if (state.coll.has(hk) && !searching) continue;
+      if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "presentation" }, h("span", { class: "nlabel", style: "padding-left:50px" }, h("span", { class: "ntext" }, sub)))); }
       const [label, cls] = STATUS[L.status];
       const ai = L.status === "claude" ? L.groups.find((g) => g.method === "claude") : null;
       rows.push(h("button", { type: "button", class: "mrow line" + (L.key === state.sel ? " sel" : "") + (L.status === "out" ? " struck" : ""), "aria-pressed": String(L.key === state.sel), "data-key": L.key,
@@ -7912,12 +7943,12 @@ function nextOpenAfter(L) {
 function selectLine(L) {
   if (!L) { state.sel = null; renderMap(); return; }
   state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null;
-  state.coll.delete(L.section); state.coll.delete(L.section + "|" + L.clause + "|" + L.heading);
+  state.coll.delete(L.section); state.coll.delete(headKey(L));
   renderMap();
   const esc = window.CSS && CSS.escape ? CSS.escape(L.key) : L.key.replace(/["\\]/g, "\\$&");
   const row = document.querySelector(`#mTree [data-key="${esc}"]`); if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
-function advance(L) { const n = nextOpenAfter(L); state.sel = n ? n.key : null; if (n) { state.coll.delete(n.section); state.coll.delete(n.section + "|" + n.clause + "|" + n.heading); } }
+function advance(L) { const n = nextOpenAfter(L); state.sel = n ? n.key : null; if (n) { state.coll.delete(n.section); state.coll.delete(headKey(n)); } }
 // Confirm every open group on the line, save them for future models, and move on
 function confirmLine(L) {
   const pend = L.groups.filter((g) => !g.confirmed && g.item);
@@ -8059,9 +8090,10 @@ function editorFor(L, lines) {
   }
   // The coating product, for every coating line of this model (his note, 7 Nov 2026)
   if (kind === "coat") {
-    const cur = Math.round(+(state.earth?.coatProduct) || 0), shared = lines.filter((x) => x.groups.some((g) => g.ruleId === "INFER-coat")).map((x) => x.n);
-    body.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, `· items ${shared.join(", ")}`)),
-      h("select", { id: "coatSel", class: "edinput coatsel", onchange: (e) => setAssumption("coatProduct", e.target.value) },
+    // Each coating line has its own product (his note, 8 Nov 2026); the line keeps its place in the bill when it changes
+    const gk = L.groups[0].key, part = gk.split("|")[2] || "", cur = coatChoice(state.earth, part);
+    body.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, "· this line only")),
+      h("select", { id: "coatSel", class: "edinput coatsel", onchange: (e) => { setAssumption(`coatProduct_${part}`, e.target.value); const N = state.mapLines.find((x) => x.groups.some((g) => g.key === gk)); if (N) selectLine(N); } },
         ...COAT_PRODUCTS.map((p, i) => h("option", { value: String(i), selected: i === cur ? true : null }, p[0].toUpperCase() + p.slice(1))))));
   }
   if (kind === "rebar") {
@@ -8193,6 +8225,11 @@ async function undoConfirmations(groups) {
   const after = state.mapLines.filter((L) => L.status === "done").length;
   toast(`${plural(Math.max(0, before - after), "line")} back to To confirm`);
 }
+
+// A line's heading in two parts: the clause's heading (“Smooth formwork”) and his sub-heading (“Vertical formwork to:”)
+const headOf = (L) => String(L.heading || "").split(" › ")[0];
+const subHeadOf = (L) => String(L.heading || "").split(" › ").slice(1).join(" › ");
+const headKey = (L) => L.section + "|" + L.clause + "|" + headOf(L);
 
 // ===== Readiness: a verdict, three steps, and the current step's checks (from the Claude Design redesign) =====
 // Step 1 is tier 1 (quantity could be wrong), step 2 tier 2 (can't be billed), step 3 tiers 3 and 4 (specification and
