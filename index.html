@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:12:05Z">
+<meta name="solvboq-build" content="2026-11-08T13:19:22Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7630,6 +7630,10 @@ async function lnSave(L, his, reason, kind) {
     by: Store.user?.email || (Store.user?.isAnonymous ? "guest" : ""), at: new Date().toISOString(), created: old?.created || new Date().toISOString(),
     build: document.querySelector('meta[name="solvboq-build"]')?.content || "",
   };
+  await lnPersist(n);
+}
+// Saved to the project when one is open, else kept in this browser
+async function lnPersist(n) {
   LN.edit = null;
   if (lnOnCloud()) {
     try { await Store.saveNote(CL.pid, n); LN.pid = CL.pid; LN.cloud[n.id] = n; const loc = lnLocal(); if (loc[n.id]) { delete loc[n.id]; lnLocal(loc); } toast(`Note saved to ${CL.projects.find((p) => p.id === CL.pid)?.name || "the project"}`); }
@@ -7699,9 +7703,60 @@ function lnOverview() {
     h("span", { class: "edtitle sm" }, "Your notes for SolvBoQ"),
     h("p", { class: "edtext" }, list.length ? `${plural(list.length, "note")} on this model, ${open ? `${open} waiting to be worked through` : "all worked through"}. ${lnOnCloud() ? "Saved with the project, so SolvBoQ can read them." : "Kept in this browser: open a project so they reach SolvBoQ."}` : "No notes on this model."),
     loc.length && lnOnCloud() ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(loc.length, "note")} only in this browser`), h("span", {}, "Made before a project was open.")), h("button", { type: "button", class: "btn sm dark", onclick: lnMoveLocal }, "Move to the project")) : null,
-    list.length ? h("div", { class: "howlist" }, ...list.sort((a, b) => (a.line.n || 0) - (b.line.n || 0)).slice(0, 8).map((n) => h("button", { type: "button", class: "lnlink", onclick: () => { const L = state.mapLines.find((x) => x.key === n.line.key); if (L) selectLine(L); else toast("That line isn’t in this bill any more."); } },
-      h("span", {}, n.line.description), h("b", {}, lnPct(n) != null ? `${lnPct(n) > 0 ? "+" : ""}${lnPct(n)}%` : "note")))) : null,
+    list.length ? h("div", { class: "howlist" }, ...list.sort((a, b) => (a.line.n || 0) - (b.line.n || 0)).slice(0, 8).map((n) => h("button", { type: "button", class: "lnlink", onclick: () => { const L = n.target ? lnFirstUnder(n.line) : state.mapLines.find((x) => x.key === n.line.key); if (L) selectLine(L); else toast("That line isn’t in this bill any more."); } },
+      h("span", {}, n.target ? `${n.target === "section" ? "Section" : "Heading"}: ${n.line.description}` : n.line.description), h("b", {}, lnPct(n) != null ? `${lnPct(n) > 0 ? "+" : ""}${lnPct(n)}%` : "note")))) : null,
     list.length ? h("button", { type: "button", class: "link accent", onclick: lnDownload }, "Download the notes (CSV)") : null);
+}
+
+// ----- Notes on headings and sections: their wording, their order, and which lines belong under them -----
+// Heading rows fold the bill open and closed, so the note is made from a line's panel: on its heading, or on its section.
+const LN_HKINDS = [["wording", "Wording"], ["order", "Order in the bill"], ["placement", "Lines under the wrong heading"], ["other", "Something else"]];
+const lnHeadKey = (section, clause, heading) => (clause == null ? `section|${section}` : `heading|${section}|${clause}|${heading || ""}`);
+const lnForHead = (key) => lnAll()[lnId(state.name, key)] || null;
+function lnFirstUnder(t) { return state.mapLines.find((x) => x.section === t.section && (t.basis === "section" || (x.clause === t.clause && (x.heading || "") === (t.heading || "")))); }
+async function lnSaveHead(t, reason, kind) {
+  reason = String(reason || "").trim().slice(0, 2000);
+  if (!reason) return toast("Say what should change: the wording, the order, or which lines belong here.");
+  const old = lnForHead(t.key), section = t.clause == null;
+  await lnPersist({
+    id: lnId(state.name, t.key), model: state.name, modelId: state.pmid || "", structure: state.result.structure || "", target: section ? "section" : "heading",
+    line: { key: t.key, n: null, section: t.section, clause: section ? "" : t.clause || "", heading: section ? "" : t.heading || "", description: t.label, unit: "", basis: section ? "section" : "heading", rule: "",
+      lines: state.mapLines.filter((x) => x.section === t.section && (section || (x.clause === t.clause && (x.heading || "") === (t.heading || "")))).map((x) => `${x.n} ${x.description}`).slice(0, 60) },
+    ours: null, his: null, reason, kind: kind || "wording", elements: [], elementCount: 0,
+    status: old?.status && old.reason === reason ? old.status : "open", reply: old?.reply || "",
+    by: Store.user?.email || (Store.user?.isAnonymous ? "guest" : ""), at: new Date().toISOString(), created: old?.created || new Date().toISOString(),
+    build: document.querySelector('meta[name="solvboq-build"]')?.content || "",
+  });
+}
+// In the line panel: a note on this line's heading, and one on its section
+function lnHeadBox(L) {
+  if (L.unmapped) return null;
+  const targets = [
+    { key: lnHeadKey(L.section, L.clause, L.heading), section: L.section, clause: L.clause || "", heading: L.heading || "", label: `${L.clause ? L.clause + " " : ""}${L.heading || ""}`.trim(), what: "heading" },
+    { key: lnHeadKey(L.section), section: L.section, clause: null, label: `${L.section}${typeof SECTION_TITLE !== "undefined" && SECTION_TITLE[L.section] ? " " + SECTION_TITLE[L.section] : ""}`, what: "section" },
+  ];
+  const rows = [];
+  for (const t of targets) {
+    const n = lnForHead(t.key);
+    if (LN.edit === t.key) {
+      let kind = n?.kind || "wording";
+      rows.push(h("div", { class: "lnbox has" },
+        h("label", { class: "edlabel", for: "lnHead" }, `Note on the ${t.what} `, h("span", { class: "edsub" }, `· ${t.label}`)),
+        h("textarea", { id: "lnHead", class: "lnwhy", rows: 3, placeholder: t.what === "heading" ? "For example: this should read “Smooth vertical formwork to:”, or: chamfers belong under this heading." : "For example: this section should come after the concrete, or: pipework belongs in its own bill." }, n?.reason || ""),
+        h("div", { class: "lnkinds", role: "radiogroup", "aria-label": "What the note is about" }, ...LN_HKINDS.map(([k, l]) => h("button", { type: "button", role: "radio", "aria-checked": String(k === kind), onclick: (e) => { kind = k; for (const b of e.currentTarget.parentNode.children) b.setAttribute("aria-checked", String(b === e.currentTarget)); } }, l))),
+        h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm dark", onclick: () => lnSaveHead(t, $("lnHead").value, kind) }, "Save note"), h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = null; renderMap(); } }, "Cancel"))));
+    } else if (n) {
+      rows.push(h("div", { class: "lnbox has" }, h("span", { class: "edlabel" }, `Your note on the ${t.what} `, h("span", { class: "edsub" }, `· ${t.label} · ${LN_STATUS[n.status] || n.status}${LN.cloud[n.id] ? "" : " · in this browser only"}`)),
+        h("p", { class: "edtext lnreason" }, n.reason), h("span", { class: "edsub" }, `${(LN_HKINDS.find((k) => k[0] === n.kind) || [, ""])[1]} · ${n.by || "guest"}, ${n.at.slice(0, 10)}`),
+        n.reply ? h("p", { class: "edtext lnreply" }, h("b", {}, "SolvBoQ: "), n.reply) : null,
+        h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { LN.edit = t.key; renderMap(); } }, "Edit"), h("button", { type: "button", class: "link", onclick: () => lnRemove(n) }, "Remove"))));
+    }
+  }
+  const missing = targets.filter((t) => !lnForHead(t.key) && LN.edit !== t.key);
+  return h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Headings"),
+    missing.length ? h("p", { class: "edtext" }, "Heading worded differently in your bills, in the wrong order, or lines under the wrong one? Note it.") : null,
+    ...rows,
+    missing.length ? h("div", { class: "tools" }, ...missing.map((t) => h("button", { type: "button", class: "btn sm", title: t.label, onclick: () => { LN.edit = t.key; renderMap(); setTimeout(() => $("lnHead")?.focus(), 0); } }, `Note on the ${t.what}`))) : null);
 }
 
 const lnIcon = () => svg('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--accent)" stroke-width="2.2" aria-label="Has your note"><path d="M4 5h16v11H9l-5 4z"></path></svg>');
@@ -7789,7 +7844,7 @@ function renderTree(lines, groups) {
     const sc = state.coll.has(sec) && !searching;
     const toggle = (k) => { state.coll.has(k) ? state.coll.delete(k) : state.coll.add(k); renderMap(); };
     rows.push(h("button", { type: "button", class: "mrow node sec", "aria-expanded": String(!sc), onclick: () => toggle(sec) },
-      h("span", { class: "nlabel" }, chev(!sc), folder(secLines.some((L) => OPEN.has(L.status))), h("span", { class: "ntext" }, h("span", { class: "ncode" }, SECTION_LABEL(sec)), " ", sec === "Not mapped" ? "" : SECTION_TITLE[sec] || ""), h("span", { class: "ncount" }, plural(secLines.length, "item"))),
+      h("span", { class: "nlabel" }, chev(!sc), folder(secLines.some((L) => OPEN.has(L.status))), h("span", { class: "ntext" }, h("span", { class: "ncode" }, SECTION_LABEL(sec)), " ", sec === "Not mapped" ? "" : SECTION_TITLE[sec] || "", lnForHead(lnHeadKey(sec)) ? h("span", { class: "lnmark", title: "Your note on this section" }, lnIcon()) : null), h("span", { class: "ncount" }, plural(secLines.length, "item"))),
       h("span", {}), h("span", {}), summary(secLines)));
     if (sc) continue;
     let head = null;
@@ -7799,7 +7854,7 @@ function renderTree(lines, groups) {
         head = hk;
         const hl = secLines.filter((x) => x.clause + "|" + x.heading === L.clause + "|" + L.heading), hc = state.coll.has(hk) && !searching;
         rows.push(h("button", { type: "button", class: "mrow node head", "aria-expanded": String(!hc), onclick: () => toggle(hk) },
-          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", L.heading || ""), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
+          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", L.heading || "", lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
           h("span", {}), h("span", {}), summary(hl)));
       }
       if (state.coll.has(hk) && !searching) continue;
@@ -7972,6 +8027,8 @@ function editorFor(L, lines) {
   }
   // His own measure, and why it differs: a note SolvBoQ learns from (notes.js)
   if (!L.unmapped) body.push(lnEditorBox(L));
+  // Notes on its heading and section (their wording, order, which lines belong under them)
+  if (!L.unmapped) body.push(lnHeadBox(L));
   // Assumptions behind inferred lines, changed right here
   const num = (k, lbl, unit, val, scale = 1) => h("label", { class: "edrow" }, lbl, h("span", {}, h("input", { class: "edinput", inputmode: "decimal", value: val == null ? "" : String(Math.round(val * scale * 100) / 100),
     onchange: (e) => setAssumption(k, e.target.value.trim() === "" ? "" : String(parseFloat(e.target.value) / scale)) }), h("span", { class: "eunit" }, unit)));
