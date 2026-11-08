@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T07:10:10Z">
+<meta name="solvboq-build" content="2026-11-08T11:36:59Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4321,7 +4321,8 @@ function runChecks(input, opts = {}) {
   Object.values(byType).forEach((t) => (t.total = t.trusted + t.eyes + t.unknown));
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
   const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
-  out.reveals = input.filter((e) => e.Bic === "OST_Reveals");   // chamfers modelled as reveals are billed from these
+  out.reveals = input.filter((e) => e.Bic === "OST_Reveals");
+  out.cuts = input.filter((e) => e.Box && (/Opening$/.test(e.Bic || "") || /opening cut/i.test(e.Category || "")));   // opening cuts in floors, roofs and shafts: billed as box-outs   // chamfers modelled as reveals are billed from these
   out.inputs = opts.inputs || null;   // the project's inputs used (inputs.js): the structure, its kind, its geotech
   out.structureWhy = structureWhy;
   out.derived = deriveItems(out, { ...opts, annotations: input.annotations });
@@ -4505,7 +4506,7 @@ const CAT_TO_BIC = { "floors": "OST_Floors", "walls": "OST_Walls", "structural f
   "structural framing": "OST_StructuralFraming", "stairs": "OST_Stairs", "generic models": "OST_GenericModel", "roofs": "OST_Roofs", "rooms": "OST_Rooms",
   "areas": "OST_Areas", "spaces": "OST_MEPSpaces", "pipes": "OST_PipeCurves", "pipe fittings": "OST_PipeFitting", "railings": "OST_StairsRailing",
   "doors": "OST_Doors", "windows": "OST_Windows" };
-const FIELDS = ["Id", "ReadError", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
+const FIELDS = ["Id", "ReadError", "Shape", "Bic", "Category", "Family", "Type", "Level", "LevelElevation", "LevelMethod", "LevelInferred", "Material", "Materials", "Volume", "Area",
   "Perimeter", "Thickness", "Length", "Diameter", "SystemName", "PhaseCreated", "IsDemolished", "DesignOption", "DesignOptionPrimary", "InPlace", "Warnings", "Box", "JoinedTo", "Overlaps", "Openings", "Stair",
   "AssemblyCode", "Keynote", "TypeMark", "MaterialDetails", "Structure", "FinishOuter", "FinishInner", "FinishTop"];
 
@@ -4530,7 +4531,7 @@ function normaliseRecord(raw) {
     Strength: m.strength == null || m.strength === "" || !isFinite(Number(m.strength)) ? null : Number(m.strength), Volume: num(m.volume), Area: num(m.area) })) : null;
   r.JoinedTo = Array.isArray(r.JoinedTo) ? r.JoinedTo.map(String) : null;
   r.Overlaps = Array.isArray(r.Overlaps) ? r.Overlaps.map(low).map((o) => ({ Id: String(o.id ?? ""), Volume: o.volume == null || o.volume === "" || !isFinite(Number(o.volume)) ? null : Number(o.volume) })).filter((o) => o.Id) : null;
-  r.Openings = Array.isArray(r.Openings) ? r.Openings.map(low).map((o) => ({ Id: String(o.id ?? ""), Kind: String(o.kind || "other"), W: num(o.w), H: num(o.h) })).filter((o) => o.W > 0 && o.H > 0)
+  r.Openings = Array.isArray(r.Openings) ? r.Openings.map(low).map((o) => ({ Id: String(o.id ?? ""), Kind: String(o.kind || "other"), Shape: String(o.shape || ""), W: num(o.w), H: num(o.h) })).filter((o) => o.W > 0 && o.H > 0)
     : "openings" in lower ? [] : null;
   const st = r.Stair && typeof r.Stair === "object" ? low(r.Stair) : null;
   r.Stair = st ? { Risers: num(st.risers), RiserHeight: num(st.riserheight), TreadDepth: num(st.treaddepth), LandingArea: num(st.landingarea),
@@ -4853,13 +4854,31 @@ function inferLines(r, ctx) {
     }
     if (st.LandingArea > 0) add("fwsoffit|stair", item(false, "Formwork to sloping soffits of staircases"), "", e, st.LandingArea);
   }
-  // Box-outs for openings cut into concrete walls and slabs (1200 G 8.2.6), by size and depth, from the openings the add-in reads
-  for (const e of conc.filter((e) => e.Openings?.length && ["OST_Walls", "OST_Floors", "OST_StructuralFoundation", "OST_Roofs"].includes(e.Bic))) {
-    const t = Math.round(((e.Thickness || height(e)) * 1000) / 10) * 10, host = e.Bic === "OST_Walls" ? "walls" : "slabs";
-    for (const o of e.Openings) {
-      const w = Math.round((o.W * 1000) / 50) * 50, hh = Math.round((o.H * 1000) / 50) * 50, [a, b] = w >= hh ? [w, hh] : [hh, w];
-      add(`fwboxout|${a}|${b}|${t}|${host}`, { section: "SANS 1200 G", clause: "8.2.6", heading: "Box out holes / form voids", description: `Box-outs about ${a} x ${b} mm through ${t} mm ${host}${o.Kind === "door" || o.Kind === "window" ? " (door and window openings)" : ""}`, unit: "No" },
-        "Inferred: openings, doors and windows cut into concrete, sized from their overall box to the nearest 50 mm. Check the shapes (round or rectangular) on the drawings.", e, 1);
+  // Box-outs (1200 G 8.2.6) in his categories (his note, 8 Nov 2026): openings other than circular by area (up to 0.1 m²,
+  // over 0.1 up to 0.5 m², over 0.5 m²), circular ones by diameter (up to 0.35 m, over), each by the depth of concrete it goes
+  // through, in 0.5 m bands. Openings come from the host (walls) and from opening cuts the add-in reads on their own (floors,
+  // roofs, shafts), placed in the concrete element whose box holds them.
+  const cuts = r.cuts || [];
+  const hosts = conc.filter((e) => e.Box && ["OST_Walls", "OST_Floors", "OST_StructuralFoundation", "OST_Roofs"].includes(e.Bic));
+  const holeOf = new Map(hosts.map((e) => [e, [...(e.Openings || [])]]));
+  for (const c of cuts) {
+    const b2 = c.Box, h = hosts.filter((e) => b2[0] >= e.Box[0] - 0.05 && b2[1] >= e.Box[1] - 0.05 && b2[3] <= e.Box[3] + 0.05 && b2[4] <= e.Box[4] + 0.05 && b2[2] < e.Box[5] && b2[5] > e.Box[2])
+      .sort((p, q) => (p.Box[5] - p.Box[2]) - (q.Box[5] - q.Box[2]))[0];
+    if (!h || holeOf.get(h).some((o) => String(o.Id) === String(c.Id))) continue;
+    const dx = b2[3] - b2[0], dy = b2[4] - b2[1], dz = b2[5] - b2[2];
+    holeOf.get(h).push({ Id: c.Id, Kind: "opening", Shape: c.Shape || "", W: h.Bic === "OST_Walls" ? Math.max(dx, dy) : Math.max(dx, dy), H: h.Bic === "OST_Walls" ? dz : Math.min(dx, dy), name: `${c.Type} ${c.Family}` });
+  }
+  const depthBand = (d) => { const hi = Math.max(0.5, Math.ceil((d - 0.001) / 0.5) * 0.5), lo = hi - 0.5; return lo === 0 ? "0 m to 0.5 m deep" : `over ${fmt1(lo)} m up to and including ${fmt1(hi)} m deep`; };
+  for (const [e, holes] of holeOf) {
+    const d = e.Bic === "OST_Walls" ? (e.Thickness || 0.3) : (e.Thickness || height(e));
+    for (const o of holes) {
+      const round = o.Shape === "circle" || (!o.Shape && /round|circ|\bdia\b|ø/i.test(o.name || ""));
+      const area = o.W * o.H, dia = Math.max(o.W, o.H);
+      const band = round ? (dia <= 0.35 ? "Smaller, circular, of diameter up to and including 0.35 m" : "Larger, circular, of diameter over 0.35 m")
+        : area <= 0.1 ? "Smaller, other than circular, of area up to and including 0.1 m²" : area <= 0.5 ? "Larger, other than circular, of area over 0.1 m² up to and including 0.5 m²" : "Larger, other than circular, of area over 0.5 m²";
+      const dw = o.Kind === "door" || o.Kind === "window";
+      add(`fwboxout|${band}|${depthBand(d)}${dw ? "|dw" : ""}`, { section: "SANS 1200 G", clause: "8.2.6", heading: `Box out holes › ${band}`, description: `${depthBand(d)}${dw ? " (door and window openings)" : ""}`, unit: "No" },
+        `Inferred: each opening through the concrete, from its outline in Revit (${round ? "circular" : "not circular"}), its size (${Math.round(o.W * 1000)} x ${Math.round(o.H * 1000)} mm) and the depth of concrete it goes through (${Math.round(d * 1000)} mm).${o.Shape ? "" : " Revit didn't say whether it's round: check it on the drawings."}`, e, 1);
     }
   }
 
@@ -5406,8 +5425,10 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
   if (trade === "fittings" && /puddle/.test(n) && card?.code !== "L.FIT") return it("SANS 1200 G", "8.13", "Casting items in concrete", `Puddle flanges cast into walls or floors${e.Diameter ? `, ${e.Diameter} mm nominal bore` : ""}`, "No", "G-CASTIN",
     "");
   // A "Default" material only matters when the type name doesn't say what the fitting is (a standard, class or size)
-  const namesFitting = /\bpn\s?\d|sans|sabs|\biso\b|astm|ansi|bs\s?en|\bdin\b|class\s?\d|\bdn\s?\d|\d+\s*\/\s*\d|\d{2,4}\s*mm/i.test(`${e.Type} ${e.Family}`);
-  if (trade === "fittings") return it("SANS 1200 L", "", "Specials and fittings", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : e.Family}${mat && !/^default$/i.test(mat) ? ` (${mat})` : ""}`, "No", "L-FITTING",
+  const namesFitting = /\bpn\s?\d|sans|sabs|\biso\b|astm|ansi|bs\s?en|\bdin\b|class\s?\d|\bdn\s?\d|\d+\s*\/\s*\d|\d{2,4}\s*mm|\b\d{2,4}\s*(?:dia\b|ø)|\bdia\.?\s*\d|ø\s*\d/i.test(`${e.Type} ${e.Family}`);
+  // Described by its type name alone when that says what it is (“150 DIA. FLANGE ADAPTOR”, not “… (Steel, Paint Finish, GREEN)”: his note,
+  // 8 Nov 2026); the material is added only when the type name gives no size, standard or class
+  if (trade === "fittings") return it("SANS 1200 L", "", "Specials and fittings", `${e.Type && !/^default$/i.test(e.Type) ? e.Type : e.Family}${mat && !/^default$/i.test(mat) && !namesFitting ? ` (${mat})` : ""}`, "No", "L-FITTING",
     (/^default$/i.test(mat) || !mat) && !namesFitting ? "The material is “Default” and the type name doesn’t give a standard, class or size, so check what this fitting is." : "");
   if (trade === "openings") {
     const kind = e.Bic === "OST_Doors" ? "Door" : "Window";
@@ -5547,6 +5568,13 @@ function boqLines(groups, { full = false } = {}) {
     const it = g.item, k = [it.section, it.clause, it.heading, it.description, it.unit].join("|");
     if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true, pending: 0 });
     const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++;
+  }
+  // Formwork as his bills set it out (his notes, 8 Nov 2026): under rough and smooth formwork, a sub-heading for vertical and
+  // one for horizontal formwork, with the items listed under it (“Sides of walls”, “Soffits of beams”). The engine's own
+  // wording stays on the groups, so calculations and Master BoQ matching are unchanged.
+  for (const L of lines.values()) {
+    const m = L.section === "SANS 1200 G" && /^8.2.[12]$/.test(L.clause) && L.description.match(/^(Vertical|Horizontal) formwork to (.+)$/i);
+    if (m) { L.heading = `${L.heading} › ${m[1]} formwork to:`; L.description = m[2][0].toUpperCase() + m[2].slice(1); }
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || a.description.localeCompare(b.description));
 }
