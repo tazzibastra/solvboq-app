@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T13:56:54Z">
+<meta name="solvboq-build" content="2026-11-08T14:07:07Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -799,6 +799,8 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .lnhnote{border-left:3px solid var(--accent);padding:2px 0 2px 10px;display:flex;flex-direction:column;gap:2px}
 .lnhnote .edtext{margin:0}
 .lnheadbtns{flex-wrap:wrap}
+.coatother{flex-direction:column;align-items:stretch;gap:4px;margin-top:8px}
+.coatother .edinput{width:100%;text-align:left}
 </style>
 </head>
 <body>
@@ -4675,7 +4677,15 @@ const COAT_PRODUCTS = ["apply (trowel-on) Sikaguard 720 Epodem (or equivalent) i
 // Which coating product a coating line uses: its own choice (coatProduct_walls…), else the one for all, else the first
 function coatChoice(E, part) {
   const v = E?.[`coatProduct_${part}`] ?? E?.coatProduct;
-  return Math.min(COAT_PRODUCTS.length - 1, Math.max(0, Math.round(+v || 0)));
+  return Math.min(COAT_PRODUCTS.length, Math.max(0, Math.round(+v || 0)));   // COAT_PRODUCTS.length: “Other”
+}
+// The product's wording on a coating line: one of the listed products, or with “Other” the wording he typed for that line
+// (his note, 8 Nov 2026: “Other should also be an option”); until he types it, the line says it's to be specified
+function coatProduct(E, part) {
+  const i = coatChoice(E, part);
+  if (i < COAT_PRODUCTS.length) return COAT_PRODUCTS[i];
+  const t = String(E?.[`coatText_${part}`] || "").trim();
+  return t || "other product, as specified (describe it in the line's panel)";
 }
 function fillKind(e) {
   const code = (typeof cardOf === "function" && cardOf(e)?.code) || "";
@@ -4842,7 +4852,7 @@ function inferLines(r, ctx) {
     if (wetWalls.length) {
       // The product chosen for each coating line (his note, 8 Nov 2026: “I need the option to change item 34 to a different material
       // than items 35 and 36”), else the one chosen for all of them, else the first
-      const P = (part) => COAT_PRODUCTS[coatChoice(ctx.coat, part)];
+      const P = (part) => coatProduct(ctx.coat, part);
       const C = (what, part) => ({ section: "SANS 1200 G", clause: "8.23", heading: "Concrete protection", description: `Protective coating to ${what}: ${P(part)}`, unit: "m²" });
       const floor = ground.filter((g) => g.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
       // A wall well inside the floor's outline (not along its edge) stands inside the structure
@@ -8000,6 +8010,13 @@ function setQty(L, v) {
   else { const x = parseFloat(v); if (!Number.isFinite(x) || x < 0) return toast("Enter a quantity of 0 or more."); state.manual[L.key] = x; }
   saveManual(state.name, state.manual); renderMap();
 }
+// His own wording for a coating line's product (“Other”), kept with this model's assumptions
+function setCoatText(part, text) {
+  state.earth = { ...(state.earth || {}) };
+  const t = String(text || "").trim().slice(0, 300);
+  if (t) state.earth[`coatText_${part}`] = t; else delete state.earth[`coatText_${part}`];
+  saveEarth(state.name, state.earth); rerunChecks(); renderMap();
+}
 function setAssumption(k, v) {
   const x = parseFloat(v); state.earth = { ...(state.earth || {}) };
   if (v === "" || !Number.isFinite(x)) delete state.earth[k]; else state.earth[k] = x;
@@ -8105,7 +8122,11 @@ function editorFor(L, lines) {
     const gk = L.groups[0].key, part = gk.split("|")[2] || "", cur = coatChoice(state.earth, part);
     body.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, "· this line only")),
       h("select", { id: "coatSel", class: "edinput coatsel", onchange: (e) => { setAssumption(`coatProduct_${part}`, e.target.value); const N = state.mapLines.find((x) => x.groups.some((g) => g.key === gk)); if (N) selectLine(N); } },
-        ...COAT_PRODUCTS.map((p, i) => h("option", { value: String(i), selected: i === cur ? true : null }, p[0].toUpperCase() + p.slice(1))))));
+        ...COAT_PRODUCTS.map((p, i) => h("option", { value: String(i), selected: i === cur ? true : null }, p[0].toUpperCase() + p.slice(1))),
+        h("option", { value: String(COAT_PRODUCTS.length), selected: cur === COAT_PRODUCTS.length ? true : null }, "Other…")),
+      cur === COAT_PRODUCTS.length ? h("label", { class: "edrow coatother" }, h("span", { class: "edsub" }, "The product, as it should read in the bill"),
+        h("input", { id: "coatText", class: "edinput", value: state.earth?.[`coatText_${part}`] || "", placeholder: "For example: Xypex Concentrate (or equivalent), two coats",
+          onchange: (e) => { setCoatText(part, e.target.value); const N = state.mapLines.find((x) => x.groups.some((g) => g.key === gk)); if (N) selectLine(N); } })) : null));
   }
   if (kind === "rebar") {
     const rc = L.groups[0].elements.reduce((s, e) => s + (e.Volume || 0), 0), e = state.earth || {};
