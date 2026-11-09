@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T08:19:54Z">
+<meta name="solvboq-build" content="2026-11-09T10:51:17Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -2841,6 +2841,9 @@ const DEFAULT_EARTHWORKS = { replacementDepth: 3.73, g5Share: 0.5, pioneerThickn
   buildingDepth: 1.5, fillThickness: 1.5,
   // His rules (notes of 8 Nov 2026): the excavation runs 1 m past the footprint, and working space is the 0.5 m band around that
   excOffset: 1.0, wsBand: 0.5 };
+// Formwork conventions. Edges of benching at its channels (his note, 7 Nov 2026, 5.16 m²): the edge height (m) when the benching's
+// volume doesn't give it, and whether the channel ends are formed too (0: the long sides only, as his figure; 1: all round).
+const DEFAULT_FORMWORK = { benchEdge: 0.15, benchEnds: 0 };
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -2891,7 +2894,9 @@ function compileConventions(profile) {
   for (const [k, v] of Object.entries(listToMap(p.earthworks))) if (k in earthworks && Number.isFinite(+v) && +v >= 0) earthworks[k] = +v;
   const rebar = { ...DEFAULT_REBAR };
   for (const [k, v] of Object.entries(listToMap(p.rebar))) if (k in rebar && Number.isFinite(+v) && +v >= 0) rebar[k] = +v;
-  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
+  const formwork = { ...DEFAULT_FORMWORK };
+  for (const [k, v] of Object.entries(listToMap(p.formwork))) if (k in formwork && Number.isFinite(+v) && +v >= 0) formwork[k] = +v;
+  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, formwork, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
 let CONV = compileConventions(null);
@@ -4077,6 +4082,20 @@ function runChecks(input, opts = {}) {
   add("unjoined", "eyes", "Concrete that overlaps without being joined",
     pl.length ? `${plural2(pl.length, "pair")} of concrete elements overlap but aren’t joined, so ${fmt2(shared)} m³ is in the quantities twice${unknownV ? ` (and ${plural2(unknownV, "pair")} whose overlap Revit couldn’t measure)` : ""}. The largest: “${nameOf(big.a)}” and “${nameOf(big.b)}”${big.v != null ? `, ${fmt2(big.v)} m³` : ""}.` : "",
     "Join them in Revit: the SolvBoQ issues panel lists the pairs with a Join button (or Modify › Join Geometry). Joined, the shared part is counted once.", unjoined, { impact: shared });
+  // Infill cast after the structure (benching, screeds) that overlaps concrete or layers without being joined: the shared volume
+  // belongs to what was there first, so it comes off the infill and the line says so (hybrid plan, Phase 0: his valve chamber's
+  // benching of 8 Nov overlapped the floor, blinding and no-fines by 9.24 m³, counted twice). The pair stays flagged above: joining
+  // it in Revit is still the fix. Two infills overlapping: off the one drawn later (the higher id). Set afresh on every run.
+  const INFILL = ["benching", "screed"];
+  for (const e of live) { delete e.InfillLess; delete e.InfillFrom; }
+  for (const p of pl) {
+    if (!(p.v > 0)) continue;
+    const ia = roleIs(p.a, ...INFILL), ib = roleIs(p.b, ...INFILL);
+    const [inf, other] = ia && ib ? (p.a.Id > p.b.Id ? [p.a, p.b] : [p.b, p.a]) : ia ? [p.a, p.b] : ib ? [p.b, p.a] : [];
+    if (!inf) continue;
+    inf.InfillLess = (inf.InfillLess || 0) + p.v; (inf.InfillFrom ||= []).push({ id: other.Id, name: nameOf(other), v: p.v });
+  }
+  for (const e of live) if (e.InfillLess > (e.Volume || 0)) e.InfillLess = e.Volume || 0;
   const unjoinedIds = new Set(unjoined.map((e) => e.Id));
   const overlapping = live.filter((e) => !dupIds.has(e.Id) && !unjoinedIds.has(e.Id) && (e.Warnings || []).some((w) => RX.overlapWarn.test(w)));
   add("overlapwarn", "eyes", "Revit says these elements overlap",
@@ -4813,6 +4832,15 @@ function inferLines(r, ctx) {
   const typeName = (e) => e.Type || e.Family || e.Category;
   const height = (e) => (e.Box ? e.Box[5] - e.Box[2] : 0);
   const dims = (e) => { const m = `${e.Type} ${e.Family}`.match(/(\d{2,4})\s*(?:mm)?\s*(?:\([a-z]\))?\s*[x×]\s*(\d{2,4})/i); return m ? [+m[1] / 1000, +m[2] / 1000] : null; };
+  const isCol = (e) => e.Bic === "OST_StructuralColumns" || (e.Bic === "OST_Columns" && role(e) === "column");
+  // A round column's diameter: from the name (450mm_Diameter, Ø450, 450 dia), else a square box holding π/4 of its volume
+  const roundCol = (e) => {
+    const n = `${e.Type} ${e.Family}`, m = n.match(/(\d{2,4})\s*(?:mm)?[\s_-]*(?:diameter|dia\b)|(?:Ø|diameter|dia\.?)\s*(\d{2,4})/i);
+    if (m) return +(m[1] || m[2]) / 1000;
+    if (!e.Box || !(e.Volume > 0)) return null;
+    const w = e.Box[3] - e.Box[0], dd = e.Box[4] - e.Box[1], hh = e.Box[5] - e.Box[2], f = e.Volume / (w * dd * hh);
+    return w > 0 && dd > 0 && hh > 0 && Math.abs(w - dd) < 0.02 * w && Math.abs(f - Math.PI / 4) < 0.03 ? (w + dd) / 2 : null;
+  };
   const fw = (rough) => rough ? { clause: "8.2.1", heading: "Rough formwork" } : { clause: "8.2.2", heading: "Smooth formwork" };
   const item = (rough, description) => ({ section: "SANS 1200 G", ...fw(rough), description, unit: "m²" });
   // Faces below the top of the main ground-bearing floor (the largest one) are taken as rough, because they won't be seen;
@@ -4860,13 +4888,18 @@ function inferLines(r, ctx) {
       `Inferred: both faces of each wall${curved ? "; on curved walls, centreline length × height for each face, because the inner face is shorter" : ""}. The band of the outer face that a surrounding slab is cast against isn’t formed. ${finishNote}`,
       e, Math.max(0, faces - (cut * e.Area) / (h || 1)));
   }
-  // Columns: perimeter × height, from the section size in the type name
-  for (const e of conc.filter((e) => e.Bic === "OST_StructuralColumns")) {
+  // Columns: perimeter × height, from the section size in the type name. A round column (a diameter in the name, or a square box
+  // whose volume is π/4 of it) is π × diameter. Columns drawn as architectural Columns but coded G.COL count too (his valve chamber,
+  // 9 Nov 2026: the code check still asks for Structural Columns, but the bill shouldn't lose their formwork meanwhile).
+  for (const e of conc.filter(isCol)) {
+    const dia = roundCol(e);
     // With a known section, the height is the smaller of the box height and volume ÷ section (boxes of notched or sloping columns overstate it)
-    const d = dims(e), h = d ? Math.min(height(e) || Infinity, e.Volume / (d[0] * d[1])) : height(e);
-    const per = d ? 2 * (d[0] + d[1]) : h > 0 ? 4 * Math.sqrt(e.Volume / h) : 0;
+    const d = dia ? null : dims(e), sec = dia ? (Math.PI * dia * dia) / 4 : d ? d[0] * d[1] : 0;
+    const h = sec ? Math.min(height(e) || Infinity, e.Volume / sec) : height(e);
+    const per = dia ? Math.PI * dia : d ? 2 * (d[0] + d[1]) : h > 0 ? 4 * Math.sqrt(e.Volume / h) : 0;
     add(`fwcols|${typeKey(e)}`, item(false, `Vertical formwork to sides of columns (${typeName(e)})`),
-      "Inferred: column perimeter × height, with the section size read from the type name.", e, per * h, d ? "" : "The type name gives no section size, so the column is taken as square. Check its size on the drawings.");
+      dia ? `Inferred: round column, π × ${(dia * 1000).toFixed(0)} mm diameter × height.` : "Inferred: column perimeter × height, with the section size read from the type name.", e, per * h,
+      dia || d ? "" : "The type name gives no section size, so the column is taken as square. Check its size on the drawings.");
   }
   // Concrete beams: two sides and the soffit. The sides only below the slab the beam carries (a beam modelled with its top level
   // with the slab's top is formed only under the slab), and along its clear length: the length between supports, from its
@@ -4898,7 +4931,7 @@ function inferLines(r, ctx) {
   // own soffit is billed with the beam, so nothing is lost. Not a wall that stands on nothing and spans as a beam (GT’s bridge
   // beams are 400 RC Wall elements): wall formwork measures only its sides, so the slab soffit over it stands for its soffit,
   // and his GT take-off billed that platform soffit in full (58.49 m²).
-  const props = live.filter((p) => p.Box && ["OST_Walls", "OST_StructuralColumns", "OST_StructuralFraming"].includes(p.Bic) && p.Volume > 0 && conc.includes(p) && !(p.Bic === "OST_Walls" && r.concretePart?.[p.Id]?.as === "beams"));
+  const props = live.filter((p) => p.Box && (["OST_Walls", "OST_StructuralFraming"].includes(p.Bic) || isCol(p)) && p.Volume > 0 && conc.includes(p) && !(p.Bic === "OST_Walls" && r.concretePart?.[p.Id]?.as === "beams"));
   for (const e of suspended.filter((e) => conc.includes(e))) {
     const under = e.Box ? props.filter((p) => p !== e && p.Box[5] >= e.Box[2] - 0.05 && p.Box[5] <= e.Box[5] + 0.05 && p.Box[2] < e.Box[2] - 0.05 && p.Box[0] >= e.Box[0] - 0.05 && p.Box[1] >= e.Box[1] - 0.05 && p.Box[3] <= e.Box[3] + 0.05 && p.Box[4] <= e.Box[4] + 0.05) : [];
     const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], e.Box[2]) - p.Box[2], 0.01); };
@@ -4930,8 +4963,15 @@ function inferLines(r, ctx) {
       for (const s of suspended.filter((s) => conc.includes(s) && s.Box && wetWalls.some((w) => Math.abs(w.Box[5] - s.Box[2]) <= 0.05 && w.Box[0] < s.Box[3] && w.Box[3] > s.Box[0] && w.Box[1] < s.Box[4] && w.Box[4] > s.Box[1]))) {
         const under = props.filter((p) => p !== s && p.Box[5] >= s.Box[2] - 0.05 && p.Box[5] <= s.Box[5] + 0.05 && p.Box[2] < s.Box[2] - 0.05 && p.Box[0] >= s.Box[0] - 0.05 && p.Box[1] >= s.Box[1] - 0.05 && p.Box[3] <= s.Box[3] + 0.05 && p.Box[4] <= s.Box[4] + 0.05);
         const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], s.Box[2]) - p.Box[2], 0.01); };
-        add("coat|soffit", C("the soffit of the cover slab", "soffit"), "Inferred: the slab's underside, less the tops of the walls and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
+        add("coat|soffit", C("the soffit of the cover slab", "soffit"), "Inferred: the slab’s underside, less the tops of the walls, columns and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
         for (const b of under.filter((p) => p.Bic === "OST_StructuralFraming")) { const g = beamGeom(b); if (g) add("coat|beams", C("sides and soffits of beams", "beams"), "Inferred: both sides below the slab and the soffit, along the beam's clear length (as its formwork).", b, (2 * g.below + g.b) * g.len); }
+        // Columns standing in the structure under that slab are wetted all round, like the walls standing inside it (9 Nov 2026,
+        // his three 450 mm columns): perimeter × height up to the slab, as their formwork. An item of its own, to confirm.
+        for (const c of under.filter(isCol)) {
+          const dia = roundCol(c), d = dia ? null : dims(c), hh = Math.min(c.Box[5], s.Box[2]) - c.Box[2];
+          const per = dia ? Math.PI * dia : d ? 2 * (d[0] + d[1]) : 4 * Math.sqrt(c.Volume / Math.max(c.Box[5] - c.Box[2], 0.01));
+          add("coat|columns", C("sides of columns", "columns"), "Inferred: columns standing inside the structure are wetted all round: perimeter × height up to the slab (as their formwork).", c, per * hh);
+        }
       }
     }
   }
@@ -4981,6 +5021,28 @@ function inferLines(r, ctx) {
     const out = outerEdge(e).len, j = apronJoints(r, e, live), t = Math.round((e.Thickness || height(e)) * 1000);
     add(`fwnarrow|apron|${typeKey(e)}`, { section: "SANS 1200 G", clause: "8.2.5", heading: "Narrow widths", description: `Edges of aprons and stop ends at their joints, ${t} mm high (${typeName(e)})`, unit: "m" },
       `Inferred: the apron's outside edge (${fmt2(out)} m)${j ? `, plus ${plural2(j.n, "joint line")} drawn in it (${fmt2(j.len)} m)` : ". No joints are drawn in it: draw them in a plan with a label naming the joints, and they're added"}.`, e, out + (j ? j.len : 0));
+  }
+  // Edges of benching at its channels (his note, 7 Nov 2026: “formwork to the bottom half of the benching … 150 mm high”, 5.16 m²).
+  // The channels are the holes in the benching's outline; its top falls from full height at the walls to a vertical edge at each
+  // channel, which is formed (smooth: it's above the floor). His figure is the long sides of each channel (4 × 8.6 m × 0.15 m),
+  // not the ends, so the ends are left out unless the profile says they're formed (CONV.formwork.benchEnds). The edge height comes
+  // from the volume, taking the top as falling evenly across a band of even width (his 9 Nov benching: 0.15 m exactly), else the
+  // profile's edge height (CONV.formwork.benchEdge: 150 mm, his figure).
+  for (const e of live.filter((e) => role(e) === "benching" && r.tradeOfId[e.Id] === "concrete" && e.Volume > 0)) {
+    const all = (e.Openings || []).filter((o) => o.W > 0 && o.H > 0);
+    // Extracts from add-ins before 8 Nov list a separate piece of the outline as a hole: a "hole" that could hold another isn't one
+    const holes = all.filter((o) => !all.some((x) => x !== o && Math.max(o.W, o.H) > Math.max(x.W, x.H) + 0.05 && Math.min(o.W, o.H) > Math.min(x.W, x.H) + 0.05));
+    if (!holes.length) continue;
+    const H = e.Thickness || height(e), Pi = holes.reduce((s, o) => s + 2 * (o.W + o.H), 0), Po = (e.Perimeter || 0) - Pi;
+    const w = (Po - Pi) / (8 * holes.length), A = w * (Po + Pi) / 2, D = w > 0.05 ? (A * H - (e.Volume - (e.InfillLess || 0))) / (w * (Po + 2 * Pi) / 6) : NaN;
+    // A top that doesn't fall (D about 0) leaves the full height as the edge; a volume more than a flat top could hold, or a fall
+    // past the floor, doesn't fit the shape, so the profile's edge height
+    // A benching that overlaps concrete it isn't joined to has a solid that can't be trusted (his 8 Nov runs), so the same there too
+    const FW = CONV.formwork, fit = !(e.InfillLess > 0) && Number.isFinite(D) && D >= -0.02 && H - D >= 0.02, edge = fit ? H - Math.max(0, D) : FW.benchEdge;
+    const len = holes.reduce((s, o) => s + 2 * Math.max(o.W, o.H) + (FW.benchEnds ? 2 * Math.min(o.W, o.H) : 0), 0);
+    add(`fwedge|bench|${typeKey(e)}`, item(false, `Vertical formwork to edges of benching at its channels (${typeName(e)})`),
+      `Inferred: ${FW.benchEnds ? "the edges all round" : "the long sides"} of ${plural2(holes.length, "channel")} (${fmt2(len)} m) × the edge where the benching’s top meets the channel, ${(edge * 1000).toFixed(0)} mm ${fit ? "(from its volume: the top falling evenly from the walls)" : "(the conventions profile’s edge height: the benching’s volume doesn’t give it, or it overlaps other concrete)"}.`,
+      e, len * edge, FW.benchEnds ? "" : "The ends of the channels are left out, as in his figure of 5.16 m²: add them if they’re formed (conventions profile).");
   }
   // Box-outs (1200 G 8.2.6) in his categories (his note, 8 Nov 2026): openings other than circular by area (up to 0.1 m²,
   // over 0.1 up to 0.5 m², over 0.5 m²), circular ones by diameter (up to 0.35 m, over), each by the depth of concrete it goes
@@ -5488,7 +5550,8 @@ const sectionRank = (s) => { const i = SECTION_ORDER.indexOf(s); return i < 0 ? 
 function basisQty(e, unit) {
   // One element drawn as several pieces (his four GRP covers as one floor) counts each piece
   if (unit === "No" && e.Pieces?.length > 1) return e.Pieces.length;
-  if (unit === "m³") return e.Volume || 0;
+  // Infill (benching, screeds) less the volume it shares with the concrete or layers it overlaps (engine: InfillLess)
+  if (unit === "m³") return Math.max(0, (e.Volume || 0) - (e.InfillLess || 0));
   if (unit === "m²") return e.Area || 0;
   // A floor billed by length is a strip (a subsoil drain, say): its centreline is about half its perimeter
   if (unit === "m" && e.Bic === "OST_Floors" && !(e.Length > 0) && e.Perimeter > 0) return e.Perimeter / 2;
@@ -5500,7 +5563,7 @@ const gradeOf = (m) => { const a = (m || "").match(/(\d{2})\s*mpa/i); if (a) ret
 const mmOf = (e) => (e.Thickness ? Math.round(e.Thickness * 1000) : (() => { const m = `${e.Type} ${e.Family}`.match(/(\d{2,4})\s*mm/i); return m ? +m[1] : null; })());
 const nm = (e) => `${e.Family} ${e.Type}`.toLowerCase();
 function concreteGroupLabel(e, role) {
-  const byRole = { benching: "benching", chamfer: "chamfers and fillets", plinth: "plinths and bunds", apron: "aprons and ramps", kerb: "kerbs" };
+  const byRole = { benching: "benching", chamfer: "chamfers and fillets", plinth: "plinths and bunds", apron: "aprons and ramps", kerb: "kerbs", column: "columns" };
   if (role && byRole[role]) return byRole[role];
   const n = nm(e);
   if (/bench/.test(n)) return "benching";
@@ -5699,6 +5762,9 @@ function buildGroups(result, decisions, learned) {
     const unit = item ? item.unit : null;
     const qty = unit ? g.elements.filter((x) => result.status[x.Id] !== "excluded").reduce((s, x) => s + basisQty(x, unit), 0) : 0;
     if (method === "rule" && unit && unit !== "No" && !(qty > 0)) { method = "check"; confirmed = false; reason = "The model gives no quantity for these elements. Measure them from the drawings."; }
+    // Say where infill was reduced for an overlap, on the line itself
+    const less = unit === "m³" ? g.elements.filter((x) => x.InfillLess > 0) : [];
+    if (less.length) reason = [reason, `Less ${fmt2(less.reduce((s, x) => s + x.InfillLess, 0))} m³ it overlaps without being joined (${less.flatMap((x) => x.InfillFrom || []).map((o) => `${o.name}, ${fmt2(o.v)} m³`).join("; ")}): counted with that, not twice. Join them in Revit.`].filter(Boolean).join(" ");
     out.push({ ...g, sample: e, item, method, confirmed, reason, ruleId, confidence, qty, issues, excluded });
   }
   // Inferred lines (formwork, reinforcement): items the model implies, with the elements they came from. Always confirmed by the user.
@@ -10522,7 +10588,7 @@ const Profiles = {
 
 function normaliseProfile(p) {
   const base = emptyProfile(p.id, p.name || p.id);
-  for (const k of ["materialGrades", "structureGrades", "rebar", "earthworks", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
+  for (const k of ["materialGrades", "structureGrades", "rebar", "earthworks", "formwork", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
   base.hints = {};
   for (const [k, v] of Object.entries(p.hints || {})) if (Array.isArray(v)) base.hints[k] = v.map(String).filter((w) => w.length <= 200).slice(0, 60);
   return { ...base, updatedAt: p.updatedAt || "", updatedBy: p.updatedBy || "" };
