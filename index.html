@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T15:11:19Z">
+<meta name="solvboq-build" content="2026-11-09T15:19:50Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -504,6 +504,10 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .entrylist{display:flex;flex-direction:column;border-top:1px solid var(--rule)}
 .entry{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-bottom:1px solid var(--rule);font-size:14px}
 .entry small{font-size:12px;color:var(--muted)}
+/* Measuring practice: each setting with its source, value and reset */
+.practicegroup{margin-top:14px}.practicegroup h4{margin:8px 0 2px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.entry.practice>span:first-child{flex:1;min-width:0}.practiceval{display:flex;align-items:center;gap:6px;flex:none}.practiceval input{width:90px}.practiceval small{min-width:70px}
+@media (max-width:640px){.entry.practice{flex-wrap:wrap}.entry.practice>span:first-child{flex-basis:100%}}
 .emptybox{padding:40px 16px;border:1px dashed var(--line);border-radius:14px;text-align:center;display:flex;flex-direction:column;gap:6px;align-items:center}
 .emptybox b{font-weight:500}
 .emptybox span{font-size:13px;color:var(--muted);max-width:46ch}
@@ -2844,6 +2848,29 @@ const DEFAULT_EARTHWORKS = { replacementDepth: 3.73, g5Share: 0.5, pioneerThickn
 // Formwork conventions. Edges of benching at its channels (his note, 7 Nov 2026, 5.16 m²): the edge height (m) when the benching's
 // volume doesn't give it, and whether the channel ends are formed too (0: the long sides only, as his figure; 1: all round).
 const DEFAULT_FORMWORK = { benchEdge: 0.15, benchEnds: 0 };
+// Joints (hybrid plan, Phase 4: his conventions as settings, not code). Walls cast in lifts of liftHeight (m); floor bay joints until
+// the layout is drawn: bayThin m per m² for floors up to thinMax (m) thick, bayThick for thicker bases, none under minPour m²; a
+// wall upstand up to upstand (m) high on a suspended slab is cast with it; buildings: saw cuts sawCut m per m².
+const DEFAULT_JOINTS = { liftHeight: 5, bayThin: 0.5, bayThick: 0.33, thinMax: 0.3, minPour: 30, upstand: 1, sawCut: 0.4 };
+// Building and steelwork sundries: lintel bearing at each end (m), erection bolts as a share of the steel, holding-down bolts per column
+const DEFAULT_SUNDRIES = { lintelBearing: 0.2, erectionBolts: 0.01, hdBolts: 4 };
+// Where each setting comes from, so a figure on a line can say whose rule it is (Phase 4: “each with its source”). Shown with the
+// settings; keep ENGINEER_PRACTICE.md (docs/examiner) in step.
+const CONVENTION_SOURCES = {
+  "earthworks.replacementDepth": "His Gravity Thickeners tender (column E), from the geotechnical report; replaced by NGL when it's known",
+  "earthworks.g5Share": "His Gravity Thickeners tender: G5 and G6 half each", "earthworks.pioneerThickness": "His Gravity Thickeners tender: 500 mm pioneer layer",
+  "earthworks.rockShare": "His provisional allowance, 20% (or his reading of the borehole logs)", "earthworks.handShare": "His provisional allowance, 20%",
+  "earthworks.stockShare": "His Gravity Thickeners tender, 90% of the excavation (his PSD 8.3.14)", "earthworks.wsPerMetre": "His Gravity Thickeners tender (no longer used: working space is his 0.5 m band)",
+  "earthworks.buildingDepth": "His Incinerator building BoQ, 1.5 m", "earthworks.fillThickness": "His Incinerator building BoQ, 1.5 m of G5",
+  "earthworks.excOffset": "His note, 8 Nov 2026: the excavation runs 1 m past the footprint", "earthworks.wsBand": "His note, 8 Nov 2026: working space is the 0.5 m band around the excavation, in m²",
+  "rebar.civil": "His Gravity Thickeners BoQ, 113 kg/m³, rounded to 115", "rebar.building": "His Incinerator BoQ, 133 kg/m³, rounded to 130", "rebar.mildShare": "His Incinerator BoQ, 6% mild steel, taken as 5%",
+  "formwork.benchEdge": "His note, 7 Nov 2026: benching edge 150 mm high (5.16 m²)", "formwork.benchEnds": "His note, 7 Nov 2026: the long sides of the channels only",
+  "joints.liftHeight": "His note, 7 Nov 2026: walls over 5 m are cast in 5 m lifts", "joints.bayThin": "His Gravity Thickeners take-off: 160 m of joint in 306 m² of floor",
+  "joints.bayThick": "Assumed: bays of about 6 m in thick bases (to confirm with him)", "joints.thinMax": "His Gravity Thickeners take-off: floors up to 300 mm",
+  "joints.minPour": "Assumed: a slab under 30 m² is one pour", "joints.upstand": "His Gravity Thickeners take-off: launder upstands cast with the slab",
+  "joints.sawCut": "His Incinerator BoQ: 67 m of saw cut in 170 m²", "sundries.lintelBearing": "His Incinerator BoQ: 200 mm bearing each end",
+  "sundries.erectionBolts": "His Incinerator BoQ: about 1% of the steel", "sundries.hdBolts": "Assumed: 4 holding-down bolts per steel column standing on concrete",
+};
 
 // Roles a user (or Claude) can give a Revit type, and the trade each one belongs to
 const ROLES = {
@@ -2896,7 +2923,11 @@ function compileConventions(profile) {
   for (const [k, v] of Object.entries(listToMap(p.rebar))) if (k in rebar && Number.isFinite(+v) && +v >= 0) rebar[k] = +v;
   const formwork = { ...DEFAULT_FORMWORK };
   for (const [k, v] of Object.entries(listToMap(p.formwork))) if (k in formwork && Number.isFinite(+v) && +v >= 0) formwork[k] = +v;
-  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, formwork, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
+  const joints = { ...DEFAULT_JOINTS };
+  for (const [k, v] of Object.entries(listToMap(p.joints))) if (k in joints && Number.isFinite(+v) && +v >= 0) joints[k] = +v;
+  const sundries = { ...DEFAULT_SUNDRIES };
+  for (const [k, v] of Object.entries(listToMap(p.sundries))) if (k in sundries && Number.isFinite(+v) && +v >= 0) sundries[k] = +v;
+  return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, formwork, joints, sundries, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
 let CONV = compileConventions(null);
@@ -4546,7 +4577,7 @@ function deriveItems(r, opts = {}) {
     item({ key: "painting", label: "Protective coating and painting", ref: "1200 H 8.3.13", unit: "t", qty: tons - galv.reduce((s, e) => s + (e.Volume || 0) * STEEL_DENSITY, 0), status: "partly",
       note: galv.length ? `Galvanised members (${plural2(galv.length, "member")}) are left out.` : "All steel is included. Deduct members that are galvanised instead of painted." });
     const cols = steel.filter((e) => e.Bic === "OST_StructuralColumns");
-    item({ key: "hdbolts", label: "Holding-down bolts", ref: "1200 H 8.3.6", unit: "no.", qty: cols.length ? cols.length * 4 : null, status: cols.length ? "partly" : "none",
+    item({ key: "hdbolts", label: "Holding-down bolts", ref: "1200 H 8.3.6", unit: "no.", qty: cols.length ? cols.length * CONV.sundries.hdBolts : null, status: cols.length ? "partly" : "none",
       note: cols.length ? `${plural2(cols.length, "steel column base")} at an assumed 4 bolts each. Confirm bolts per base on the drawings.` : "No steel columns are modelled, so the bases can’t be counted." });
   }
 
@@ -5124,10 +5155,11 @@ function inferLines(r, ctx) {
 // Slabs under 30 m² and narrow rings or strips (a footing ring under a wall) are one pour; overlapping slabs count once.
 // Buildings: saw cuts on about a 5 m grid, 0.4 m per m² (his Incinerator floor: 67 m in 170 m²).
 function floorJoints(r, e, flats = []) {
-  if (r.structure !== "civil") return (e.Area || 0) * 0.4;
+  const J = CONV.joints;
+  if (r.structure !== "civil") return (e.Area || 0) * J.sawCut;
   const t = e.Thickness || (e.Box ? e.Box[5] - e.Box[2] : 0), a = e.Box ? topArea(e, flats) : e.Area || 0;
   const strip = e.Box && a / outerEdge(e).len < 1.5;
-  return e.Bic === "OST_Floors" && t > 0 && a >= 30 && !strip ? a * (t <= 0.3 ? 0.5 : 0.33) : 0;
+  return e.Bic === "OST_Floors" && t > 0 && a >= J.minPour && !strip ? a * (t <= J.thinMax + 1e-9 ? J.bayThin : J.bayThick) : 0;
 }
 
 // A slab's top area, less the part another slab around it at the same level already covers (a ring modelled over the floor it
@@ -5445,11 +5477,11 @@ function inferMore(r, ctx) {
     const walls = live.filter((e) => e.Bic === "OST_Walls" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Length > 0);
     for (const e of walls) {
       const base = tops.find((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
-      if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= 1)) continue;
+      if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= CONV.joints.upstand)) continue;
       // Walls over 5 m are cast in lifts of up to 5 m, with a horizontal joint between lifts (his note, 7 Nov 2026)
-      const h = e.Box[5] - e.Box[2], lifts = Math.max(1, Math.ceil((h - 0.01) / 5));
+      const h = e.Box[5] - e.Box[2], lift = CONV.joints.liftHeight || 5, lifts = Math.max(1, Math.ceil((h - 0.01) / lift));
       add("jwall", "joint", G("8.5", "Joints", "Watertight construction joints with water bar, at the base of walls and between lifts", "m"),
-        `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${lifts > 1 ? `; this wall is ${fmt2(h)} m high, so it’s cast in ${lifts} lifts of up to 5 m, with a joint at the base of each` : ""}. Short upstands cast with a suspended slab have none.`, e, e.Length * lifts);
+        `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${lifts > 1 ? `; this wall is ${fmt2(h)} m high, so it’s cast in ${lifts} lifts of up to ${fmt1(lift)} m, with a joint at the base of each` : ""}. Short upstands cast with a suspended slab have none.`, e, e.Length * lifts);
       // Vertical joints: where a floor joint on his layout meets a wall, the wall has a vertical joint its full height (his Joint B:
       // count the crossings × the wall height, 6 × 4 m = 24 m on the valve chamber)
       const cross = layoutCrossings(r, e);
@@ -5470,14 +5502,14 @@ function inferMore(r, ctx) {
       const lj = layoutJoints(r, e);
       if (lj) add("jfloorlayout", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs", "m"), `Inferred: ${layoutText(lj)}.`, e, lj.total);
       else add("jfloor", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs (estimate)", "m"),
-        "Inferred: 0.5 m of joint per m² of floor up to 300 mm thick (bays of about 4 m), 0.33 m per m² of thicker bases (about 6 m); slabs under 30 m² and narrow rings are one pour. Replace it with the joint layout when it’s available.",
+        `Inferred: ${CONV.joints.bayThin} m of joint per m² of floor up to ${Math.round(CONV.joints.thinMax * 1000)} mm thick, ${CONV.joints.bayThick} m per m² of thicker bases; slabs under ${CONV.joints.minPour} m² and narrow rings are one pour. Replace it with the joint layout when it’s available.`,
         e, floorJoints(r, e, slabs));
     }
   } else if (groundArea > 0) {
     for (const e of ground) {
       // His Incinerator floor: 67 m of saw-cut joints in 170 m² (0.4 m/m²), sealant over the same length
       add("jsaw", "joint", G("8.5", "Joints", "Saw-cut contraction joints in ground slabs (estimate, about 5 m grid)", "m"),
-        "Inferred: about 0.4 m of joint per m² of ground slab (a 5 m grid). Replace it with the joint layout when it’s available.", e, floorJoints(r, e));
+        `Inferred: about ${CONV.joints.sawCut} m of joint per m² of ground slab. Replace it with the joint layout when it’s available.`, e, floorJoints(r, e));
       add("jseal", "joint", G("8.5", "Joints", "Joint sealant to saw-cut joints (estimate)", "m"), "Inferred: the same length as the saw-cut joints.", e, floorJoints(r, e));
     }
     // Damp-proofing and ant poison under ground-bearing slabs, for buildings
@@ -5510,7 +5542,7 @@ function inferMore(r, ctx) {
     const m = `${e.Type} ${e.Family}`.match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/i);
     const w = m ? +m[1] / 1000 : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
     add("lintel", "building", PD("PD 10.1", "Brickwork sundries", "Precast concrete lintels over openings", "m"),
-      `Inferred: opening width plus 200 mm bearing at each end${cavity ? ", one lintel per skin of the cavity walls" : ""}, from the width in the type name.`, e, (w + 0.4) * (cavity ? 2 : 1),
+      `Inferred: opening width plus ${Math.round(CONV.sundries.lintelBearing * 1000)} mm bearing at each end${cavity ? ", one lintel per skin of the cavity walls" : ""}, from the width in the type name.`, e, (w + 2 * CONV.sundries.lintelBearing) * (cavity ? 2 : 1),
       m ? "" : "Some openings have no size in the type name, so the width is read from the element’s overall size.");
   }
 
@@ -5522,7 +5554,7 @@ function inferMore(r, ctx) {
     add("delivery", "steel", H("8.3.2", "Delivery to site", "Delivery of steelwork to site, normal loads", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("erection", "steel", H("8.3.3", "Erection on site", "Erection of steelwork on site", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("bolts", "steel", H("8.3.4", "Erection bolts", "Erection bolts, nuts and washers (estimate)", "t"),
-      "Inferred: 1% of the steel tonnage, until the connection details are known.", e, 0.01 * t(e));
+      `Inferred: ${+(CONV.sundries.erectionBolts * 100).toFixed(2)}% of the steel tonnage, until the connection details are known.`, e, CONV.sundries.erectionBolts * t(e));
     if (!/galvani|hdg/i.test(`${e.Material} ${e.Type}`)) add("coating", "steel", H("8.3.13", "Corrosion protection", "Surface preparation, priming and coating of steelwork", "t"),
       "Inferred: all steel tonnage except members that are galvanised.", e, t(e));
   }
@@ -5530,8 +5562,8 @@ function inferMore(r, ctx) {
   const concTops = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete");
   const onConcrete = (c) => c.Box && concTops.some((s) => Math.abs(s.Box[5] - c.Box[2]) <= 0.3 && s.Box[0] <= c.Box[3] && s.Box[3] >= c.Box[0] && s.Box[1] <= c.Box[4] && s.Box[4] >= c.Box[1]);
   for (const e of steel.filter((e) => e.Bic === "OST_StructuralColumns" && (!e.Box || onConcrete(e))))
-    add("hdbolts", "steel", H("8.3.6", "Holding-down bolts", "Holding-down bolt assemblies (4 per column base, assumed)", "No"),
-      "Inferred: 4 bolts at the base of each steel column that stands on concrete. Confirm the bolts per base on the drawings.", e, 4,
+    add("hdbolts", "steel", H("8.3.6", "Holding-down bolts", `Holding-down bolt assemblies (${CONV.sundries.hdBolts} per column base, assumed)`, "No"),
+      `Inferred: ${CONV.sundries.hdBolts} bolts at the base of each steel column that stands on concrete. Confirm the bolts per base on the drawings.`, e, CONV.sundries.hdBolts,
       e.Box ? "" : "Some columns have no position in the data, so they’re assumed to stand on concrete.");
   return [...lines.values()];
 }
@@ -10627,12 +10659,12 @@ const Profiles = {
 
 function normaliseProfile(p) {
   const base = emptyProfile(p.id, p.name || p.id);
-  for (const k of ["materialGrades", "structureGrades", "rebar", "earthworks", "formwork", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
+  for (const k of ["materialGrades", "structureGrades", "rebar", "earthworks", "formwork", "joints", "sundries", "roles", "mapping", "suppress"]) base[k] = Array.isArray(p[k]) ? p[k].filter((x) => x && typeof x.key === "string") : [];
   base.hints = {};
   for (const [k, v] of Object.entries(p.hints || {})) if (Array.isArray(v)) base.hints[k] = v.map(String).filter((w) => w.length <= 200).slice(0, 60);
   return { ...base, updatedAt: p.updatedAt || "", updatedBy: p.updatedBy || "" };
 }
-const hasContent = (p) => ["materialGrades", "structureGrades", "roles", "mapping", "suppress"].some((k) => p[k].length) || Object.keys(p.hints).length;
+const hasContent = (p) => ["materialGrades", "structureGrades", "roles", "mapping", "suppress", "earthworks", "rebar", "formwork", "joints", "sundries"].some((k) => p[k]?.length) || Object.keys(p.hints).length;
 function upsert(list, key, value) { const i = list.findIndex((x) => x.key === key); if (i < 0) list.push({ key, value }); else list[i] = { key, value }; }
 
 // ----- The conventions chip in the header -----
@@ -10672,7 +10704,8 @@ function renderConventions() {
   const tabs = [["types", "Revit types", unrecognised.length ? `${unrecognised.length} to set` : String(list.length), !!unrecognised.length],
     ["grades", "Material grades", String(p.materialGrades.length)], ["mappings", "Saved mappings", String(p.mapping.length)],
     ["dismissed", "Dismissed flags", String(p.suppress.length)], ["learned", "Learned from others", String(suggestions.length), !!suggestions.length],
-    ["hints", "Name hints", String(Object.keys(p.hints).length)], ["claude", "Claude", sampleFn ? "On" : "Off", !sampleFn]];
+    ["hints", "Name hints", String(Object.keys(p.hints).length)], ["practice", "Measuring practice", String(PRACTICE_GROUPS.reduce((n, [g]) => n + (p[g] || []).length, 0) || "Defaults")],
+    ["claude", "Claude", sampleFn ? "On" : "Off", !sampleFn]];
 
   const body = tab === "types" ? typesTab(list, unrecognised)
     : tab === "grades" ? entryTab("Material grades", "Set from the “Concrete with no grade” check. Every model using this profile takes these grades.", p.materialGrades, (x) => `${x.key} = ${x.value}`, (x) => Profiles.removeEntry("materialGrades", x.key), "When you give a material a grade in Readiness, it’s saved here and used on every model.", "Go to Readiness", () => { state.view = "overview"; render(); })
@@ -10680,6 +10713,7 @@ function renderConventions() {
     : tab === "dismissed" ? entryTab("Dismissed flags", "From “This flag is wrong” on a check. These types are left out of that check.", p.suppress, (x) => `${CHECK_TITLES[x.value] || x.value}: ${typeLabel(x.key)}`, (x) => Profiles.removeEntry("suppress", x.key, x.value), "Flags you mark as wrong for a type are listed here so you can undo them.", "Go to Readiness", () => { state.view = "overview"; render(); })
     : tab === "learned" ? learnedTab(suggestions, shared)
     : tab === "claude" ? claudeTab()
+    : tab === "practice" ? practiceTab(p)
     : hintsTab(p);
 
   v.replaceChildren(h("section", { class: "card convcard" },
@@ -10742,6 +10776,33 @@ function typeRow(t, ai, sourceLabel) {
           return items.length ? [h("div", { class: "rpgroup" }, name), ...items.map(([k, x]) => h("button", { type: "button", role: "option", "aria-selected": String(k === chosen), onclick: () => pick(k) }, x.label,
             k === chosen ? svg('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="color:var(--accent)"><path d="M5 12l5 5 9-10"></path></svg>') : null))] : null;
         }))) : null));
+}
+// His measuring conventions as settings (hybrid plan, Phase 4): each with its value, where it comes from, and a change for this profile
+const PRACTICE_GROUPS = [["earthworks", "Earthworks", () => DEFAULT_EARTHWORKS], ["rebar", "Reinforcement", () => DEFAULT_REBAR], ["formwork", "Formwork", () => DEFAULT_FORMWORK],
+  ["joints", "Joints", () => DEFAULT_JOINTS], ["sundries", "Building and steelwork sundries", () => DEFAULT_SUNDRIES]];
+const PRACTICE_LABELS = {
+  "earthworks.replacementDepth": ["Replacement depth under a tank, without NGL", "m"], "earthworks.g5Share": ["G5 share of the replacement fill", "share"],
+  "earthworks.pioneerThickness": ["Pioneer layer", "m"], "earthworks.rockShare": ["Hard rock, extra over", "share of excavation"], "earthworks.handShare": ["Hand excavation, extra over", "share of excavation"],
+  "earthworks.stockShare": ["Temporary stockpiling", "share of excavation"], "earthworks.wsPerMetre": ["Working space per metre (old rule)", "m³/m"], "earthworks.buildingDepth": ["Excavation depth for a building, without NGL", "m"],
+  "earthworks.fillThickness": ["Imported fill under a building", "m"], "earthworks.excOffset": ["Excavation past the footprint, all round", "m"], "earthworks.wsBand": ["Working space band around the excavation", "m"],
+  "rebar.civil": ["Reinforcement, water-retaining structures", "kg/m³"], "rebar.building": ["Reinforcement, buildings", "kg/m³"], "rebar.mildShare": ["Mild steel share", "share"],
+  "formwork.benchEdge": ["Benching edge height where its volume doesn't give it", "m"], "formwork.benchEnds": ["Benching channel ends formed too", "0 no, 1 yes"],
+  "joints.liftHeight": ["Wall lift height", "m"], "joints.bayThin": ["Floor joints until the layout is drawn, thin floors", "m/m²"], "joints.bayThick": ["Floor joints, thicker bases", "m/m²"],
+  "joints.thinMax": ["Thin floor up to", "m"], "joints.minPour": ["A slab under this is one pour", "m²"], "joints.upstand": ["Upstand cast with its slab, up to", "m"], "joints.sawCut": ["Saw cuts in building floors", "m/m²"],
+  "sundries.lintelBearing": ["Lintel bearing at each end", "m"], "sundries.erectionBolts": ["Erection bolts", "share of steel"], "sundries.hdBolts": ["Holding-down bolts per column base", "No"],
+};
+function practiceTab(p) {
+  return [h("div", { class: "convtitle" }, h("div", {}, h("h3", {}, "Measuring practice"),
+      h("span", {}, "The engineer's conventions SolvBoQ measures by, each with where it comes from. A value changed here applies to every model using this profile; a figure on one model is still changed in Map to SANS."))),
+    ...PRACTICE_GROUPS.map(([g, title, defs]) => h("div", { class: "practicegroup" }, h("h4", {}, title),
+      ...Object.entries(defs()).map(([k, def]) => {
+        const id = `${g}.${k}`, set = (p[g] || []).find((x) => x.key === k), lab = PRACTICE_LABELS[id] || [k, ""];
+        return h("div", { class: "entry practice" },
+          h("span", {}, h("b", { style: "font-weight:500;display:block" }, `${lab[0]}`), h("small", {}, CONVENTION_SOURCES[id] || "")),
+          h("label", { class: "practiceval" }, h("input", { type: "number", step: "any", min: "0", class: "edinput", value: String(set ? set.value : def), "aria-label": `${lab[0]} (${lab[1]})`,
+            onchange: (ev) => { const v = +ev.target.value; if (Number.isFinite(v) && v >= 0) Profiles.setEntry(g, k, v, "practice", "user"); } }), h("small", {}, lab[1])),
+          set ? h("button", { type: "button", class: "btn xs", onclick: () => Profiles.removeEntry(g, k) }, `Back to ${def}`) : h("small", { class: "muted" }, "Default"));
+      })))];
 }
 function entryTab(title, sub, items, text, remove, empty, cta, go) {
   return [h("div", { class: "convtitle" }, h("div", {}, h("h3", {}, title), h("span", {}, sub))),
