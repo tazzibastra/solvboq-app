@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T16:14:30Z">
+<meta name="solvboq-build" content="2026-11-09T16:43:24Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -805,6 +805,11 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .lnheadbtns{flex-wrap:wrap}
 .coatother{flex-direction:column;align-items:stretch;gap:4px;margin-top:8px}
 .coatother .edinput{width:100%;text-align:left}
+
+/* What changed since an earlier run (Map to SANS overview) */
+.revbox{display:flex;flex-direction:column;gap:8px;margin-top:6px}.revbox .tools{flex-wrap:nowrap}.revbox select{min-width:0;flex:1}
+.revlines{display:flex;flex-direction:column;border-top:1px solid var(--rule);max-height:420px;overflow:auto}
+.revline{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--rule);font-size:13px}.revline small{color:var(--muted);font-size:12px}.revline .r{white-space:nowrap;font-variant-numeric:tabular-nums}
 </style>
 </head>
 <body>
@@ -6196,6 +6201,83 @@ function faceToday(r) {
 }
 
 
+// ===== What changed between two runs of a model (hybrid plan, Phase 5) =====
+// Elements are matched by Revit's stable id (UniqueId, read since 9 Nov 2026), else by element id, which Revit keeps within one file
+// (a detached copy renumbers them: then little matches, and the diff says so). For each element: added, removed, or changed and
+// what (type, material, level, volume or area by more than 0.5%, moved by more than 10 mm); types renamed (the same type id under a
+// new name). Then every bill line whose quantity changed, with the elements behind the change, so a new revision is read line by line
+// rather than taken on trust. Pure: the page, the tests and the tools call it alike. One shared page scope: names start with rev.
+
+const REV_FIELDS = [["Type", "type"], ["Family", "family"], ["Material", "material"], ["Level", "level"], ["AssemblyCode", "BoQ code"]];
+
+// The key an element is matched by, and how: its UniqueId where both runs have them, else its element id
+function revKey(e, byUnique) { return byUnique && e.UniqueId ? "u:" + e.UniqueId : "i:" + String(e.Id); }
+
+// What changed about one element: the fields that differ, and its size and position
+function revChanges(a, b) {
+  const out = [];
+  for (const [k, label] of REV_FIELDS) if (String(a[k] || "") !== String(b[k] || "")) out.push(`${label} ${a[k] || "–"} → ${b[k] || "–"}`);
+  const rel = (x, y) => Math.abs((y || 0) - (x || 0)) > 0.005 * Math.max(Math.abs(x || 0), Math.abs(y || 0), 1e-9) && Math.abs((y || 0) - (x || 0)) > 1e-4;
+  if (rel(a.Volume, b.Volume)) out.push(`volume ${(+a.Volume || 0).toFixed(3)} → ${(+b.Volume || 0).toFixed(3)} m³`);
+  else if (rel(a.Area, b.Area)) out.push(`area ${(+a.Area || 0).toFixed(2)} → ${(+b.Area || 0).toFixed(2)} m²`);
+  if (a.Box && b.Box && a.Box.some((v, i) => Math.abs(v - b.Box[i]) > 0.01)) out.push("moved or resized");
+  return out;
+}
+
+// The diff. prev and cur are record lists (recordsFromJSON); bills are line maps { key: { qty, unit, description, ids:Set } }
+function revisionDiff(prev, cur, prevBill, curBill) {
+  const byUnique = prev.some((e) => e.UniqueId) && cur.some((e) => e.UniqueId);
+  const P = new Map(prev.map((e) => [revKey(e, byUnique), e])), C = new Map(cur.map((e) => [revKey(e, byUnique), e]));
+  const added = [...C.entries()].filter(([k]) => !P.has(k)).map(([, e]) => e);
+  const removed = [...P.entries()].filter(([k]) => !C.has(k)).map(([, e]) => e);
+  const changed = [];
+  for (const [k, b] of C) { const a = P.get(k); if (!a) continue; const what = revChanges(a, b); if (what.length) changed.push({ e: b, was: a, what }); }
+  // Types renamed: the same type id, another name
+  const renamed = [], seen = new Set();
+  if (byUnique) {
+    const pt = new Map(prev.filter((e) => e.TypeUniqueId).map((e) => [e.TypeUniqueId, e.Type]));
+    for (const e of cur) { const was = pt.get(e.TypeUniqueId); if (e.TypeUniqueId && was != null && was !== e.Type && !seen.has(e.TypeUniqueId)) { seen.add(e.TypeUniqueId); renamed.push({ from: was, to: e.Type }); } }
+  }
+  // Bill lines whose quantity moved, and the elements behind each change
+  const idsOf = (list) => new Set(list.map((e) => String(e.Id)));
+  const addedIds = idsOf(added), removedIds = idsOf(removed), changedById = new Map(changed.map((c) => [String(c.e.Id), c]));
+  const lines = [];
+  for (const k of new Set([...Object.keys(prevBill), ...Object.keys(curBill)])) {
+    const a = prevBill[k], b = curBill[k], was = a ? a.qty : 0, now = b ? b.qty : 0;
+    if (Math.abs(now - was) <= Math.max(0.005, 0.0005 * Math.abs(was))) continue;
+    const why = [];
+    for (const id of b ? b.ids : []) { if (addedIds.has(id)) why.push(`added ${id}`); else if (changedById.has(id)) why.push(`${id}: ${changedById.get(id).what.join(", ")}`); }
+    for (const id of a ? a.ids : []) if (removedIds.has(id)) why.push(`removed ${id}`);
+    lines.push({ key: k, description: (b || a).description, unit: (b || a).unit, was, now, why, kind: !a ? "new" : !b ? "gone" : "changed" });
+  }
+  // What the later run carries that the earlier didn't (a newer add-in): a line that moved with no element behind it is measured from that
+  const has = (recs) => ({ faces: recs.some((e) => Array.isArray(e.Faces)), levels: !!(recs.annotations?.Levels || recs.annotations?.levels), spots: !!(recs.annotations?.Spots || recs.annotations?.spots), ids: recs.some((e) => e.UniqueId) });
+  const hp = has(prev), hc = has(cur), more = [hc.faces && !hp.faces ? "faces" : "", hc.levels && !hp.levels ? "levels" : "", hc.spots && !hp.spots ? "spot elevations" : ""].filter(Boolean);
+  const data = more.length ? `the later run has ${more.join(", ").replace(/, ([^,]*)$/, " and $1")} from the add-in` : "";
+  // No element of the line changed, but one beside it did (a column added under a slab takes its top off the slab's soffit)
+  const byId = new Map([...prev, ...cur].map((e) => [String(e.Id), e])), causes = [...added.map((e) => [e, "added"]), ...removed.map((e) => [e, "removed"]), ...changed.map((c) => [c.e, "changed"])];
+  const touch = (p, q) => p.Box && q.Box && p.Box[0] <= q.Box[3] + 0.05 && q.Box[0] <= p.Box[3] + 0.05 && p.Box[1] <= q.Box[4] + 0.05 && q.Box[1] <= p.Box[4] + 0.05 && p.Box[2] <= q.Box[5] + 0.05 && q.Box[2] <= p.Box[5] + 0.05;
+  for (const L of lines) if (!L.why.length) {
+    const own = [...(curBill[L.key]?.ids || []), ...(prevBill[L.key]?.ids || [])].map((id) => byId.get(id)).filter(Boolean);
+    for (const [c, how] of causes) if (own.some((o) => o !== c && touch(o, c)) && L.why.length < 6) L.why.push(`beside ${how} ${c.Id}`);
+  }
+  for (const L of lines) if (!L.why.length) L.why.push(data ? `no element changed: ${data}` : "no element changed: settings or decisions differ");
+  lines.sort((x, y) => Math.abs(y.now - y.was) - Math.abs(x.now - x.was));
+  return { byUnique, matched: cur.length - added.length, added, removed, changed, renamed, lines, data };
+}
+
+// A bill as the diff reads it: every line (section, clause, heading, description, unit) with its quantity and element ids
+function revBill(lines) {
+  const out = {};
+  for (const L of lines) {
+    const k = [L.section, L.clause, L.heading, L.description, L.unit].join(" | ");
+    const ids = new Set(L.groups.flatMap((g) => g.elements.map((e) => String(e.Id))));
+    out[k] = { qty: (out[k]?.qty || 0) + (L.qty || 0), unit: L.unit, description: L.heading && L.heading.includes("›") ? `${L.heading.split("›").pop().trim()} ${L.description}` : L.description, ids };
+  }
+  return out;
+}
+
+
 // ===== Claims: read a contractor's payment certificate and check it =====
 // The second engine. It starts from the contractor's certificate (and later the engineer's master BoQ), not the model.
 // Plain JavaScript, no browser: the page feeds it pdf.js text, the known-answer tests feed it the same from Node.
@@ -8747,9 +8829,48 @@ function editorOverview(lines, groups) {
     unmatched.length && sampleFn ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(unmatched.length, "unmatched group")}`), h("span", {}, state.aiMsg || "Claude can suggest an item for each one.")),
       mapCtl ? h("button", { type: "button", class: "btn sm", onclick: () => mapCtl && mapCtl.abort() }, "Stop") : h("button", { type: "button", class: "btn sm accent", onclick: () => askClaude(unmatched) }, "Ask Claude")) : null,
     lnOverview(),
+    revOverview(),
     yourConfirmations(groups).length ? h("button", { type: "button", class: "link", onclick: () => undoConfirmations(groups) }, `Undo my confirmations on this model (${plural(yourConfirmations(groups).length, "group")})`) : null,
     h("span", { class: "edtitle sm" }, "How lines were mapped"),
     h("div", { class: "howlist" }, ...how.map(([l, n]) => h("div", {}, h("span", {}, l), h("b", {}, String(n))))))];
+}
+// What changed since an earlier run of this model in the project (hybrid plan, Phase 5: revisions.js). Both runs are worked out with
+// the same settings and decisions, so what differs is the model and the data the add-in read
+function revOverview() {
+  const others = (typeof PV !== "undefined" ? PV.models || [] : []).filter((m) => m.id !== state.pmid);
+  if (!others.length || typeof revisionDiff !== "function") return null;
+  const cur = PV.models.find((m) => m.id === state.pmid), older = others.filter((m) => !cur || String(m.dated) < String(cur.dated));
+  const pick = others.some((m) => m.id === state.revWith) ? state.revWith : (older[0] || others[0]).id;
+  const R = state.rev && state.rev.mid === pick && state.rev.cur === state.pmid ? state.rev : null;
+  return h("div", { class: "revbox" },
+    h("span", { class: "edtitle sm" }, "What changed since an earlier run"),
+    h("div", { class: "tools" },
+      h("select", { id: "revSel", class: "edinput", "aria-label": "Earlier run", onchange: (e) => { state.revWith = e.target.value; renderMap(); } },
+        others.map((m) => h("option", { value: m.id, selected: m.id === pick ? "" : null }, `${m.title || m.fileName} · ${pvDate(m.dated)}`))),
+      h("button", { type: "button", class: "btn sm", onclick: () => revCompare(pick) }, "Compare")),
+    state.revMsg ? h("p", { class: "sub", style: "margin:0" }, state.revMsg) : null,
+    R ? revView(R) : null);
+}
+async function revCompare(mid) {
+  state.revMsg = "Opening the earlier run…"; state.rev = null; renderMap();
+  try {
+    const { info, data } = await Store.loadModel(CL.pid, mid);
+    const prevRecs = recordsFromJSON(data), opts = { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null };
+    const prevBill = revBill(boqLines(buildGroups(runChecks(prevRecs, opts), state.mapDecisions, CONV.mapping), { full: true }));
+    rerunChecks();   // the engine's working state back to this model
+    const curBill = revBill(boqLines(currentGroups(), { full: true }));
+    state.rev = { mid, cur: state.pmid, info, d: revisionDiff(prevRecs, state.records, prevBill, curBill) }; state.revMsg = "";
+  } catch (e) { state.revMsg = "The earlier run couldn’t be opened: " + e.message; }
+  renderMap();
+}
+function revView(R) {
+  const d = R.d, q = (x, u) => fmtQty(x, u);
+  return h("div", { class: "revview" },
+    h("p", { class: "sub", style: "margin:0" }, `Against ${pvDate(R.info.dated)}: matched by ${d.byUnique ? "Revit’s element ids that survive revisions" : "element number (the earlier run predates the add-in’s stable ids)"}. ${plural(d.added.length, "element")} added, ${d.removed.length} removed, ${d.changed.length} changed${d.renamed.length ? `, ${plural(d.renamed.length, "type")} renamed` : ""}. ${d.lines.length ? plural(d.lines.length, "line") + " of the bill moved:" : "No line of the bill moved."}`),
+    d.lines.length ? h("div", { class: "revlines" }, ...d.lines.slice(0, 40).map((L) => h("div", { class: "revline" },
+      h("span", {}, h("b", { style: "font-weight:500;display:block" }, L.description), h("small", {}, L.why.slice(0, 3).join("; ") + (L.why.length > 3 ? `; and ${L.why.length - 3} more` : ""))),
+      h("span", { class: "r" }, `${q(L.was, L.unit)} → ${q(L.now, L.unit)}`)))) : null,
+    d.lines.length > 40 ? h("p", { class: "sub" }, `And ${d.lines.length - 40} more.`) : null);
 }
 function bulkRow(title, sub, fn) {
   return h("div", { class: "bulk" }, h("div", {}, h("b", {}, title), h("span", {}, sub)), h("button", { type: "button", class: "btn sm dark", onclick: fn }, "Confirm all"));
