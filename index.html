@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T11:26:30Z">
+<meta name="solvboq-build" content="2026-11-09T14:23:45Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4300,7 +4300,7 @@ function runChecks(input, opts = {}) {
     "Nothing to do.", blinding);
   const screed = live.filter((e) => roleIs(e, "screed"));
   add("screed", "handled", "Screed modelled as a floor",
-    "Treated as a floor finish (building works), not as structural concrete.", "Nothing to do.", screed);
+    civil ? "Billed as granolithic screeding by area (his PSG 8.12), with a steel-floated finish, not as structural concrete." : "Treated as a floor finish (building works), not as structural concrete.", "Nothing to do.", screed);
   const otherThin = live.filter((e) => e.Bic === "OST_Floors" && e.Thickness != null && e.Thickness < 0.1 && tradeOf(e) === "concrete" && !ROLE_OF.has(e.Id));
   add("thin", "eyes", "Very thin floors with no clear role",
     "Under 100 mm thick, not under or on top of a slab, and not named as blinding or screed. Billed as a slab, they’d pick up reinforcement and formwork they don’t need.",
@@ -5416,7 +5416,9 @@ function inferMore(r, ctx) {
   }
   // Tops of benching (wood-floated), aprons and plinths (steel-floated), each an item of its own (his notes, 7 Nov 2026)
   for (const [rl, key, desc, why] of [["benching", "bench", "Wood-floated finish to top of benching", "plan area of the benching"],
-    ["apron", "apron", "Steel-floated finish to top of aprons", "top area of each apron"], ["plinth", "plinth", "Steel-floated finish to top of plinths", "top area of each plinth"]])
+    ["apron", "apron", "Steel-floated finish to top of aprons", "top area of each apron"], ["plinth", "plinth", "Steel-floated finish to top of plinths", "top area of each plinth"],
+    // Screeds in a water-retaining structure: steel-floated, an item of their own (his GT bill, PSG 8.4.4: launder channel screed, cone floors)
+    ...(r.structure === "civil" ? [["screed", "screed", "Steel-floated finish to top of screeds", "top area of each screed"]] : [])])
     for (const e of live.filter((e) => role(e) === rl && r.tradeOfId[e.Id] === "concrete" && (e.Area || 0) > 0))
       add(`float|${key}`, "finish", G("8.4.4", FIN, desc, "m²"), `Inferred: the ${why}.`, e, e.Area);
   // Exposed tops of concrete walls: his “top of walls” is length × thickness of the tank, chamber and launder walls
@@ -5589,7 +5591,7 @@ function concreteGroupLabel(e, role) {
 }
 
 // The built-in rules. Each returns an item for the group's first element, a confidence, and any reason to confirm.
-function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) {
+function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null, civil = false) {
   const mat = e.Material || "", n = nm(e), mm = mmOf(e);
   const it = (section, clause, heading, description, unit, ruleId, check) => ({ item: { section, clause, heading, description, unit }, ruleId, check: check || "" });
   // Clauses for no-fines (PSG 8.10), subsoil drains (PSLE 8.2.14) and cast-in items (PSG 8.13) are from the engineer's Gravity Thickeners BoQ
@@ -5618,7 +5620,16 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
     e.Bic === "OST_Floors" && !(e.Length > 0) ? "Modelled as a floor, so the length is taken as half its perimeter. Check it against the drawings." : "");
   if (trade === "concrete") {
     if (role === "blinding" || (!role && /blind/i.test(mat + n))) return it("SANS 1200 G", "8.4.2", "Blinding layer", `Class 15 MPa/19 mm concrete, ${mm || 75} mm thick under floors`, "m²", "G-BLIND");
-    if (role === "screed" || (!role && /screed/i.test(mat + n))) return it("PD", "", "Screeds", `Cement screed to floors, ${mm || 50} mm thick`, "m²", "PD-SCREED");
+    if (role === "screed" || (!role && /screed/i.test(mat + n))) {
+      // In a water-retaining (civil) structure his bills have screeds as granolithic screeding under his PSG 8.12, by grade and stone
+      // size, in m² (GT: 35 MPa/10 mm to the launder channel, 35 MPa/19 mm to the cone floors). Buildings keep the PD screed item.
+      if (civil) {
+        const sg = typeof materialGrade === "function" ? materialGrade(e) : { grade: gradeOf(mat) }, g = sg.grade || grades[mat] || "", st = sg.stone || (mm && mm <= 40 ? 10 : 19);
+        return it("SANS 1200 G", "8.12", "Granolithic screeding", `${g || "35 MPa"}/${st} mm on structural floor screeds: ${mm || 50} mm thick screed to floors (${e.Type || e.Family})`, "m²", "G-SCREED",
+          [g ? "" : "The material gives no grade: 35 MPa taken, as his bills.", sg.stone ? "" : `The material gives no stone size: ${st} mm taken (10 mm for screeds up to 40 mm thick, else 19 mm).`].filter(Boolean).join(" "));
+      }
+      return it("PD", "", "Screeds", `Cement screed to floors, ${mm || 50} mm thick`, "m²", "PD-SCREED");
+    }
     if (/precast/i.test(mat) && /kerb/.test(n)) return it("SANS 1200 MK", "", "Precast concrete kerbs", `${e.Type || "Kerb"}`, "m", "MK-KERB", e.Bic === "OST_GenericModel" ? "Modelled as a Generic Model, so the kerb type is read from its name." : "");
     const mg = typeof materialGrade === "function" ? materialGrade(e) : { grade: gradeOf(mat) };
     const grade = mg.grade || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
@@ -5698,6 +5709,7 @@ function explainRule(g, result) {
       break;
     }
     case "G-BLIND": out.push(`Rule: blinding is billed by area (SANS 1200 G 8.4.2).${roleWhy || " Its name or material says blinding."}`); break;
+    case "G-SCREED": out.push("Rule: in a water-retaining structure screeds are granolithic screeding (his PSG 8.12), by grade and stone size, in m²."); break;
     case "PD-SCREED": out.push(`Rule: screeds are billed by area under the PD specification.${roleWhy || " Its name or material says screed."}`); break;
     case "G-NOFINES": out.push(`Rule: no-fines concrete is billed by volume (1200 G 8.10, from his Gravity Thickeners BoQ).${roleWhy}`); break;
     case "LE-SUBSOIL": out.push(`Rule: subsoil drains are billed by length (1200 LE 8.2.14, from his Gravity Thickeners BoQ).${roleWhy}`); break;
@@ -5761,15 +5773,17 @@ function buildGroups(result, decisions, learned) {
     else if (d) { ({ item, method, confirmed } = d); reason = d.reason || ""; confidence = d.confidence ?? null; }
     else if (learned[g.key]) { item = learned[g.key].item || learned[g.key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
     else {
-      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade, result.concretePart?.[e.Id]);
+      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade, result.concretePart?.[e.Id], result.structure === "civil");
       // Never confirmed without a look: in-place families (drawn by hand, so the rule is a guess at what they are), and
       // pipework and gratings, which are often priced in the mechanical bill (his Gravity Thickeners bill has none)
       // A readiness flag that could change the quantity or stop it being billed (tier 1 or 2) also holds a rule match back
       const flag = g.elements.flatMap((x) => result.byElement[x.Id] || []).find((i) => i.tier <= 2 && i.severity !== "handled" && i.severity !== "excluded");
       const coded = typeof cardOf === "function" && g.elements.every((x) => cardOf(x) && cardOf(x).code === cardOf(e)?.code);
-      const look = !r || r.check ? "" : flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : coded ? "" : g.elements.some((x) => x.InPlace) ? "An in-place family, drawn by hand in the model. Check what it is and that this item fits it."
+      // A tier 1 or 2 flag is always said first, even when the rule has its own caution: it can change the quantity
+      const flagged = r && flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : "";
+      const look = !r || r.check ? flagged : flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : coded ? "" : g.elements.some((x) => x.InPlace) ? "An in-place family, drawn by hand in the model. Check what it is and that this item fits it."
         : r.item.section === "SANS 1200 L" || r.ruleId === "H-GRATING" || r.ruleId === "G-CASTIN" ? "Pipework, fittings, puddle flanges and gratings are often priced in the mechanical bill. Confirm they belong in this one, or leave them out." : "";
-      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = r.check || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : ""); }
+      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = (r.check && flagged ? `${flagged} ${r.check}` : r.check) || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : ""); }
       else reason = "No rule matches this category, family and material.";
     }
     // A structure label (SolvBoQ Structure, for example MH1) names the structure on its line: separate items for separate structures
@@ -5812,6 +5826,7 @@ function presentItem(it) {
   if (it.clause === "8.4.3" && (m = d.match(/^(.*?concrete(?: \([^)]*\))?) in (.+)$/i))) return sub(`${m[1]} in:`, m[2]);
   if (it.clause === "8.4.4" && (m = d.match(/^((?:Steel|Wood)-floated finish) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
   if (it.clause === "8.23" && (m = d.match(/^(Protective coating) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
+  if (it.clause === "8.12" && (m = d.match(/^(.+? on structural floor screeds): (.+)$/i))) return sub(`${m[1]}:`, m[2]);
   return it;
 }
 // Sub-headings in his order: vertical formwork before horizontal, then as written
