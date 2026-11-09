@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T15:29:34Z">
+<meta name="solvboq-build" content="2026-11-09T15:40:50Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4520,7 +4520,7 @@ function deriveItems(r, opts = {}) {
   r.layout = jointLayout(opts.annotations);
   r.annotations = opts.annotations || null;
   r.ngl = modelNgl(opts.annotations, live);
-  const inferred = inferLines(r, { coat: opts.earthworks || {}, live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
+  const inferred = inferLines(r, { faces: opts.faces, coat: opts.earthworks || {}, live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
   const fwItem = (key, label, kind, note) => { const q = total(kind); if (q > 0) item({ key, label, ref: "1200 G 8.2", unit: "m²", qty: q, status: checks(kind) ? "partly" : "ready", note }); };
@@ -5156,6 +5156,53 @@ function inferLines(r, ctx) {
       add("rebar|mild", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: mild steel bars", description: "Mild steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * mild) / 1000);
       add("rebar|ht", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: high tensile steel bars", description: "High tensile steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * (1 - mild)) / 1000);
     }
+  }
+  // Formwork from the model's faces (hybrid plan, Phase 3, 9 Nov 2026): where the add-in read an element's faces and what touches
+  // them, its formwork comes from them (structure.js: a face is formed where nothing cast before it, or with it, lies against it),
+  // in today's lines, keys and wording; the box rules above stay for older extracts and the cases faces don't yet cover (manhole
+  // walls and walls with face-finish labels, which need outer and inner told apart; generic models; stairs). Sloping faces are
+  // their own item. The sides of openings bigger than a box-out stay with the opening (billed above), never twice.
+  const ff = ctx.faces !== false && typeof faceFormwork === "function" ? faceFormwork(r) : null;
+  if (ff) {
+    const CATS = ["OST_Walls", "OST_Floors", "OST_StructuralFoundation", "OST_StructuralFraming", "OST_StructuralColumns"];
+    const use = new Map();
+    for (const x of ff.elements) {
+      const e = x.e;
+      if (x.noContacts > 0 || !conc.includes(e) || !(CATS.includes(e.Bic) || isCol(e))) continue;
+      if (e.Bic === "OST_Walls" && ((mhTop != null && e.Box && e.Box[5] <= mhTop + 0.05) || faceFinish(e.FinishOuter) || faceFinish(e.FinishInner))) continue;
+      use.set(String(e.Id), x);
+    }
+    // Today's box figures for those elements come out of the formwork lines
+    for (const [k, L] of [...lines]) {
+      if (!/^fw(walls|cols|beams|soffit|edge)\|/.test(k) || /^fwsoffit\|stair|^fwedge\|(stop|bench)\|/.test(k)) continue;
+      const keep = L.parts.filter((p) => !use.has(String(p.id)));
+      if (keep.length === L.parts.length) continue;
+      if (!keep.length) { lines.delete(k); continue; }
+      L.parts = keep; L.elements = L.elements.filter((e) => !use.has(String(e.Id))); L.qty = keep.reduce((t, p) => t + p.qty, 0);
+    }
+    const why = "From the model's faces: each face is formed where nothing cast before it, or in the same pour, lies against it (blinding and fill, then bases and ground slabs, walls and columns, beams with their slabs, benching and screeds, aprons). Rough below the top of the ground-bearing floor, smooth above.";
+    for (const x of use.values()) {
+      const e = x.e, tk = typeKey(e), tn = typeName(e), q = new Map();
+      const put = (key, it, qty) => { if (qty > 1e-9) { const o = q.get(key) || { it, qty: 0 }; o.qty += qty; q.set(key, o); } };
+      const isFloor = e.Bic === "OST_Floors" || e.Bic === "OST_StructuralFoundation", found = e.Bic === "OST_StructuralFoundation" || !suspended.includes(e);
+      const what = e.Bic === "OST_Walls" ? "walls" : isCol(e) ? "columns" : e.Bic === "OST_StructuralFraming" ? "beams" : "slabs";
+      for (const p of x.parts) {
+        if (p.opening) continue;
+        for (const [rough, a] of [[true, p.rough], [false, p.smooth]]) {
+          if (!(a > 1e-9)) continue;
+          if (p.kind === "slope") put(`fwslope|${tk}|${rough ? "r" : "s"}`, item(rough, `Sloping formwork to ${what} (${tn})`), a);
+          else if (e.Bic === "OST_Walls") { if (p.kind === "side") put(`fwwalls|${tk}|${rough ? "r" : "s"}|${p.curved ? "c" : ""}`, item(rough, `Vertical formwork to sides of walls${p.curved ? ", curved on plan" : ""} (${tn})`), a); }
+          else if (isCol(e)) { if (p.kind === "side") put(`fwcols|${tk}`, item(false, `Vertical formwork to sides of columns (${tn})`), a); }
+          else if (e.Bic === "OST_StructuralFraming") put(p.kind === "soffit" ? `fwbeams|soffit|${tk}` : `fwbeams|sides|${tk}`, item(false, p.kind === "soffit" ? `Horizontal formwork to soffits of beams (${tn})` : `Vertical formwork to sides of beams (${tn})`), a);
+          else if (isFloor) {
+            if (p.kind === "soffit") put(`fwsoffit|${tk}`, item(false, `Horizontal formwork to soffits of suspended slabs (${tn})`), a);
+            else put(`fwedge|${tk}`, item(found, `Vertical formwork to edges of ${e.Bic === "OST_StructuralFoundation" ? "foundations" : found ? "ground-bearing slabs and footings" : "suspended slabs"} (${tn})`), a);
+          }
+        }
+      }
+      for (const [key, o] of q) add(key, o.it, why, e, o.qty);
+    }
+    r.formworkFromFaces = use.size;
   }
   const notMeasured = live.filter((e) => r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_GenericModel" || (e.Bic === "OST_Stairs" && !e.Stair?.Runs.length)) && !noForm.includes(role(e)));
   return { lines: [...lines.values()], notMeasured };
@@ -5874,7 +5921,7 @@ function presentItem(it) {
   if (!it || it.section !== "SANS 1200 G") return it;
   const d = String(it.description), cap = (x) => x[0].toUpperCase() + x.slice(1), sub = (s, rest) => ({ ...it, heading: `${it.heading} › ${s}`, description: cap(rest) });
   let m;
-  if (/^8\.2\.[12]$/.test(it.clause) && (m = d.match(/^(Vertical|Horizontal) formwork to (.+)$/i))) return sub(`${m[1]} formwork to:`, m[2]);
+  if (/^8\.2\.[12]$/.test(it.clause) && (m = d.match(/^(Vertical|Horizontal|Sloping) formwork to (.+)$/i))) return sub(`${m[1]} formwork to:`, m[2]);
   if (it.clause === "8.4.3" && (m = d.match(/^(.*?concrete(?: \([^)]*\))?) in (.+)$/i))) return sub(`${m[1]} in:`, m[2]);
   if (it.clause === "8.4.4" && (m = d.match(/^((?:Steel|Wood)-floated finish) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
   if (it.clause === "8.23" && (m = d.match(/^(Protective coating) to (.+)$/i))) return sub(`${m[1]} to:`, m[2]);
@@ -5882,7 +5929,7 @@ function presentItem(it) {
   return it;
 }
 // Sub-headings in his order: vertical formwork before horizontal, then as written
-const headingRank = (h) => String(h || "").replace(/› Vertical/, "› 1").replace(/› Horizontal/, "› 2");
+const headingRank = (h) => String(h || "").replace(/› Vertical/, "› 1").replace(/› Horizontal/, "› 2").replace(/› Sloping/, "› 3");
 function boqLines(groups, { full = false } = {}) {
   const lines = new Map();
   for (const g of groups) {
@@ -5893,6 +5940,177 @@ function boqLines(groups, { full = false } = {}) {
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || headingRank(a.heading).localeCompare(headingRank(b.heading)) || a.description.localeCompare(b.description));
 }
+
+// ===== Formwork from real faces (hybrid engine plan, Phase 2, shadow mode) =====
+// The add-in records every face of each concrete element and what lies against it (FaceReader.cs). This works out formwork from
+// them, run beside today's box rules and not yet billed: a face is formed where nothing cast before it, or in the same pour, lies
+// against it. Pours, in order (the plan's): blinding, no-fines and fill layers; bases and ground slabs; walls and columns; beams
+// with the slabs they carry, and stairs; benching and screeds; aprons and kerbs. Other things (steel, fittings) come after.
+// Every face's area is accounted for in a ledger (formed, cast against, on the ground, top, not claimed), so nothing goes unseen.
+// One shared page scope: the top-level names here are face*, FACE_*.
+
+// Elements whose faces aren't formwork (as inferLines' noForm): billed by their own items
+const FACE_NOFORM = ["blinding", "screed", "noFines", "benching", "chamfer", "kerb", "apron"];
+
+// The pour an element belongs to (lower is earlier; equal is the same pour)
+function facePour(r, e) {
+  if (!e) return 9;
+  const role = r.roles?.[e.Id]?.role || "", kind = r.slabKind?.[e.Id];
+  if (r.tradeOfId?.[e.Id] !== "concrete") return role === "fill" ? 0 : 9;
+  if (["blinding", "noFines", "fill"].includes(role)) return 0;
+  if (["benching", "screed", "plinth"].includes(role)) return 4;
+  if (["apron", "kerb"].includes(role)) return 5;
+  if (kind === "ground" || (e.Bic === "OST_StructuralFoundation" && kind !== "raised")) return 1;
+  if (kind === "suspended" || kind === "raised" || e.Bic === "OST_StructuralFraming" || e.Bic === "OST_Stairs") return 3;
+  return 2;   // walls, columns and the rest
+}
+
+// Formwork from faces, per element, with its ledger. Returns null when the extract has no faces (an older add-in).
+function faceFormwork(r) {
+  const els = (r.elements || []).filter((e) => Array.isArray(e.Faces));
+  if (!els.length) return null;
+  const byId = new Map((r.elements || []).map((e) => [String(e.Id), e]));
+  const role = (e) => r.roles?.[e.Id]?.role || "";
+  // Rough below the top of the main ground-bearing slab, smooth above (as today's rule)
+  const groundTop = (r.elements || []).filter((e) => r.slabKind?.[e.Id] === "ground" && e.Box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0]?.Box[5] ?? null;
+  const out = [];
+  for (const e of els) {
+    if (r.tradeOfId?.[e.Id] !== "concrete" || FACE_NOFORM.includes(role(e)) || e.Bic === "OST_Stairs") continue;
+    const mine = facePour(r, e), onGround = mine <= 1, holes = faceHoles(e);
+    const L = { rough: 0, smooth: 0, sloping: 0, castAgainst: 0, onGround: 0, top: 0, topCovered: 0, unclaimed: 0, noContacts: 0, boxout: 0, bigOpening: 0, total: 0, parts: [] };
+    for (const f of e.Faces) {
+      L.total += f.Area;
+      if (f.Contacts == null) { L.noContacts += f.Area; continue; }
+      // The sides of an opening: within the box-out limits it's billed by number (SANS 1200 G 8.2.6), so its sides aren't formwork;
+      // (square to the face the opening is in: the face holding the opening shares its outline too). Every side of an opening, its
+      // head and sill too, is formed when it is formed at all
+      const hole = holes.length ? holes.find((h) => f.N && Math.abs(f.N[0] * h.n[0] + f.N[1] * h.n[1] + f.N[2] * h.n[2]) < 0.2 && faceOnLoop(f, h.pts, h.n)) : null;
+      if (hole?.boxout) { L.boxout += f.Area; continue; }
+      if (hole) L.bigOpening += f.Area;
+      // What lies against it: cast before it or with it (not formed), or after it (it was formed first)
+      let against = 0;
+      for (const c of f.Contacts) if (facePour(r, byId.get(String(c.Id))) <= mine) against += c.Area;
+      against = Math.min(against, f.Area);
+      const open = f.Area - against;
+      // A top is covered by anything standing on it, cast before or after (a wall on a slab): what is left is open (finishes)
+      if (f.Kind === "top" && !hole) { const on = Math.min(f.Area, f.Contacts.reduce((s, c) => s + c.Area, 0)); L.topCovered += on; L.top += f.Area - on; continue; }
+      L.castAgainst += against;
+      if (f.Kind === "soffit" && onGround && !hole) { L.onGround += open; continue; }
+      // A wall or column bottom with nothing under it isn't formed either: it stands on something the extract doesn't show
+      if (f.Kind === "soffit" && mine === 2 && !hole) { L.unclaimed += open; continue; }
+      const z0 = f.Z?.[0] ?? 0, z1 = f.Z?.[1] ?? z0;
+      const below = groundTop == null ? 0 : z1 <= groundTop + 0.005 ? 1 : z0 >= groundTop - 0.005 ? 0 : (groundTop - z0) / (z1 - z0);
+      L.rough += open * below; L.smooth += open * (1 - below);
+      // Sloping: neither vertical nor flat (hopper and cone walls, sloping soffits), its own item in his bills; within rough or smooth
+      // (a sliver under 0.1 m², a chamfer or a modelling edge, stays with the element's ordinary faces)
+      const slope = open >= 0.1 && !!(f.N && Math.abs(f.N[2]) > 0.1 && Math.abs(f.N[2]) <= 0.7 || f.Kind === "soffit" && f.N && Math.abs(f.N[2]) < 0.995);
+      if (slope) L.sloping += open;
+      // Each formed face, for the bill (engine.js, Phase 3): what it is, curved on plan (a cylinder over 0.5 m radius, not a fillet),
+      // and whether it is the side of an opening bigger than a box-out (billed with the opening, not here)
+      if (open > 0) L.parts.push({ kind: slope ? "slope" : f.Kind, rough: open * below, smooth: open * (1 - below), curved: f.Surface === "cylinder" && (f.R || 0) > 0.5, opening: !!hole });
+    }
+    out.push({ e, pour: mine, ...L });
+  }
+  return { elements: out, groundTop };
+}
+
+// An element's openings: every loop of a face but its outer one (the largest), with its size, and whether it's within the box-out
+// limits (other than circular up to 0.5 m², circular up to 0.7 m diameter: SANS 1200 G 8.2.6)
+function faceHoles(e) {
+  const out = [];
+  // Openings are in an element's big faces (a wall's two faces, a slab's top and underside); an inner loop in a small face (the end of a
+  // hopper trough drawn as one element, whose hollow runs its whole length) is the inside of the element, not an opening
+  const loopsOf = (f) => (f.Loops || []).map((l) => { const pts = []; for (let i = 0; i + 2 < l.length; i += 3) pts.push([l[i], l[i + 1], l[i + 2]]); return { pts, area: f.N ? faceLoopArea(pts, f.N) : 0 }; });
+  const biggest = Math.max(0, ...(e.Faces || []).map((f) => Math.max(0, ...loopsOf(f).map((l) => l.area))));
+  for (const f of e.Faces || []) {
+    if (!(f.Loops?.length > 1) || !f.N) continue;
+    const loops = loopsOf(f);
+    const outer = loops.reduce((a, b) => (b.area > a.area ? b : a));
+    if (outer.area < 0.25 * biggest) continue;
+    for (const h of loops) {
+      if (h === outer || h.pts.length < 3) continue;
+      const c = h.pts.reduce((s, p) => [s[0] + p[0] / h.pts.length, s[1] + p[1] / h.pts.length, s[2] + p[2] / h.pts.length], [0, 0, 0]);
+      const rs = h.pts.map((p) => Math.hypot(p[0] - c[0], p[1] - c[1], p[2] - c[2])), rMax = Math.max(...rs), rMin = Math.min(...rs);
+      const round = h.pts.length >= 8 && rMin > 0.95 * rMax;
+      out.push({ pts: h.pts, n: f.N, area: h.area, round, boxout: round ? 2 * rMax <= 0.7 + 1e-6 : h.area <= 0.5 + 1e-6 });
+    }
+  }
+  return out;
+}
+// Area of a loop of points lying in a plane with normal n (the shoelace in the plane's coordinates)
+function faceLoopArea(pts, n) {
+  let ax = 0, ay = 0, az = 0;
+  for (let i = 0; i < pts.length; i++) { const p = pts[i], q = pts[(i + 1) % pts.length]; ax += p[1] * q[2] - p[2] * q[1]; ay += p[2] * q[0] - p[0] * q[2]; az += p[0] * q[1] - p[1] * q[0]; }
+  return Math.abs(ax * n[0] + ay * n[1] + az * n[2]) / 2;
+}
+// Whether a face is a side of an opening: at least two points of its outline on the opening's outline (within 5 mm), and all of it
+// inside the opening seen straight on (projected onto the opening's plane, within its outline's extent): a big face that only
+// meets the opening along an edge (a hopper wall's sloping face beside its inner loop, the Sludge Silos run) isn't one
+function faceOnLoop(f, pts, n) {
+  let hits = 0;
+  for (const l of f.Loops || []) for (let i = 0; i + 2 < l.length; i += 3)
+    if (pts.some((p) => Math.abs(p[0] - l[i]) < 0.005 && Math.abs(p[1] - l[i + 1]) < 0.005 && Math.abs(p[2] - l[i + 2]) < 0.005)) hits++;
+  if (hits < 2) return false;
+  if (!n) return true;
+  const c = pts[0], lo = [0, 1, 2].map((k) => Math.min(...pts.map((p) => p[k])) - 0.005), hi = [0, 1, 2].map((k) => Math.max(...pts.map((p) => p[k])) + 0.005);
+  for (const l of f.Loops || []) for (let i = 0; i + 2 < l.length; i += 3) {
+    const d = (l[i] - c[0]) * n[0] + (l[i + 1] - c[1]) * n[1] + (l[i + 2] - c[2]) * n[2], q = [l[i] - d * n[0], l[i + 1] - d * n[1], l[i + 2] - d * n[2]];
+    if (q.some((v, k) => v < lo[k] || v > hi[k])) return false;
+  }
+  return true;
+}
+
+// Roles laid on a slab that still leave the slab floated (his practice)
+const FACE_FLOATED_UNDER = ["screed", "benching"];
+// Floated finishes from the faces' tops, his practice (notes of 7 Nov 2026 and his GT take-off): ground slabs and footings
+// wood-floated in full (also under benching, screeds and walls); benching wood-floated; suspended and raised slabs, beams, wall
+// tops, aprons, plinths and (in a water-retaining structure) screeds steel-floated where open. Per element: { wood, steel, what }.
+function faceFinishes(r) {
+  const els = (r.elements || []).filter((e) => Array.isArray(e.Faces) && r.tradeOfId?.[e.Id] === "concrete");
+  if (!els.length) return null;
+  const civil = r.structure === "civil", out = [];
+  for (const e of els) {
+    const role = r.roles?.[e.Id]?.role || "", pour = facePour(r, e);
+    if (["blinding", "noFines", "fill", "chamfer", "kerb"].includes(role) || e.Bic === "OST_Stairs") continue;
+    const tops = e.Faces.filter((f) => f.Kind === "top");
+    // A screed or benching on top doesn't stop the slab being floated: he floats ground slabs in full under them, and the same is
+    // taken for suspended slabs (best guess, 9 Nov 2026); walls, columns and the like standing on it do
+    const onTop = (c) => !FACE_FLOATED_UNDER.includes(r.roles?.[c.Id]?.role || "");
+    const full = tops.reduce((s, f) => s + f.Area, 0), open = tops.reduce((s, f) => s + Math.max(0, f.Area - (f.Contacts || []).filter(onTop).reduce((t, c) => t + c.Area, 0)), 0);
+    let wood = 0, steel = 0, what = "";
+    if (role === "benching") { wood = full; what = "benching"; }
+    else if (role === "screed") { if (civil) { steel = open; what = "screeds"; } }
+    else if (["apron", "plinth"].includes(role)) { steel = open; what = role + "s"; }
+    else if (pour === 1) { wood = full; what = "ground slabs and footings"; }
+    else if (e.Bic === "OST_Walls" || e.Bic === "OST_StructuralColumns" || e.Bic === "OST_Columns") { steel = open; what = "tops of walls"; }
+    else { steel = open; what = "suspended slabs and beams"; }
+    if (wood || steel) out.push({ e, wood, steel, what });
+  }
+  return out;
+}
+
+// Today's floated finishes (m²) per element, from the finish lines' parts: { wood, steel }
+function faceTodayFinishes(r) {
+  const m = new Map();
+  for (const l of r.derived?.lines || []) {
+    if (!/^float\|/.test(l.key) || /^float\|stair/.test(l.key)) continue;
+    const wood = /^Wood/.test(l.item?.description || "");
+    for (const p of l.parts || []) { const k = String(p.id), x = m.get(k) || { wood: 0, steel: 0 }; x[wood ? "wood" : "steel"] += p.qty || 0; m.set(k, x); }
+  }
+  return m;
+}
+
+// Today's box-rule formwork (m²) per element, for the comparison: the formwork lines' parts, without stop ends (from the joints),
+// risers, stair soffits and box-outs, which the faces don't measure
+function faceToday(r) {
+  const m = new Map();
+  for (const l of r.derived?.lines || []) {
+    if (!/^fw/.test(l.key) || /^fwedge\|stop|^fwriser|^fwboxout|^fwnarrow|^fwsoffit\|stair/.test(l.key) || l.item?.unit !== "m²") continue;
+    for (const p of l.parts || []) m.set(String(p.id), (m.get(String(p.id)) || 0) + (p.qty || 0));
+  }
+  return m;
+}
+
 
 // ===== Claims: read a contractor's payment certificate and check it =====
 // The second engine. It starts from the contractor's certificate (and later the engineer's master BoQ), not the model.
