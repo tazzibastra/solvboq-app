@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T14:32:46Z">
+<meta name="solvboq-build" content="2026-11-09T15:11:19Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4433,6 +4433,8 @@ function deriveItems(r, opts = {}) {
   const suspended = withBoxes ? slabs.filter(hasBelow) : hasElev ? slabs.filter((e) => e.LevelElevation > lowest + 0.5) : [];
   // Foundation slabs up on columns are landings or platforms: they get a soffit and a top finish like a suspended slab
   const raised = withBoxes ? T("concrete").filter((e) => e.Bic === "OST_StructuralFoundation" && e.Box && onColumns(e)) : [];
+  // Which slabs bear on the ground and which are suspended or raised, kept for the face rules (structure.js, hybrid plan Phase 2)
+  r.slabKind = {}; for (const [k, list] of [["ground", ground], ["suspended", suspended], ["raised", raised]]) for (const e of list) r.slabKind[e.Id] = k;
   // His tank bill splits reinforced concrete into watertight (what holds the water) and non-watertight (bridge, beams, columns,
   // stairs, landings, footings). A wall standing on nothing, above the floor, is a beam (GT's bridge beams are 400 RC Wall elements);
   // a suspended slab or base is watertight only when water-retaining walls stand on it (a launder or chamber floor).
@@ -4486,7 +4488,7 @@ function deriveItems(r, opts = {}) {
   const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
   r.layout = jointLayout(opts.annotations);
   r.annotations = opts.annotations || null;
-  r.ngl = modelNgl(opts.annotations);
+  r.ngl = modelNgl(opts.annotations, live);
   const inferred = inferLines(r, { coat: opts.earthworks || {}, live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
   const checks = (kind) => inferred.lines.filter((l) => l.kind === kind && l.check).length;
@@ -4745,8 +4747,10 @@ function fillKind(e) {
 }
 // Natural ground level, as he marks it (note of 8 Nov 2026: “NGL, normally indicated in a section view”): a level named NGL or
 // natural ground; a spot elevation reading NGL; a label “NGL” in a section or elevation, at the height of the horizontal line
-// beside it (else the label's own height). Null when the model doesn't mark it: he can enter it under Earthworks.
-function modelNgl(ann) {
+// beside it (else the label's own height). Then, assumed and said so (his run of 9 Nov 2026: a spot elevation at +0.6545 in his
+// section, with no text): the one spot elevation in a section or elevation that lies outside every element (a spot on a slab or
+// layer marks that element, not the ground). Null when the model doesn't mark it: he can enter it under Earthworks.
+function modelNgl(ann, els = []) {
   if (!ann) return null;
   const g = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)];
   const NGL = /\bN\.?G\.?L\b|natural ground/i;
@@ -4762,6 +4766,11 @@ function modelNgl(ann) {
     const z = flat.length && Math.abs(flat[0] - at[2]) <= 0.6 ? flat[0] : at[2];
     return { z, from: `“${g(lb, "Text")}” in ${g(v, "Name")}` };
   }
+  const inside = (p) => els.some((e) => e.Box && p[0] >= e.Box[0] - 0.01 && p[0] <= e.Box[3] + 0.01 && p[1] >= e.Box[1] - 0.01 && p[1] <= e.Box[4] + 0.01 && p[2] >= e.Box[2] - 0.01 && p[2] <= e.Box[5] + 0.01);
+  const loose = (g(ann, "Spots") || []).filter((s) => { const v = views.get(String(g(s, "View"))), at = g(s, "At");
+    return v && /section|elevation/i.test(String(g(v, "Kind") || "")) && Array.isArray(at) && Number.isFinite(+g(s, "Value")) && !inside(at); });
+  if (loose.length === 1) { const s = loose[0], v = views.get(String(g(s, "View")));
+    return { z: +g(s, "Value"), from: `the spot elevation in ${g(v, "Name")} that isn’t on any element, taken as natural ground level: label it NGL to be sure`, assumed: true }; }
   return null;
 }
 // The length of a line inside a plan box (Liang–Barsky clipping)
