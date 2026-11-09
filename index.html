@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-08T15:04:44Z">
+<meta name="solvboq-build" content="2026-11-09T08:19:54Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3090,12 +3090,6 @@ const CARDS = [
     type: "Grating 30x5 Galv", material: "Material: galvanised steel.",
     model: ["Model as a thin Floor with a metal material, its own type."],
     bills: [["Open grid flooring complete with frames", "m²", "H 8.3.9"]], avoid: [], checks: ["codecat"], his: [] },
-  // Access covers and hatches (his valve chamber's GRP covers, 8 Nov 2026: he coded them X.NOTBUILT for want of a code, and they
-  // vanished from the bill). Clause blank until his bill confirms it.
-  { code: "H.COVER", group: "H", title: "Access covers and hatches", role: "cover", cats: ["OST_Floors", "OST_GenericModel", "OST_SpecialityEquipment"],
-    type: "GRP Cover 1000 x 900", material: "Material: GRP, galvanised steel or cast iron (no grade).",
-    model: ["Model each cover at its size, in the opening it covers: one element per cover, or one floor drawn as several pieces.", "Name the size in the type (1000 x 900) if the shape isn't a plain rectangle."],
-    bills: [["Access covers complete with frames, [size] ([type])", "No", ""]], avoid: [["Coded X.NOTBUILT, so left out of the bill (his valve chamber).", ""]], checks: ["codecat"], his: ["Valve chamber: 4 GRP covers 1000 x 900"] },
   { code: "H.LADDER", group: "H", title: "Ladders and step irons", role: "ladder", cats: ["OST_GenericModel", "OST_SpecialityEquipment"],
     type: "Ladder 3.0 m Galv", material: "",
     model: ["A loadable family per ladder or step iron, length in the type."],
@@ -3208,6 +3202,13 @@ const CARDS = [
   { code: "PD.SANITARY", group: "PD", title: "Sanitary fittings", role: null, cats: ["OST_PlumbingFixtures"],
     type: "", material: "", model: ["Plumbing Fixtures, specification in the type name."],
     bills: [["Sanitary fittings, [type]", "No", ""]], avoid: [], checks: ["codecat"], his: [] },
+  // Access covers and hatches: PD, his company's particular specification (he said so, 8 Nov 2026), under 10.8 Miscellaneous items
+  // as SolvBoQ already filed uncoded covers; the clause to be checked against his PD specification when it arrives. His valve
+  // chamber's GRP covers were coded X.NOTBUILT for want of this code, and vanished from the bill.
+  { code: "PD.COVER", group: "PD", title: "Access covers and hatches", role: "cover", cats: ["OST_Floors", "OST_GenericModel", "OST_SpecialityEquipment"],
+    type: "GRP Cover 1000 x 900", material: "Material: GRP, galvanised steel or cast iron (no grade).",
+    model: ["Model each cover at its size, in the opening it covers: one element per cover, or one floor drawn as several pieces.", "Name the size in the type (1000 x 900) if the shape isn't a plain rectangle."],
+    bills: [["Access covers complete with frames, [size] ([type])", "No", "PD 10.8"]], avoid: [["Coded X.NOTBUILT, so left out of the bill (his valve chamber).", ""]], checks: ["codecat"], his: ["Valve chamber: 4 GRP covers 1000 x 900, under PD"] },
   { code: "PD.TIMBER", group: "PD", title: "Timber", role: "timber", cats: ["OST_StructuralFraming", "OST_GenericModel"],
     type: "SA Pine 38x38 Brandering", material: "Material: timber, with the grade.",
     model: ["Structural Framing (timber) with the section in the type name."],
@@ -5521,9 +5522,9 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null) 
   if (card?.code === "LD.RING") return it("SANS 1200 LD", "", "Manholes", `Precast concrete manhole rings, ${e.Type || e.Family}`, "No", "LD-RING");
   if (card?.code === "LD.SLAB") return it("SANS 1200 LD", "", "Manholes", `Precast concrete cover slabs and base units, ${e.Type || e.Family}`, "No", "LD-SLAB");
   if (card?.code === "LD.CHANNEL") return it("SANS 1200 LD", "", "Manholes", `Half-round channels formed in benching, ${e.Type || e.Family}`, "m", "LD-CHANNEL", !(e.Length > 0) ? "No length in the data: draw the channel as a line-based family." : "");
-  if (card?.code === "H.COVER") { const p = e.Pieces?.length ? e.Pieces[0] : e.Box ? { W: Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]), H: Math.min(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) } : null;
+  if (card?.code === "PD.COVER") { const p = e.Pieces?.length ? e.Pieces[0] : e.Box ? { W: Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]), H: Math.min(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) } : null;
     const size = p ? `${Math.round(p.W * 1000)} x ${Math.round(p.H * 1000)} mm` : "[size]";
-    return it("SANS 1200 H", "", "Covers and hatches", `Access covers complete with frames, ${size} (${e.Type || e.Family})`, "No", "H-COVER", p ? "" : "No size in the data: name it in the type (1000 x 900)."); }
+    return it("PD", "PD 10.8", "Miscellaneous items", `Access covers complete with frames, ${size} (${e.Type || e.Family})`, "No", "PD-COVER", p ? "" : "No size in the data: name it in the type (1000 x 900)."); }
   if (card?.code === "LD.COVER") return it("SANS 1200 LD", "", "Manholes", `Manhole frame and cover, ${e.Type || e.Family}`, "No", "LD-COVER");
   // Imported fill modelled as a layer: billed by its own volume, under the fill item for its material
   if (role === "fill") {
@@ -5668,7 +5669,7 @@ function buildGroups(result, decisions, learned) {
   const nb = new Map();
   for (const e of result.notBuilt || []) { const k = "notbuilt|" + groupKey(e); if (!nb.has(k)) nb.set(k, []); nb.get(k).push(e); }
   const out = [...nb.entries()].map(([key, elements]) => ({ key, elements, trade: null, sample: elements[0], item: null, method: "excluded", confirmed: true, excluded: true, qty: 0, issues: [], confidence: null, ruleId: "X-NOTBUILT",
-    reason: `coded X.NOTBUILT (${elements[0].Type || elements[0].Family}): a placeholder, not built, so not billed. If it is built, give its type a billed code (covers: H.COVER)` }));
+    reason: `coded X.NOTBUILT (${elements[0].Type || elements[0].Family}): a placeholder, not built, so not billed. If it is built, give its type a billed code (covers: PD.COVER)` }));
   for (const g of groups.values()) {
     const e = g.elements[0];
     const excluded = g.elements.every((x) => result.status[x.Id] === "excluded");
