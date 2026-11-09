@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T16:06:45Z">
+<meta name="solvboq-build" content="2026-11-09T16:14:30Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3869,7 +3869,7 @@ const RX = {
 };
 // Order for "Start here": wrong quantities first, then things that can't be billed, then missing spec, then classification to confirm
 const TIERS = [
-  { key: 1, label: "Quantity could be wrong", checks: ["readerror", "dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat"] },
+  { key: 1, label: "Quantity could be wrong", checks: ["readerror", "dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat", "wallish"] },
   { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
   { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode", "nostructure"] },
@@ -4185,6 +4185,16 @@ function runChecks(input, opts = {}) {
       wrongCat.length ? `For example “${nameOf(wrongCat[0])}” is coded ${cardOf(wrongCat[0]).code} (${cardOf(wrongCat[0]).title.toLowerCase()}) but drawn as ${CARD_CAT[wrongCat[0].Bic] || wrongCat[0].Category}. Formwork, finishes and joints follow the category, so they’ll be worked out for the wrong thing.` : "",
       "Remodel it in the category its card says, or correct the code.", wrongCat);
   }
+  // Concrete drawn as a beam or column but shaped like a wall (9 Nov 2026: the Sludge Silos hopper walls, 98 m³, are Structural
+  // Framing): from its faces, a face of 5 m² or more, over 1.5 m high and at least 2 m across (a column's face is narrow), on a section
+  // no thicker than 0.6 m (volume ÷ half its side area: a V of two plates, as the silo's hopper, counts each plate). It's
+  // billed as a beam or column: not watertight, not coated, its formwork under beams. Only with faces read (the new add-in).
+  const wallish = live.filter((e) => (e.Bic === "OST_StructuralFraming" || e.Bic === "OST_StructuralColumns" || e.Bic === "OST_Columns") && tradeOf(e) === "concrete"
+    && Array.isArray(e.Faces) && e.Volume > 0 && e.Volume / (e.Faces.filter((f) => f.Kind === "side").reduce((t, f) => t + f.Area, 0) / 2 || Infinity) <= 0.6
+    && e.Faces.some((f) => f.Kind === "side" && f.Area >= 5 && f.Z && f.Z[1] - f.Z[0] > 1.5 && f.Area / (f.Z[1] - f.Z[0]) >= 2));
+  add("wallish", "eyes", "Drawn as a beam or column, but shaped like a wall",
+    wallish.length ? `“${nameOf(wallish[0])}”${wallish.length > 1 ? ` and ${plural2(wallish.length - 1, "other")}` : ""} ${wallish.length > 1 ? "have" : "has"} the faces of a wall (a thin section with faces over 1.5 m high), but ${wallish.length > 1 ? "are" : "is"} drawn as ${wallish[0].Category}. ${fmt2(wallish.reduce((t, e) => t + e.Volume, 0))} m³ is billed as beams or columns: not as watertight wall concrete, not coated, its formwork under beams.` : "",
+    "Redraw it as a wall (a wall type coded G.WALL.WT holds water), or give its type a wall code.", wallish);
   // Structure labels the project doesn't know: their elements don't get that structure's grade, kind or geotech
   if (opts.inputs?.names?.length) {
     const key = (s) => String(s || "").trim().toLowerCase().replace(/\s+/g, " ");
