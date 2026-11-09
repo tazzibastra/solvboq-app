@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T11:09:43Z">
+<meta name="solvboq-build" content="2026-11-09T11:26:30Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4522,11 +4522,17 @@ function deriveItems(r, opts = {}) {
     item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m²", qty: eTotal("ws") ?? 0, status: "partly", note: "Outer perimeter × depth: SANS 1200 D measures working space by area, the width is in the rate." });
   } else if (earth.assumptions) {
     const a = earth.assumptions;
+    // The same rules as Map to SANS (his notes of 8 Nov 2026): from NGL where it's known, the 0.5 m band for working space, and
+    // modelled fill layers billed by their volume (Readiness and Map to SANS never disagree)
+    const hasNgl = Number.isFinite(a.ngl), layers = live.filter((e) => r.roles[e.Id]?.role === "fill" && e.Volume > 0);
     item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: eTotal("exc") ?? 0, status: "partly",
-      note: a.civil ? `Tank: footprint × ${fmt2(a.replacementDepth)} m replacement depth, his tender rule. Set the depth from the geotechnical report under Earthworks in Map to SANS.` : `Building: footprint × ${fmt2(a.buildingDepth)} m.` });
-    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: a.civil ? "m³" : "m²", qty: eTotal("ws") ?? 0, status: "partly", note: a.civil ? `${fmt2(a.wsPerMetre)} m³ per metre of perimeter, his Gravity Thickeners tender rule.` : `Outer perimeter × ${fmt2(a.buildingDepth)} m deep: SANS 1200 D measures working space by area, the width is in the rate.` });
-    item({ key: "fill", label: "Imported fill under floors and foundations", ref: "1200 D 8.3.16", unit: "m³", qty: (eTotal("g5") ?? 0) + (eTotal("g6") ?? 0) + (eTotal("pioneer") ?? 0), status: "partly",
-      note: a.civil ? `G5 and G6 replace the excavated ground (${Math.round(a.g5Share * 100)}% G5), on a ${Math.round(a.pioneerThickness * 1000)} mm pioneer layer.` : `Footprint × ${fmt2(a.fillThickness)} m (assumed). The geotechnical report gives the real layers.` });
+      note: hasNgl ? `The footprint plus ${fmt2(a.excOffset)} m all round × the depth from natural ground level, ${fmt2(a.ngl)} m (${a.nglFrom}), to the bottom of the lowest layer under it: his rule.`
+        : a.civil ? `Tank: footprint × ${fmt2(a.replacementDepth)} m replacement depth, his tender rule, until natural ground level is known: mark NGL in the model, or enter it under Earthworks in Map to SANS.` : `Building: footprint × ${fmt2(a.buildingDepth)} m, until natural ground level is known (mark NGL in the model, or enter it under Earthworks).` });
+    item({ key: "workspace", label: "Working space", ref: "1200 D 8.3.5", unit: "m²", qty: eTotal("ws") ?? 0, status: "partly", note: `The ${fmt2(a.wsBand)} m band around the excavation, in m²: his rule. SANS 1200 D measures working space by area, the width is in the rate.` });
+    item({ key: "fill", label: "Imported fill under floors and foundations", ref: "1200 D 8.3.16", unit: "m³", status: "partly",
+      qty: layers.length ? layers.reduce((t, e) => t + e.Volume, 0) : (eTotal("g5") ?? 0) + (eTotal("g6") ?? 0) + (eTotal("pioneer") ?? 0),
+      note: layers.length ? `From the ${plural2(layers.length, "fill layer")} modelled (${[...new Set(layers.map((e) => e.Type || e.Family))].join(", ")}), by volume.`
+        : a.civil ? `G5 and G6 replace the excavated ground (${Math.round(a.g5Share * 100)}% G5), on a ${Math.round(a.pioneerThickness * 1000)} mm pioneer layer.` : `Footprint × ${fmt2(a.fillThickness)} m (assumed). The geotechnical report gives the real layers.` });
   } else if (slabs.length) item({ key: "excavation", label: "Excavation and stockpiling", ref: "1200 D 8.3.3, 8.3.14", unit: "m³", qty: null, status: "none", note: "The data has no element positions, so footprints and depths can’t be worked out." });
 
   const steel = T("steel");
