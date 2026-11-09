@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T15:57:28Z">
+<meta name="solvboq-build" content="2026-11-09T16:06:45Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5226,6 +5226,27 @@ function inferLines(r, ctx) {
       for (const [key, o] of q) add(key, o.it, why, e, o.qty);
     }
     r.formworkFromFaces = use.size;
+    // Protective coating from faces (9 Nov 2026): the same items as above, each element's figure from its faces where they were read.
+    // Wall faces less what was cast before them or with them (the corner joints with the next wall, the slab below), but not what
+    // was cast later against them (his 160 m²: benching against the foot of a wall, beam ends, aren't deducted), and openings;
+    // the inside faces of the structure's walls, both faces of walls standing inside; the soffit, beams and columns as their formwork
+    const endOf = (w, p) => p.h > 0 && p.area / p.h <= (w.Thickness || 0.3) * 1.5 + 0.01;
+    const coatQty = {
+      walls: (x) => { const c = centreOf(x.e); return x.parts.filter((p) => p.kind === "side" && !p.opening && !endOf(x.e, p) && sideOf(x.e, p, c) === "in").reduce((t, p) => t + p.rough + p.smooth, 0); },
+      internal: (x) => x.parts.filter((p) => p.kind === "side" && !p.opening && !endOf(x.e, p)).reduce((t, p) => t + p.rough + p.smooth, 0),
+      soffit: (x) => x.parts.filter((p) => p.kind === "soffit" && !p.opening).reduce((t, p) => t + p.rough + p.smooth, 0),
+      beams: (x) => x.parts.filter((p) => !p.opening && (p.kind === "side" || p.kind === "soffit" || p.kind === "slope")).reduce((t, p) => t + p.rough + p.smooth, 0),
+      columns: (x) => x.parts.filter((p) => p.kind === "side" && !p.opening).reduce((t, p) => t + p.rough + p.smooth, 0),
+    };
+    for (const [k, L] of lines) {
+      const part = (k.match(/^coat\|(walls|internal|soffit|beams|columns)$/) || [])[1];
+      if (!part) continue;
+      let changed = 0;
+      for (const p of L.parts) { const x = use.get(String(p.id)); if (x) { p.qty = coatQty[part](x); changed++; } }
+      if (!changed) continue;
+      L.qty = L.parts.reduce((t, p) => t + p.qty, 0);
+      if (changed === L.parts.length) L.reason = `From the model's faces: ${{ walls: "the inside face of each wall (gross: benching against its foot isn't deducted; openings are)", internal: "both faces of each wall standing inside the structure", soffit: "the slab's underside where nothing stands on it (as its formwork)", beams: "the beams' sides and soffits below the slab (as their formwork)", columns: "each column all round, up to the slab (as its formwork)" }[part]}.`;
+    }
   }
   const notMeasured = live.filter((e) => r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_GenericModel" || (e.Bic === "OST_Stairs" && !e.Stair?.Runs.length)) && !noForm.includes(role(e)));
   return { lines: [...lines.values()], notMeasured };
