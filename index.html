@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T15:40:50Z">
+<meta name="solvboq-build" content="2026-11-09T15:57:28Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4592,7 +4592,7 @@ function deriveItems(r, opts = {}) {
   if (T("roofing").length || T("cladding").length) fromDrawings.push({ label: "Flute closures and fillers", ref: "1200 HB 8.2.3", unit: "m", why: "Follow the sheeting edges on the roof and elevation drawings." });
   if (T("openings").length) fromDrawings.push({ label: "Door and window specification (ironmongery, seals, glazing)", ref: "PD 10.4", unit: "", why: "Usually included in the item rate. Check against the door and window schedule." });
   const sArea = area(screeds);
-  const more = inferMore(r, { live, slabs, ground: withBoxes || hasElev ? ground : slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], civil, isBlinding, floated: Math.max(0, allSlabArea - sArea), screedArea: sArea });
+  const more = inferMore(r, { faces: opts.faces, live, slabs, ground: withBoxes || hasElev ? ground : slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], civil, isBlinding, floated: Math.max(0, allSlabArea - sArea), screedArea: sArea });
   // Readiness shows the same floated area as the BoQ lines
   const fl = items.find((i) => i.key === "float"), flLines = more.filter((l) => l.key.startsWith("float|"));
   if (fl && flLines.length) { fl.qty = flLines.reduce((s, l) => s + l.qty, 0);
@@ -5160,7 +5160,7 @@ function inferLines(r, ctx) {
   // Formwork from the model's faces (hybrid plan, Phase 3, 9 Nov 2026): where the add-in read an element's faces and what touches
   // them, its formwork comes from them (structure.js: a face is formed where nothing cast before it, or with it, lies against it),
   // in today's lines, keys and wording; the box rules above stay for older extracts and the cases faces don't yet cover (manhole
-  // walls and walls with face-finish labels, which need outer and inner told apart; generic models; stairs). Sloping faces are
+  // generic models; stairs). Manhole walls and walls with face-finish labels are billed face by face, inner or outer (sideOf). Sloping faces are
   // their own item. The sides of openings bigger than a box-out stay with the opening (billed above), never twice.
   const ff = ctx.faces !== false && typeof faceFormwork === "function" ? faceFormwork(r) : null;
   if (ff) {
@@ -5169,7 +5169,6 @@ function inferLines(r, ctx) {
     for (const x of ff.elements) {
       const e = x.e;
       if (x.noContacts > 0 || !conc.includes(e) || !(CATS.includes(e.Bic) || isCol(e))) continue;
-      if (e.Bic === "OST_Walls" && ((mhTop != null && e.Box && e.Box[5] <= mhTop + 0.05) || faceFinish(e.FinishOuter) || faceFinish(e.FinishInner))) continue;
       use.set(String(e.Id), x);
     }
     // Today's box figures for those elements come out of the formwork lines
@@ -5180,14 +5179,38 @@ function inferLines(r, ctx) {
       if (!keep.length) { lines.delete(k); continue; }
       L.parts = keep; L.elements = L.elements.filter((e) => !use.has(String(e.Id))); L.qty = keep.reduce((t, p) => t + p.qty, 0);
     }
+    const wallsC = conc.filter((p) => p.Bic === "OST_Walls" && p.Box), flatsC = conc.filter((p) => p.Box && (p.Bic === "OST_Floors" || p.Bic === "OST_StructuralFoundation"));
+    const centreOf = (w) => {
+      const host = flatsC.filter((p) => p.Box[0] <= w.Box[0] + 0.1 && p.Box[1] <= w.Box[1] + 0.1 && p.Box[3] >= w.Box[3] - 0.1 && p.Box[4] >= w.Box[4] - 0.1)
+        .sort((a, b) => (a.Box[3] - a.Box[0]) * (a.Box[4] - a.Box[1]) - (b.Box[3] - b.Box[0]) * (b.Box[4] - b.Box[1]))[0];
+      const b = host ? host.Box : [Math.min(...wallsC.map((p) => p.Box[0])), Math.min(...wallsC.map((p) => p.Box[1])), 0, Math.max(...wallsC.map((p) => p.Box[3])), Math.max(...wallsC.map((p) => p.Box[4]))];
+      return [(b[0] + b[3]) / 2, (b[1] + b[4]) / 2];
+    };
+    const sideOf = (w, p, c) => {
+      if (p.h > 0 && p.area / p.h <= (w.Thickness || 0.3) * 1.5 + 0.01) return "out";   // an end of the wall
+      if (!p.n || !p.at) return "out";
+      return p.n[0] * (c[0] - p.at[0]) + p.n[1] * (c[1] - p.at[1]) > 0 ? "in" : "out";
+    };
     const why = "From the model's faces: each face is formed where nothing cast before it, or in the same pour, lies against it (blinding and fill, then bases and ground slabs, walls and columns, beams with their slabs, benching and screeds, aprons). Rough below the top of the ground-bearing floor, smooth above.";
     for (const x of use.values()) {
       const e = x.e, tk = typeKey(e), tn = typeName(e), q = new Map();
       const put = (key, it, qty) => { if (qty > 1e-9) { const o = q.get(key) || { it, qty: 0 }; o.qty += qty; q.set(key, o); } };
       const isFloor = e.Bic === "OST_Floors" || e.Bic === "OST_StructuralFoundation", found = e.Bic === "OST_StructuralFoundation" || !suspended.includes(e);
       const what = e.Bic === "OST_Walls" ? "walls" : isCol(e) ? "columns" : e.Bic === "OST_StructuralFraming" ? "beams" : "slabs";
+      const inMH = e.Bic === "OST_Walls" && mhTop != null && e.Box && e.Box[5] <= mhTop + 0.05, fo = faceFinish(e.FinishOuter), fi = faceFinish(e.FinishInner);
+      const sided = e.Bic === "OST_Walls" && (inMH || fo || fi), centre = sided ? centreOf(e) : null;
       for (const p of x.parts) {
         if (p.opening) continue;
+        // A manhole wall or a wall with face-finish labels: each face inner or outer. A manhole is in the ground up to its cover, so
+        // its outer faces are rough and its inner faces smooth; a label wins; otherwise rough or smooth from position
+        if (sided && p.kind === "side") {
+          const side = sideOf(e, p, centre), set = side === "out" ? fo : fi;
+          const what = inMH ? "manhole walls" : "walls", label = `Vertical formwork to ${side === "out" ? "outer" : "inner"} faces of ${what}${p.curved ? ", curved on plan" : ""} (${tn})`;
+          const one = (kind, a) => { if (kind !== "none" && a > 1e-9) put(`fwwalls|${tk}|${kind === "rough" ? "r" : "s"}|${p.curved ? "c" : ""}|${side}`, item(kind === "rough", label), a); };
+          if (set || inMH) one(set || (side === "out" ? "rough" : "smooth"), p.rough + p.smooth);
+          else { one("rough", p.rough); one("smooth", p.smooth); }
+          continue;
+        }
         for (const [rough, a] of [[true, p.rough], [false, p.smooth]]) {
           if (!(a > 1e-9)) continue;
           if (p.kind === "slope") put(`fwslope|${tk}|${rough ? "r" : "s"}`, item(rough, `Sloping formwork to ${what} (${tn})`), a);
@@ -5525,6 +5548,34 @@ function inferMore(r, ctx) {
   for (const w of solid.filter((e) => e.Bic === "OST_Walls" && e.Length > 0 && e.Thickness >= 0.1 && (!mainFloor || e.Box[5] > mainFloor.Box[5] + 0.05)))
     if (!covered(w, w.Length * w.Thickness)) add("float|walltop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of walls", "m²"),
       "Inferred: wall length × thickness, where nothing is cast on top of the wall and it stands above the floor.", w, w.Length * w.Thickness);
+  // Floated finishes from the model's faces (hybrid plan, Phase 3, 9 Nov 2026): where an element's faces and contacts were read, the
+  // open part of its top (structure.js faceFinishes: anything standing on it covers it, but not a screed or benching laid on it) in
+  // the same lines: ground slabs and footings wood-floated in full in a water-retaining structure (steel-floated slabs in a building,
+  // as today), suspended slabs and wall tops steel-floated where open, exposed beam tops an item of their own. Slabs with a top-finish
+  // label, benching, aprons, plinths, screeds and stairs keep their own rules.
+  const fin = ctx.faces !== false && typeof faceFinishes === "function" ? faceFinishes(r) : null;
+  if (fin) {
+    const CATS = ["OST_Floors", "OST_StructuralFoundation", "OST_Walls", "OST_StructuralFraming"], OWN = ["benching", "screed", "apron", "plinth", "blinding", "noFines", "fill", "chamfer", "kerb"];
+    const faceEls = new Set(live.filter((e) => Array.isArray(e.Faces) && e.Faces.length && e.Faces.every((f) => f.Contacts != null) && r.tradeOfId[e.Id] === "concrete"
+      && CATS.includes(e.Bic) && !OWN.includes(role(e)) && !topFinish(e.FinishTop)).map((e) => String(e.Id)));
+    for (const [k, L] of [...lines]) {
+      if (!/^float\|(wood|steel|walltop)$/.test(k)) continue;
+      const keep = L.parts.filter((p) => !faceEls.has(String(p.id)));
+      if (keep.length === L.parts.length) continue;
+      if (!keep.length) { lines.delete(k); continue; }
+      L.parts = keep; L.elements = L.elements.filter((e) => !faceEls.has(String(e.Id))); L.qty = keep.reduce((t, p) => t + p.qty, 0);
+    }
+    const why = "From the model's faces: the open part of each top (anything standing on it covers it; a screed or benching laid on it doesn't).";
+    for (const x of fin.filter((y) => faceEls.has(String(y.e.Id)))) {
+      const e = x.e;
+      if (x.wood > 0) civil ? add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"), `${why} Ground slabs and footings in full.`, e, x.wood)
+        : add("float|steel", "finish", G("8.4.4", FIN, "Steel-floated finish to top of slabs", "m²"), `${why} Split wood-floated and steel-floated as the specification says.`, e, x.wood);
+      if (!(x.steel > 0)) continue;
+      if (e.Bic === "OST_Walls") add("float|walltop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of walls", "m²"), why, e, x.steel);
+      else if (e.Bic === "OST_StructuralFraming") add("float|beamtop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of beams", "m²"), `${why} Beam tops not under a slab.`, e, x.steel);
+      else add("float|steel", "finish", G("8.4.4", FIN, suspended.includes(e) ? "Steel-floated finish to top of suspended slabs" : "Steel-floated finish to top of slabs", "m²"), why, e, x.steel);
+    }
+  }
 
   // Joints
   const groundArea = ground.reduce((s, e) => s + (e.Area || 0), 0);
@@ -6007,7 +6058,9 @@ function faceFormwork(r) {
       if (slope) L.sloping += open;
       // Each formed face, for the bill (engine.js, Phase 3): what it is, curved on plan (a cylinder over 0.5 m radius, not a fillet),
       // and whether it is the side of an opening bigger than a box-out (billed with the opening, not here)
-      if (open > 0) L.parts.push({ kind: slope ? "slope" : f.Kind, rough: open * below, smooth: open * (1 - below), curved: f.Surface === "cylinder" && (f.R || 0) > 0.5, opening: !!hole });
+      if (open > 0) { const pts = (f.Loops?.[0] || []), k = pts.length / 3, at = k ? [0, 1, 2].map((d) => { let t = 0; for (let i = d; i < pts.length; i += 3) t += pts[i]; return t / k; }) : null;
+        // which way it faces and where its middle is (inner or outer face of a wall: engine.js), and its height
+        L.parts.push({ kind: slope ? "slope" : f.Kind, rough: open * below, smooth: open * (1 - below), curved: f.Surface === "cylinder" && (f.R || 0) > 0.5, opening: !!hole, n: f.N, at, h: z1 - z0, area: f.Area }); }
     }
     out.push({ e, pour: mine, ...L });
   }
