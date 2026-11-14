@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-14T15:04:43Z">
+<meta name="solvboq-build" content="2026-11-14T15:25:02Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6051,7 +6051,12 @@ function buildGroups(result, decisions, learned) {
     else if (otherBill && !decisions[g.key] && !learned[g.key]) { method = "excluded"; confirmed = typeof cardOf === "function" && cardOf(e)?.code === "X.MECH";
       reason = confirmed ? "Coded X.MECH on its type: priced in the mechanical or electrical bill." : "Mechanical or electrical installation, which is priced in its own bill. Change it if this one belongs in the civil BoQ."; }
     else if (d) { ({ item, method, confirmed } = d); reason = d.reason || ""; confidence = d.confidence ?? null; }
-    else if (learned[g.key]) { item = learned[g.key].item || learned[g.key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
+    else if (learned[g.key]) { item = learned[g.key].item || learned[g.key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile.";
+      // A saved confirmation settles which item it is, not that the quantity is right: with a model problem that could change the
+      // quantity still open (tier 1: an unjoined overlap, a duplicate), the line comes back to be looked at on every run until the
+      // model is fixed or the flag is dismissed (decided 14 Nov 2026: a known double count sat under a green tick after a reload)
+      const open = g.elements.flatMap((x) => result.byElement[x.Id] || []).find((i) => i.tier === 1 && (i.severity === "eyes" || i.severity === "unknown"));
+      if (open) { method = "check"; confirmed = false; reason = `You confirmed this item on an earlier run, but a model problem is still open: ${open.title.charAt(0).toLowerCase() + open.title.slice(1)}. Check the quantity before billing it.`; } }
     else {
       const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade, result.concretePart?.[e.Id], result.structure === "civil");
       // Never confirmed without a look: in-place families (drawn by hand, so the rule is a guess at what they are), and
@@ -7506,6 +7511,44 @@ function claudeMapItems(out) {
 }
 
 const fmtQty = (v, u) => `${(Math.round(v * 100) / 100).toLocaleString("en-GB", { maximumFractionDigits: 2 })}${u ? " " + u : ""}`;
+
+// ----- His rates for SolvBoQ's own lines (engine plan, readiness by value; decided 14 Nov 2026: rates come from the project's
+// Master BoQ, never from the page) -----
+// A rate of his for a generated bill line, so the bill's value can be split into measured, worked out and estimated. From his
+// line of the same unit and kind of work whose wording fits best ("line"); failing that, the middle rate of his lines of that
+// kind and unit ("kind": approximate); else none. A line and one of his of different kinds, or of different SANS 1200 sections,
+// are never paired (pipes under 1200 L once took his joint rate: “Supply, lay and joint pipes”). A generated line’s kind is read
+// from its heading first (“Protective coating to: › The soffit of the cover slab” is a coating, not formwork).
+const sansOf = (L) => (/1200\s*([A-Z]{1,2})\b/.exec(String(L.section || "")) || [])[1] || "";
+function rateFor(L, hisLines) {
+  const kind = kindOf(L.heading) || lineKind(L), mine = words(`${L.heading} ${L.description}`), unit = normUnit(L.unit), sec = sansOf(L);
+  const cands = (hisLines || []).filter((x) => normUnit(x.unit) === unit && !(sec && sansOf(x) && sansOf(x) !== sec));   // his unrated lines too: see below
+  let best = null;
+  for (const x of cands) {
+    const k = lineKind(x); if (kind && k && kind !== k) continue;
+    const s = wordScore(mine, words(`${x.heading} ${x.description}`)) + (kind && kind === k ? 0.25 : 0);
+    if (!best || s > best.s) best = { s, x };
+  }
+  // His line that fits best may carry no rate (hard rock in his GT bill): then there is none, never the next line’s
+  if (best && best.s >= 0.6) return best.x.rate > 0 ? { rate: best.x.rate, from: "line", line: best.x } : null;
+  const same = kind ? cands.filter((x) => x.rate > 0 && lineKind(x) === kind).map((x) => x.rate).sort((a, b) => a - b) : [];
+  return same.length ? { rate: same[Math.floor(same.length / 2)], from: "kind", line: null } : null;
+}
+// The bill's value at his rates, by how each quantity was arrived at. lines: [{ key, basis, qty, unit, heading, description }] with
+// basis measured | worked | estimated (others are left out). Returns the rands and line counts per basis, what couldn't be priced,
+// and each line's value, so the estimates can be listed largest first.
+function valueByBasis(lines, hisLines) {
+  const out = { measured: { value: 0, n: 0 }, worked: { value: 0, n: 0 }, estimated: { value: 0, n: 0 }, unpriced: 0, approx: 0, total: 0, per: new Map() };
+  for (const L of lines) {
+    if (!out[L.basis] || !(L.qty > 0)) continue;
+    const r = rateFor(L, hisLines);
+    if (!r) { out.unpriced++; continue; }
+    const v = L.qty * r.rate;
+    out[L.basis].value += v; out[L.basis].n++; out.total += v; if (r.from === "kind") out.approx++;
+    out.per.set(L.key, { value: v, rate: r.rate, from: r.from, his: r.line });
+  }
+  return out;
+}
 
 
 // ===== Claude through the API, with the user's own key =====
@@ -9153,14 +9196,33 @@ function editorOverview(lines, groups) {
 // model), or not in the model at all. The estimates are listed with what would make each a measurement. Counted by line: SolvBoQ
 // holds no rates, so it can't say what share of the bill's value each is, and says so.
 function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
+// The Master BoQ whose rates price the bill: the one open in Master BoQ, else his choice here, else the project's first
+function rateMaster() {
+  if (typeof MB === "undefined") return null;
+  if (!(MB.saved || []).length && !MB.listedForRates && typeof mbList === "function") { MB.listedForRates = true; mbList(); }   // once: the project's BoQs
+  const all = [MB.master, ...(MB.saved || [])].filter((m, i, a) => m && (m.lines || []).some((x) => x.rate > 0) && a.findIndex((y) => y && y.id === m.id) === i);
+  return all.find((m) => m.id === state.rateMasterId) || all[0] || null;
+}
 function basisOverview(lines) {
   const n = (b) => lines.filter((L) => basisOf(L) === b).length, est = lines.filter((L) => basisOf(L) === "estimated");
-  const rows = [["Measured from the model", n("measured")], ["Worked out from the model", n("worked")], ["Estimated", n("estimated")], ["Not in the model: to measure", n("none")], ["Quantity typed by you", n("edited")]].filter(([, c], i) => c || i < 3);
+  const master = rateMaster(), others = typeof MB === "undefined" ? [] : [MB.master, ...(MB.saved || [])].filter((m, i, a) => m && (m.lines || []).some((x) => x.rate > 0) && a.findIndex((y) => y && y.id === m.id) === i);
+  // By value, at his own rates, where the project has a bill of his: a count of lines hides how much of the bill is estimated
+  const val = master && typeof valueByBasis === "function" ? valueByBasis(lines.filter((L) => ["measured", "worked", "estimated"].includes(basisOf(L)) && L.shownQty > 0).map((L) => ({ key: L.key, basis: basisOf(L), qty: L.shownQty, unit: L.unit, section: L.section, heading: L.heading, description: L.description })), master.lines) : null;
+  const priced = val && val.total > 0, pc = (b) => (priced ? `${Math.round((100 * val[b].value) / val.total)}%` : ""), R = (v) => (typeof rands === "function" ? rands(v) : "R " + Math.round(v).toLocaleString("en-GB"));
+  const rows = [["Measured from the model", n("measured"), "measured"], ["Worked out from the model", n("worked"), "worked"], ["Estimated", n("estimated"), "estimated"], ["Not in the model: to measure", n("none"), ""], ["Quantity typed by you", n("edited"), ""]].filter(([, c], i) => c || i < 3);
+  const value = (L) => (priced ? val.per.get(L.key) : null);
+  const list = [...est].sort((a, b) => (value(b)?.value || 0) - (value(a)?.value || 0));
   return h("div", { class: "edfield", id: "basisBox" },
     h("span", { class: "edtitle sm" }, "How the quantities were arrived at"),
-    h("div", { class: "howlist" }, ...rows.map(([l, c]) => h("div", {}, h("span", {}, l), h("b", {}, String(c))))),
-    est.length ? h("p", { class: "edtext warn" }, `${plural(est.length, "line")} ${est.length === 1 ? "is an estimate" : "are estimates"}, not measured from the model. These are often a large part of a bill’s value (reinforcement, earthworks), and the count of lines doesn’t show that: SolvBoQ has no rates.`) : h("p", { class: "edtext" }, "No line is an estimate."),
-    ...est.map((L) => h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${L.description}${L.shownQty != null ? ` · ${mapQty(L.shownQty, L.unit)} ${L.unit || ""}` : ""}`), h("span", {}, L.est)),
+    h("div", { class: "howlist" }, ...rows.map(([l, c, b]) => h("div", {}, h("span", {}, l), h("b", {}, priced && b ? `${plural(c, "line")} · ${R(val[b].value)} · ${pc(b)}` : String(c))))),
+    priced ? h("p", { class: "edtext" + (val.estimated.value > 0 ? " warn" : ""), id: "basisValue" },
+        `At the rates in your BoQ “${master.name}”: ${pc("estimated")} of the priced value (${R(val.estimated.value)} of ${R(val.total)}) is estimated, not measured from the model. `
+        + `${val.unpriced ? `${plural(val.unpriced, "line")} ${val.unpriced === 1 ? "has" : "have"} no rate in that BoQ and ${val.unpriced === 1 ? "isn’t" : "aren’t"} counted. ` : ""}`
+        + `${val.approx ? `${plural(val.approx, "line")} ${val.approx === 1 ? "takes" : "take"} the usual rate for that kind of work in your BoQ, because no line of yours matches ${val.approx === 1 ? "it" : "them"}.` : ""}`,
+        others.length > 1 ? h("button", { type: "button", class: "link accent", onclick: () => { const i = others.findIndex((m) => m.id === master.id); state.rateMasterId = others[(i + 1) % others.length].id; renderMap(); } }, " Use another BoQ’s rates") : null)
+      : est.length ? h("p", { class: "edtext warn" }, `${plural(est.length, "line")} ${est.length === 1 ? "is an estimate" : "are estimates"}, not measured from the model. These are often a large part of a bill’s value (reinforcement, earthworks), and the count of lines doesn’t show that. Load your BoQ under Master BoQ to see the share by value at your rates.`)
+        : h("p", { class: "edtext" }, "No line is an estimate."),
+    ...list.map((L) => h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${L.description}${L.shownQty != null ? ` · ${mapQty(L.shownQty, L.unit)} ${L.unit || ""}` : ""}${value(L) ? ` · ${R(value(L).value)}` : ""}`), h("span", {}, L.est)),
       h("button", { type: "button", class: "btn sm", onclick: () => selectLine(L) }, "Open"))));
 }
 // What changed since an earlier run of this model in the project (hybrid plan, Phase 5: revisions.js). Both runs are worked out with
@@ -9918,7 +9980,7 @@ const mbLocal = () => { try { return JSON.parse(localStorage.getItem(MB_LOCAL) |
 const mbCloud = () => !!(Store.user && typeof CL !== "undefined" && CL.pid);
 async function mbList() {
   try { MB.saved = mbCloud() ? await Store.listMasters(CL.pid) : Object.values(mbLocal()); } catch (e) { MB.err = e.message; MB.saved = []; }
-  if (state.view === "master") renderMaster(); else if (state.view === "claims" && CL.open) renderClaims();
+  if (state.view === "master") renderMaster(); else if (state.view === "claims" && CL.open) renderClaims(); else if (state.view === "map" && typeof renderMap === "function" && !state.sel) renderMap();
 }
 function mbSave(now) {
   clearTimeout(MB.saveT);
