@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-09T16:43:24Z">
+<meta name="solvboq-build" content="2026-11-14T14:50:55Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3875,7 +3875,7 @@ const RX = {
 // Order for "Start here": wrong quantities first, then things that can't be billed, then missing spec, then classification to confirm
 const TIERS = [
   { key: 1, label: "Quantity could be wrong", checks: ["readerror", "dup", "unjoined", "twins", "overlapwarn", "rcconflict", "zero", "steelzero", "pipelen", "roofarea", "mismatch", "unsupported", "thin", "codecat", "wallish"] },
-  { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen"] },
+  { key: 2, label: "Can’t be billed yet", checks: ["nomat", "pipedia", "flashnolen", "outside"] },
   { key: 3, label: "Specification missing", checks: ["grade", "steelgrade", "steelsize", "pipeclass", "fitdia", "metalmat", "vague", "opensize"] },
   { key: 4, label: "Confirm what it is", checks: ["generic", "inplace", "nolevel", "inferred", "flashguess", "badcode", "nocode", "nostructure"] },
 ];
@@ -4040,6 +4040,18 @@ function runChecks(input, opts = {}) {
   add("phase", "excluded", "Existing or demolished elements",
     "These are on an existing phase or are demolished, so they’re left out of the new-works BoQ.",
     "Check none of them are actually new work.", phased);
+  // Solids in a category SolvBoQ doesn’t measure (a mass, casework, a part, an entourage family): they were only counted as
+  // “not measured”, with nothing said about their volume, so concrete drawn in an odd category left the bill unseen (engine
+  // plan, D4). Any of them with a solid volume is listed with it. Not centre lines (they repeat their pipe), balusters, stringers
+  // or reveals (chamfers, billed by length from result.reveals).
+  const outside = notBuilding.filter((e) => e.Bic && !MEASURED.has(e.Bic) && e.Volume > 0.001 && !e.IsDemolished && !/CenterLine|Baluster|Reveal|Sketch|Stringer/i.test(e.Bic));
+  if (outside.length) {
+    const cats = new Map(); for (const e of outside) { const k = e.Category || e.Bic, c = cats.get(k) || { n: 0, v: 0 }; c.n++; c.v += e.Volume; cats.set(k, c); }
+    const V = sumVol(outside), concV = sumVol(outside.filter((e) => isConcreteMat(e.Material))), big = [...outside].sort((a, b) => b.Volume - a.Volume)[0];
+    add("outside", "eyes", "Solid elements in a category SolvBoQ doesn’t measure",
+      `${plural2(outside.length, "element")} with a solid volume, ${fmt2(V)} m³ in all, ${outside.length === 1 ? "is" : "are"} drawn in ${cats.size === 1 ? "a category" : "categories"} SolvBoQ doesn’t measure (${[...cats].sort((a, b) => b[1].v - a[1].v).slice(0, 4).map(([k, c]) => `${k}: ${c.n}, ${fmt2(c.v)} m³`).join("; ")}${cats.size > 4 ? "; and more" : ""}), so none of it is in the BoQ${concV > 0 ? `; ${fmt2(concV)} m³ of it has a concrete material` : ""}. The largest: “${nameOf(big)}”, ${fmt2(big.Volume)} m³.`,
+      "If it’s built work, ask the modeller to draw it in the category it belongs to (a wall, a floor, a foundation, or a generic model with its BoQ code), or measure it by hand. If it isn’t part of the works, mark this flag as wrong for the type.", outside, { impact: V });
+  }
   const optioned = els.filter((e) => e.DesignOption && !e.DesignOptionPrimary);
   add("option", "excluded", "Elements in a design option that isn’t primary",
     "Non-primary design options are alternatives, not the design, so they’re left out rather than priced on top of the real element.",
@@ -4412,7 +4424,7 @@ function runChecks(input, opts = {}) {
     for (const e of iss.elements) { const k = tradeOfId[e.Id] || tradeOf(e); per[k] = (per[k] || 0) + tradeStats[k].qty(e); }
     if (iss.key === "dup") for (const k in per) per[k] /= 2;
     if (iss.key === "twins") for (const k in per) per[k] = iss.impact;
-    iss.byTrade = Object.entries(per).map(([k, q]) => ({ trade: k, qty: q, n: iss.elements.filter((e) => tradeOfId[e.Id] === k).length }))
+    iss.byTrade = Object.entries(per).map(([k, q]) => ({ trade: k, qty: q, n: iss.elements.filter((e) => (tradeOfId[e.Id] || tradeOf(e)) === k).length }))
       .sort((a, b) => b.qty - a.qty);
     iss.score = Math.max(0, ...iss.byTrade.map((x) => {
       const t = tradeStats[x.trade]; const live = t.n.trusted + t.n.eyes + t.n.unknown;
@@ -4436,6 +4448,33 @@ function runChecks(input, opts = {}) {
 
 
 // ===== BoQ items worked out from model data, and items that always come from the drawings =====
+// Whether an inferred line is an estimate, and what would make it a measurement (engine plan: the 3 Way Splitter's readiness said
+// “100% trusted” while half the bill's value was estimated). An inferred line is either worked out from the model's geometry by
+// a rule (formwork from faces, finishes, joints on a drawn layout, working space round the footprint): "" here; or it rests on a
+// rate, a share or a depth that isn't in the model: the text says which, and what to supply. A figure he gave with a source
+// (the depth from the report, rock from his reading of the logs, a figure set for this model) is not an estimate.
+function lineEstimate(l, all, ea) {
+  const k = l.key, d = l.item?.description || "";
+  if (k.startsWith("rebar|")) return "It comes from a rate of reinforcement per m³ of concrete, not from bars: the bending schedules give the measured weight.";
+  if (k.startsWith("earth|") && ea && !ea.manhole) {
+    const part = k.slice(6), dk = ea.civil ? "replacementDepth" : "buildingDepth", given = (x) => x === "project" || x === "model";
+    if (part === "exc") {
+      if (ea.ngl != null) return /taken as natural ground level/.test(ea.nglFrom || "") ? "Natural ground level is assumed from an unlabelled spot elevation: label it NGL in the model to make this a measurement." : "";
+      return given(ea.src?.[dk]) ? "" : `The depth dug (${fmt2(ea[dk])} m) is assumed: mark natural ground level in the model, or give the depth from the geotechnical report under Project.`;
+    }
+    if (part === "ws" || /^(inter|boulder)/.test(part)) return "";
+    if (part === "rock") return ea.src?.rockShare === "geotech" || ea.src?.rockShare === "model" ? "" : "A provisional share of the excavation, not from the ground: classify the borehole logs under Project to bill it from them.";
+    if (part === "hand") return "A provisional share of the excavation, his allowance.";
+    if (part === "stock") return "A share of the excavation (his practice), not a measured volume.";
+    return "A share of the excavation or an assumed thickness: model the fill layers to bill them by their volume.";
+  }
+  if (k === "jfloor" || k === "jsaw") return "From a length of joint per m² of floor: draw the joint layout in a plan view to measure it.";
+  if (k.startsWith("fwedge|stop") && all.some((x) => x.key === "jfloor")) return "The stop ends follow the estimated floor joints: draw the joint layout to measure them.";
+  if (k === "bolts") return "A share of the steel’s weight, not counted from connections.";
+  if (k === "hdbolts") return "An assumed number of bolts per column base: confirm it on the drawings.";
+  return /\((?:[^)]*\s)?(?:estimate|assumed)\b[^)]*\)/i.test(d) ? "It rests on an assumed figure, as its description says." : "";
+}
+
 function deriveItems(r, opts = {}) {
   const live = r.elements.filter((e) => !NON_MEASURED.has(e.Bic) && r.status[e.Id] !== "excluded");
   const T = (k) => live.filter((e) => r.tradeOfId[e.Id] === k);
@@ -4479,6 +4518,18 @@ function deriveItems(r, opts = {}) {
   const suspended = withBoxes ? slabs.filter(hasBelow) : hasElev ? slabs.filter((e) => e.LevelElevation > lowest + 0.5) : [];
   // Foundation slabs up on columns are landings or platforms: they get a soffit and a top finish like a suspended slab
   const raised = withBoxes ? T("concrete").filter((e) => e.Bic === "OST_StructuralFoundation" && e.Box && onColumns(e)) : [];
+  // Where the faces were read, the support graph decides (structure.js, the structure stage: what each slab stands on, not what
+  // its box overlaps), with its reason; the box rule above stays for extracts without faces and for a slab whose contacts weren’t
+  // all read. On the real models with faces the two agree; a cover on upstands under 0.5 m is suspended only to the graph.
+  r.slabKindWhy = {};
+  if (withBoxes && opts.faces !== false && typeof faceSlabKind === "function") {
+    const fk = faceSlabKind(r), move = (e, to) => { for (const l of [ground, suspended, raised]) { const i = l.indexOf(e); if (l === to) { if (i < 0) l.push(e); } else if (i >= 0) l.splice(i, 1); } };
+    for (const e of fk ? [...slabs, ...T("concrete").filter((x) => x.Bic === "OST_StructuralFoundation" && x.Box)] : []) {
+      const k = fk.get(String(e.Id)); if (!k || k.kind === "unknown") continue;
+      if (e.Bic === "OST_Floors") move(e, k.kind === "ground" ? ground : suspended); else move(e, k.kind === "raised" ? raised : null);
+      r.slabKindWhy[e.Id] = k.why;
+    }
+  }
   // Which slabs bear on the ground and which are suspended or raised, kept for the face rules (structure.js, hybrid plan Phase 2)
   r.slabKind = {}; for (const [k, list] of [["ground", ground], ["suspended", suspended], ["raised", raised]]) for (const e of list) r.slabKind[e.Id] = k;
   // His tank bill splits reinforced concrete into watertight (what holds the water) and non-watertight (bridge, beams, columns,
@@ -4626,6 +4677,7 @@ function deriveItems(r, opts = {}) {
       description: `Watertightness test of the water-retaining structure${nm ? ` (${nm})` : ""}`, unit: "Sum" },
       reason: "Inferred: one test for each water-retaining structure (watertight concrete in it).", check: "", qty: 1, elements: g, parts: g.map((e) => ({ id: e.Id, qty: 1 / g.length })) });
   }
+  for (const l of all) l.est = lineEstimate(l, all, earth.assumptions);
   return { items, fromDrawings, lines: all, earthworks: earth.assumptions };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
@@ -4812,6 +4864,12 @@ function modelNgl(ann, els = []) {
     const z = flat.length && Math.abs(flat[0] - at[2]) <= 0.6 ? flat[0] : at[2];
     return { z, from: `“${g(lb, "Text")}” in ${g(v, "Name")}` };
   }
+  // No NGL marked: a level named for the finished ground (FGL, finished or ground level, not a foundation level). SANS 1200 D (8.2.3)
+  // measures restricted excavation as if bulk earthworks to the finished level were done first, so it is the level to dig from
+  // (the 3 Way Splitter, 9 Nov 2026: FGL at 96.5 m)
+  const FGL = /\bF\.?G\.?L\b|finished ground|ground level/i;
+  for (const lv of g(ann, "Levels") || []) if (FGL.test(String(g(lv, "Name") || "")) && !/foundation/i.test(String(g(lv, "Name") || "")) && Number.isFinite(+g(lv, "Elevation")))
+    return { z: +g(lv, "Elevation"), from: `the level “${g(lv, "Name")}”: finished ground, which SANS 1200 D measures restricted excavation from (mark NGL if natural ground differs)` };
   const inside = (p) => els.some((e) => e.Box && p[0] >= e.Box[0] - 0.01 && p[0] <= e.Box[3] + 0.01 && p[1] >= e.Box[1] - 0.01 && p[1] <= e.Box[4] + 0.01 && p[2] >= e.Box[2] - 0.01 && p[2] <= e.Box[5] + 0.01);
   const loose = (g(ann, "Spots") || []).filter((s) => { const v = views.get(String(g(s, "View"))), at = g(s, "At");
     return v && /section|elevation/i.test(String(g(v, "Kind") || "")) && Array.isArray(at) && Number.isFinite(+g(s, "Value")) && !inside(at); });
@@ -5005,7 +5063,9 @@ function inferLines(r, ctx) {
   for (const e of suspended.filter((e) => conc.includes(e))) {
     const under = e.Box ? props.filter((p) => p !== e && p.Box[5] >= e.Box[2] - 0.05 && p.Box[5] <= e.Box[5] + 0.05 && p.Box[2] < e.Box[2] - 0.05 && p.Box[0] >= e.Box[0] - 0.05 && p.Box[1] >= e.Box[1] - 0.05 && p.Box[3] <= e.Box[3] + 0.05 && p.Box[4] <= e.Box[4] + 0.05) : [];
     const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], e.Box[2]) - p.Box[2], 0.01); };
-    const bearing = under.reduce((s, p) => s + plan(p), 0);
+    // SANS 1200 G 8.1.1: no deduction for openings up to 0.5 m² (or 0.7 m across): a column top of 0.16 m² isn't taken off (the
+    // 3 Way Splitter, 9 Nov 2026: his soffit 12.7 m² is the slab's full area over ten columns); wall tops and beams are
+    const SMALL = 0.5 + 1e-9, bearing = under.reduce((s, p) => { const a = plan(p); return s + (a > SMALL ? a : 0); }, 0);
     add(`fwsoffit|${typeKey(e)}`, item(false, `Horizontal formwork to soffits of suspended slabs (${typeName(e)})`),
       `Inferred: underside area of each suspended slab (another slab lies at least 0.5 m below it)${bearing > 0 ? ", less the tops of the walls, columns and beams it bears on" : ""}. Sloping soffits aren’t told apart from flat ones.`, e, Math.max(0, (e.Area || 0) - bearing));
   }
@@ -5033,7 +5093,7 @@ function inferLines(r, ctx) {
       for (const s of suspended.filter((s) => conc.includes(s) && s.Box && wetWalls.some((w) => Math.abs(w.Box[5] - s.Box[2]) <= 0.05 && w.Box[0] < s.Box[3] && w.Box[3] > s.Box[0] && w.Box[1] < s.Box[4] && w.Box[4] > s.Box[1]))) {
         const under = props.filter((p) => p !== s && p.Box[5] >= s.Box[2] - 0.05 && p.Box[5] <= s.Box[5] + 0.05 && p.Box[2] < s.Box[2] - 0.05 && p.Box[0] >= s.Box[0] - 0.05 && p.Box[1] >= s.Box[1] - 0.05 && p.Box[3] <= s.Box[3] + 0.05 && p.Box[4] <= s.Box[4] + 0.05);
         const plan = (p) => { const g = p.Bic === "OST_StructuralFraming" ? beamGeom(p) : null; return g ? g.b * g.len : p.Volume / Math.max(Math.min(p.Box[5], s.Box[2]) - p.Box[2], 0.01); };
-        add("coat|soffit", C("the soffit of the cover slab", "soffit"), "Inferred: the slab’s underside, less the tops of the walls, columns and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => a + plan(p), 0)));
+        add("coat|soffit", C("the soffit of the cover slab", "soffit"), "Inferred: the slab’s underside, less the tops of the walls, columns and beams it bears on (as its formwork).", s, Math.max(0, (s.Area || 0) - under.reduce((a, p) => { const x = plan(p); return a + (x > 0.5 + 1e-9 ? x : 0); }, 0)));
         for (const b of under.filter((p) => p.Bic === "OST_StructuralFraming")) { const g = beamGeom(b); if (g) add("coat|beams", C("sides and soffits of beams", "beams"), "Inferred: both sides below the slab and the soffit, along the beam's clear length (as its formwork).", b, (2 * g.below + g.b) * g.len); }
         // Columns standing in the structure under that slab are wetted all round, like the walls standing inside it (9 Nov 2026,
         // his three 450 mm columns): perimeter × height up to the slab, as their formwork. An item of its own, to confirm.
@@ -5560,6 +5620,11 @@ function inferMore(r, ctx) {
     if (tf === "none") continue;
     if (tf) { add(`float|${tf}`, "finish", G("8.4.4", FIN, tf === "wood" ? "Wood-floated finish to top of floor slabs and footings" : "Steel-floated finish to top of slabs", "m²"),
       `Inferred: top area of each slab, less any part with concrete cast on it; ${tf === "wood" ? "wood" : "steel"}-floated as its type’s SolvBoQ Top Finish says.`, e, a); continue; }
+    // A suspended floor with benching on it is wood-floated in full, as his ground slabs are under benching (the 3 Way Splitter's
+    // chamber floor, 9 Nov 2026: 12.7 m² wood-floated); under a screed it stays steel-floated (his GT launder floor)
+    const benched = (s) => civil && live.some((b) => role(b) === "benching" && b.Box && Math.abs(b.Box[2] - s.Box[5]) <= 0.06 && planShared(b.Box, s.Box) > 0);
+    if (suspended.includes(e) && benched(e)) { add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"),
+      "Inferred: a floor with benching on it is wood-floated in full, as his ground slabs are under benching.", e, e.Area || a); continue; }
     if (suspended.includes(e)) add("float|steel", "finish", G("8.4.4", FIN, "Steel-floated finish to top of suspended slabs", "m²"),
       "Inferred: top area of each suspended slab, landing and platform, less any part with concrete cast on it.", e, a);
     else if (civil) add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"),
@@ -5579,11 +5644,19 @@ function inferMore(r, ctx) {
     ...(r.structure === "civil" ? [["screed", "screed", "Steel-floated finish to top of screeds", "top area of each screed"]] : [])])
     for (const e of live.filter((e) => role(e) === rl && r.tradeOfId[e.Id] === "concrete" && (e.Area || 0) > 0))
       add(`float|${key}`, "finish", G("8.4.4", FIN, desc, "m²"), `Inferred: the ${why}.`, e, e.Area);
-  // Exposed tops of concrete walls: his “top of walls” is length × thickness of the tank, chamber and launder walls
+  // Tops of concrete walls and beams, steel-floated in full: his “top of walls” is length × thickness of the tank, chamber and launder
+  // walls, and his tops of beams are the beams' full tops (his valve chamber, 9 Nov 2026: 8.6 m² = 2.8 + 3.0 + 2.8, with the cover slab
+  // cast on them). They're cast before the slab and their tops struck off and floated, as he wood-floats ground slabs in full
   const mainFloor = ground.filter(box).sort((a, b) => (b.Area || 0) - (a.Area || 0))[0];
+  // A water-retaining structure only (his evidence): in a building, beams are cast with the slab they carry and walls under a slab
+  // have no exposed top, so only tops that nothing stands on are floated there, as before
   for (const w of solid.filter((e) => e.Bic === "OST_Walls" && e.Length > 0 && e.Thickness >= 0.1 && (!mainFloor || e.Box[5] > mainFloor.Box[5] + 0.05)))
-    if (!covered(w, w.Length * w.Thickness)) add("float|walltop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of walls", "m²"),
-      "Inferred: wall length × thickness, where nothing is cast on top of the wall and it stands above the floor.", w, w.Length * w.Thickness);
+    // (not a wall that spans as a beam under a slab: his GT take-off floated only the exposed tops of the bridge "walls", 47.8 m²)
+    if ((civil && r.concretePart?.[w.Id]?.as !== "beams") || !covered(w, w.Length * w.Thickness)) add("float|walltop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of walls", "m²"),
+      "Inferred: wall length × thickness, for each wall standing above the floor (also under a slab cast on it later: the top is struck off and floated first).", w, w.Length * w.Thickness);
+  for (const b of live.filter((e) => e.Bic === "OST_StructuralFraming" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Volume > 0 && e.Box[5] - e.Box[2] > 0.05))
+    if (civil) add("float|beamtop", "finish", G("8.4.4", FIN, "Steel-floated finish to tops of beams", "m²"),
+      "Inferred: each beam's full top, its volume over its depth (also under a slab cast on it later).", b, b.Volume / (b.Box[5] - b.Box[2]));
   // Floated finishes from the model's faces (hybrid plan, Phase 3, 9 Nov 2026): where an element's faces and contacts were read, the
   // open part of its top (structure.js faceFinishes: anything standing on it covers it, but not a screed or benching laid on it) in
   // the same lines: ground slabs and footings wood-floated in full in a water-retaining structure (steel-floated slabs in a building,
@@ -5591,11 +5664,11 @@ function inferMore(r, ctx) {
   // label, benching, aprons, plinths, screeds and stairs keep their own rules.
   const fin = ctx.faces !== false && typeof faceFinishes === "function" ? faceFinishes(r) : null;
   if (fin) {
-    const CATS = ["OST_Floors", "OST_StructuralFoundation", "OST_Walls", "OST_StructuralFraming"], OWN = ["benching", "screed", "apron", "plinth", "blinding", "noFines", "fill", "chamfer", "kerb"];
+    const CATS = ["OST_Floors", "OST_StructuralFoundation"], OWN = ["benching", "screed", "apron", "plinth", "blinding", "noFines", "fill", "chamfer", "kerb"];
     const faceEls = new Set(live.filter((e) => Array.isArray(e.Faces) && e.Faces.length && e.Faces.every((f) => f.Contacts != null) && r.tradeOfId[e.Id] === "concrete"
       && CATS.includes(e.Bic) && !OWN.includes(role(e)) && !topFinish(e.FinishTop)).map((e) => String(e.Id)));
     for (const [k, L] of [...lines]) {
-      if (!/^float\|(wood|steel|walltop)$/.test(k)) continue;
+      if (!/^float\|(wood|steel)$/.test(k)) continue;
       const keep = L.parts.filter((p) => !faceEls.has(String(p.id)));
       if (keep.length === L.parts.length) continue;
       if (!keep.length) { lines.delete(k); continue; }
@@ -5604,6 +5677,9 @@ function inferMore(r, ctx) {
     const why = "From the model's faces: the open part of each top (anything standing on it covers it; a screed or benching laid on it doesn't).";
     for (const x of fin.filter((y) => faceEls.has(String(y.e.Id)))) {
       const e = x.e;
+      // a suspended floor with benching on it: wood-floated in full, as above
+      if (suspended.includes(e) && civil && live.some((b) => role(b) === "benching" && b.Box && e.Box && Math.abs(b.Box[2] - e.Box[5]) <= 0.06 && Math.max(0, Math.min(b.Box[3], e.Box[3]) - Math.max(b.Box[0], e.Box[0])) * Math.max(0, Math.min(b.Box[4], e.Box[4]) - Math.max(b.Box[1], e.Box[1])) > 0)) {
+        add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"), `${why} A floor with benching on it, wood-floated in full.`, e, e.Faces.filter((f) => f.Kind === "top").reduce((t, f) => t + f.Area, 0)); continue; }
       if (x.wood > 0) civil ? add("float|wood", "finish", G("8.4.4", FIN, "Wood-floated finish to top of floor slabs and footings", "m²"), `${why} Ground slabs and footings in full.`, e, x.wood)
         : add("float|steel", "finish", G("8.4.4", FIN, "Steel-floated finish to top of slabs", "m²"), `${why} Split wood-floated and steel-floated as the specification says.`, e, x.wood);
       if (!(x.steel > 0)) continue;
@@ -5636,8 +5712,9 @@ function inferMore(r, ctx) {
           `Inferred: where the floor joints on your joint layout (${r.layout.view}) meet a wall, a vertical joint its full height: crossings × wall height.`, e, cross * h);
       }
     }
-    // Where a suspended slab is cast into a wall partway up it (a launder floor against the tank wall, his joint type R)
-    for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box)) {
+    // Where a suspended slab that holds water is cast into a wall partway up it (a launder floor against the tank wall, his joint type R).
+    // Not a dry slab against the outside of the walls (the 3 Way Splitter's walkway, 9 Nov 2026: his bill has no joint there)
+    for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box && r.concretePart?.[s.Id]?.wt)) {
       let len = 0;
       for (const w of walls) if (s.Box[2] > w.Box[2] + 0.1 && s.Box[5] < w.Box[5] - 0.05 && planShared(s.Box, w.Box) >= 0.5 * Math.min(planArea(s.Box), planArea(w.Box))) len += w.Length;
       if (len > 0) add("jslab", "joint", G("8.5", "Joints", "Watertight construction joints where slabs meet walls", "m"),
@@ -5990,7 +6067,7 @@ function buildGroups(result, decisions, learned) {
     else if (learned[key]) { item = learned[key].item || learned[key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
     const trade = { rebar: "rebar", steel: "steel", building: "masonry", earth: "other" }[L.kind] || "concrete";
     out.push({ key, elements: L.elements, trade, sample: L.elements[0], item, method, confirmed, reason, ruleId: "INFER-" + L.kind,
-      confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, label: L.item.description, parts: L.parts });
+      confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, est: L.est || "", label: L.item.description, parts: L.parts });
   }
   const order = { none: 0, claude: 1, check: 2, inferred: 2, edited: 3, learned: 4, rule: 5, excluded: 6 };
   return out.sort((a, b) => (order[a.method] - order[b.method]) || (a.item && b.item ? sectionRank(a.item.section) - sectionRank(b.item.section) : 0) || b.elements.length - a.elements.length);
@@ -6023,7 +6100,7 @@ function boqLines(groups, { full = false } = {}) {
     if (!g.item || g.excluded || (!full && !g.confirmed)) continue;
     const it = presentItem(g.item), k = [it.section, it.clause, it.heading, it.description, it.unit].join("|");
     if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true, pending: 0 });
-    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++;
+    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++; if (g.est && !L.est) L.est = g.est;
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || headingRank(a.heading).localeCompare(headingRank(b.heading)) || a.description.localeCompare(b.description));
 }
@@ -6052,6 +6129,40 @@ function facePour(r, e) {
   return 2;   // walls, columns and the rest
 }
 
+// The order elements are cast in (the structure stage, step 4): the pour rank above, corrected by the support graph where the
+// faces were read. The rank alone puts every wall before every suspended slab, which is wrong as soon as a wall stands on one
+// (the Sludge Silos: walls 8 to 12 elements up). So each element also has a storey: a wall or column standing on a suspended
+// slab, a raised base or a beam is one storey above it (and a beam standing on a floor); everything else is on the storey of what carries it; infill (benching,
+// screeds, aprons) is on the highest storey of what it touches, cast after it. Order = storey first, then rank. Things that
+// aren't concrete (steel, fittings) always come last. Without a graph (an older extract) it is the rank, as before.
+const FACE_GRAPHS = new WeakMap();
+function faceGraph(r) { if (!FACE_GRAPHS.has(r)) FACE_GRAPHS.set(r, faceSupport(r)); return FACE_GRAPHS.get(r); }
+function faceStoreys(r, g) {
+  if (g.storeys) return g.storeys;
+  const st = new Map(), busy = new Set(), rank = (n) => facePour(r, n.e);
+  const of = (n) => {
+    if (st.has(n.id)) return st.get(n.id);
+    if (!n.e || busy.has(n.id)) return 0;
+    busy.add(n.id);
+    const mine = rank(n); let s = 0;
+    // A beam or a stair standing on a floor by its underside (an upstand, a hopper wall drawn as framing, a flight starting on a
+    // suspended slab: the Silos) is cast after that floor too, as a wall is. An element hanging over a gap (a wall drawn 7 mm above its slab) is ordered as standing on what
+    // lies under the gap: the gap is reported, but the order mustn't put it before the walls beside it.
+    if (mine >= 1 && mine <= 3) { const gap = g.gaps.find((x) => x.id === n.id), floor = (o) => o.e.Bic === "OST_Floors" || o.e.Bic === "OST_StructuralFoundation";
+      for (const [x, under] of [...n.on.map((y) => [y, true]), ...n.into.map((y) => [y, false]), ...(gap ? [[{ id: gap.below }, true]] : [])]) { const o = g.nodes.get(x.id), ro = o?.e ? rank(o) : 0;
+        if (ro >= 1 && ro <= 3) s = Math.max(s, of(o) + (ro === 3 && under && (mine === 2 || ((n.e.Bic === "OST_StructuralFraming" || n.e.Bic === "OST_Stairs") && floor(o))) ? 1 : 0)); } }
+    else if (mine === 4 || mine === 5) for (const x of [...n.on, ...n.into, ...n.beside]) { const o = g.nodes.get(x.id), ro = o?.e ? rank(o) : 0; if (ro >= 1 && ro <= 3) s = Math.max(s, of(o)); }
+    busy.delete(n.id); st.set(n.id, s); return s;
+  };
+  for (const n of g.nodes.values()) of(n);
+  return (g.storeys = st);
+}
+function faceOrder(r, e) {
+  const rank = facePour(r, e); if (!e || rank === 9) return rank === 9 ? 9999 : rank;
+  const g = faceGraph(r); if (!g) return rank;
+  return 10 * (faceStoreys(r, g).get(String(e.Id)) || 0) + rank;
+}
+
 // Formwork from faces, per element, with its ledger. Returns null when the extract has no faces (an older add-in).
 function faceFormwork(r) {
   const els = (r.elements || []).filter((e) => Array.isArray(e.Faces));
@@ -6063,8 +6174,8 @@ function faceFormwork(r) {
   const out = [];
   for (const e of els) {
     if (r.tradeOfId?.[e.Id] !== "concrete" || FACE_NOFORM.includes(role(e)) || e.Bic === "OST_Stairs") continue;
-    const mine = facePour(r, e), onGround = mine <= 1, holes = faceHoles(e);
-    const L = { rough: 0, smooth: 0, sloping: 0, castAgainst: 0, onGround: 0, top: 0, topCovered: 0, unclaimed: 0, noContacts: 0, boxout: 0, bigOpening: 0, total: 0, parts: [] };
+    const mine = facePour(r, e), order = faceOrder(r, e), onGround = mine <= 1, holes = faceHoles(e);
+    const L = { notDeducted: 0, rough: 0, smooth: 0, sloping: 0, castAgainst: 0, onGround: 0, top: 0, topCovered: 0, unclaimed: 0, noContacts: 0, boxout: 0, bigOpening: 0, total: 0, parts: [] };
     for (const f of e.Faces) {
       L.total += f.Area;
       if (f.Contacts == null) { L.noContacts += f.Area; continue; }
@@ -6074,11 +6185,17 @@ function faceFormwork(r) {
       const hole = holes.length ? holes.find((h) => f.N && Math.abs(f.N[0] * h.n[0] + f.N[1] * h.n[1] + f.N[2] * h.n[2]) < 0.2 && faceOnLoop(f, h.pts, h.n)) : null;
       if (hole?.boxout) { L.boxout += f.Area; continue; }
       if (hole) L.bigOpening += f.Area;
-      // What lies against it: cast before it or with it (not formed), or after it (it was formed first)
+      // What lies against it: cast before it or with it (not formed), or after it (it was formed first). On a soffit, something bearing on
+      // it of 0.5 m² or less (a column top) isn't taken off: SANS 1200 G 8.1.1, no deduction for openings up to 0.5 m². Only an opening in a
+      // bigger soffit: a small pad standing on its base is supported over its whole underside, which isn't formed
       let against = 0;
-      for (const c of f.Contacts) if (facePour(r, byId.get(String(c.Id))) <= mine) against += c.Area;
+      for (const c of f.Contacts) if (faceOrder(r, byId.get(String(c.Id))) <= order && !(f.Kind === "soffit" && c.Area <= 0.5 + 1e-9 && c.Area < 0.5 * f.Area)) against += c.Area;
       against = Math.min(against, f.Area);
-      const open = f.Area - against;
+      // and a hole in the face of box-out size isn't deducted either (its sides are the box-out, billed by number)
+      const small = (f.Loops || []).length > 1 && f.N ? (() => { const ls = f.Loops.map((l) => { const p = []; for (let i = 0; i + 2 < l.length; i += 3) p.push([l[i], l[i + 1], l[i + 2]]); return faceLoopArea(p, f.N); });
+        const outer = Math.max(...ls); return ls.filter((a) => a < outer && a <= 0.5 + 1e-9).reduce((t, a) => t + a, 0); })() : 0;
+      const open = f.Area - against + (f.Kind === "top" ? 0 : small);
+      if (f.Kind !== "top" && small > 0) { L.notDeducted += small; L.total += small; }   // in the ledger: billed although not a surface
       // A top is covered by anything standing on it, cast before or after (a wall on a slab): what is left is open (finishes)
       if (f.Kind === "top" && !hole) { const on = Math.min(f.Area, f.Contacts.reduce((s, c) => s + c.Area, 0)); L.topCovered += on; L.top += f.Area - on; continue; }
       L.castAgainst += against;
@@ -6098,7 +6215,7 @@ function faceFormwork(r) {
         // which way it faces and where its middle is (inner or outer face of a wall: engine.js), and its height
         L.parts.push({ kind: slope ? "slope" : f.Kind, rough: open * below, smooth: open * (1 - below), curved: f.Surface === "cylinder" && (f.R || 0) > 0.5, opening: !!hole, n: f.N, at, h: z1 - z0, area: f.Area }); }
     }
-    out.push({ e, pour: mine, ...L });
+    out.push({ e, pour: mine, order, ...L });
   }
   return { elements: out, groundTop };
 }
@@ -6198,6 +6315,163 @@ function faceToday(r) {
     for (const p of l.parts || []) m.set(String(p.id), (m.get(String(p.id)) || 0) + (p.qty || 0));
   }
   return m;
+}
+
+// ===== The support graph (engine plan, the structure stage, step 2; shadow: no quantity uses it yet) =====
+// What each element stands on and what it carries, from the contacts of its faces, so that ground-bearing or suspended and the
+// pour order can be derived, not guessed from boxes and a fixed rank. Facts only, per element with faces:
+//   on      what lies against its underside (soffit faces), with the area: it stands on these
+//   into    what its sides meet that goes on down below its underside (a beam's ends in the walls, a slab cast into a wall):
+//           these can carry it by its sides
+//   beside  what its sides meet otherwise (the slab a wall stands in, a neighbouring wall at a corner)
+//   carries, holds   the same seen from the other element
+//   depth   the longest chain of elements under it (0: nothing modelled under it)
+// Nothing is guessed: concrete whose faces or contacts weren't read is listed (unread); a contact only one of the two elements
+// reports (oneSided) and elements that stand on each other in a ring (cycles) are listed as doubts about the read.
+function faceSupport(r) {
+  const all = r.elements || [], byId = new Map(all.map((e) => [String(e.Id), e]));
+  if (!all.some((e) => Array.isArray(e.Faces) && e.Faces.length)) return null;
+  const nodes = new Map();
+  const node = (id) => { id = String(id); if (!nodes.has(id)) nodes.set(id, { id, e: byId.get(id) || null, on: [], into: [], beside: [], carries: [], holds: [], touches: new Set(), soffit: 0, read: false, unreadArea: 0, depth: 0 }); return nodes.get(id); };
+  const put = (list, id, area) => { const x = list.find((y) => y.id === id); if (x) x.area += area; else list.push({ id, area }); };
+  for (const e of all) {
+    if (!Array.isArray(e.Faces) || !e.Faces.length) continue;
+    const n = node(e.Id); n.read = true;
+    for (const f of e.Faces) {
+      if (f.Contacts == null) { n.unreadArea += f.Area; continue; }
+      if (f.Kind === "soffit") n.soffit += f.Area;
+      for (const c of f.Contacts) {
+        const id = String(c.Id), o = byId.get(id); n.touches.add(id);
+        if (f.Kind === "soffit") put(n.on, id, c.Area);
+        else if (f.Kind === "side") put(o?.Box && e.Box && o.Box[2] < e.Box[2] - 0.05 ? n.into : n.beside, id, c.Area);
+      }
+    }
+  }
+  // A foot let into what it's joined to (a column 85 mm into its base, the 3 Way Splitter): Revit joins them, so no two faces
+  // lie against each other and there is no contact. Where an underside has nothing against it, lies within the height of an
+  // element it is joined to, and is over it in plan, it stands in that element (marked joined: from the join, not a contact). The same where it
+  // overlaps that element without being joined (the Splitter before it was fixed; marked overlap too: the unjoined check has the pair).
+  const planShared = (a, b) => Math.max(0, Math.min(a[3], b[3]) - Math.max(a[0], b[0])) * Math.max(0, Math.min(a[4], b[4]) - Math.max(a[1], b[1]));
+  for (const n of nodes.values()) {
+    const e = n.e, lets = [...(e.JoinedTo || []).map((j) => [String(j), false]), ...(e.Overlaps || []).map((o) => [String(o.Id), true])]; if (!n.read || !e.Box || !lets.length) continue;
+    const plan = planShared(e.Box, e.Box);
+    for (const f of e.Faces) {
+      if (f.Kind !== "soffit" || f.Contacts == null || !f.Z) continue;
+      const free = f.Area - f.Contacts.reduce((s, c) => s + c.Area, 0); if (free < 0.1 * f.Area) continue;
+      for (const [id, overlap] of lets) {
+        const o = byId.get(id); if (!o?.Box || f.Contacts.some((c) => String(c.Id) === id) || n.on.some((x) => x.id === id)) continue;
+        const share = plan > 0 ? planShared(e.Box, o.Box) / plan : 0;
+        if (share <= 0 || !(f.Z[0] > o.Box[2] + 0.002 && f.Z[0] <= o.Box[5] + 0.002)) continue;
+        n.on.push({ id, area: Math.min(free, f.Area * share), joined: true, overlap }); n.touches.add(id); node(id).touches.add(n.id);
+      }
+    }
+  }
+  // Two elements that each rest on the other: a slab cast into a wall, the wall notched round it (the Sludge Silos), so the slab
+  // lies on the wall below it and the wall above lies on the slab. The one that goes on down carries the other; its own
+  // contact is kept as "over" (it passes over the other), not as standing on it.
+  for (const n of nodes.values()) { n.over = [];
+    n.on = n.on.filter((x) => { const o = nodes.get(x.id);
+      const mutual = o && [...o.on, ...o.into].some((y) => y.id === n.id) && n.e?.Box && o.e?.Box && n.e.Box[2] < o.e.Box[2] - 0.05;
+      if (mutual) n.over.push(x); return !mutual; }); }
+  for (const n of [...nodes.values()]) {
+    for (const x of n.on) node(x.id).carries.push({ id: n.id, area: x.area });
+    for (const x of n.into) node(x.id).holds.push({ id: n.id, area: x.area });
+  }
+  // A contact the other element doesn't report back (both fully read): a doubt about the read, not a fact to build on
+  const oneSided = [];
+  for (const n of nodes.values()) for (const x of n.on) { const o = nodes.get(x.id); if (o.read && !o.unreadArea && !o.touches.has(n.id)) oneSided.push({ a: n.id, b: x.id, area: x.area }); }
+  // Depth: the longest chain under an element, through what it stands on and what holds its sides
+  const cycles = [], state = new Map();
+  const depthOf = (n, path) => {
+    if (state.get(n.id) === 2) return n.depth;
+    if (state.get(n.id) === 1) { const ring = path.slice(path.indexOf(n.id)), k = [...ring].sort().join("|"); if (!cycles.some((c) => [...c].sort().join("|") === k)) cycles.push(ring); return 0; }
+    state.set(n.id, 1);
+    let d = 0; for (const x of [...n.on, ...n.into]) d = Math.max(d, 1 + depthOf(nodes.get(x.id), [...path, n.id]));
+    n.depth = d; state.set(n.id, 2); return d;
+  };
+  for (const n of nodes.values()) depthOf(n, []);
+  const unread = [];
+  for (const e of all) {
+    if (r.tradeOfId?.[e.Id] !== "concrete" || r.status?.[e.Id] === "excluded") continue;
+    const n = nodes.get(String(e.Id));
+    if (!n?.read) unread.push({ e, why: "its faces weren't read" });
+    else if (n.unreadArea > 0) unread.push({ e, why: `contacts weren't read on ${Math.round(n.unreadArea * 100) / 100} m² of its faces` });
+  }
+  // Left hanging: nothing under it and nothing holding its sides, yet another element's top lies 2 to 50 mm below it in plan
+  // (a wall drawn 7 mm above its slab, the 3 Way Splitter). A gap in the model: said, never closed by a guess.
+  const gaps = [];
+  for (const n of nodes.values()) {
+    if (!n.read || n.on.length || n.into.length || !(n.soffit > 0) || !n.e.Box) continue;
+    let best = null;
+    for (const o of all) { if (o === n.e || !o.Box || !Array.isArray(o.Faces) || planShared(n.e.Box, o.Box) <= 0) continue;
+      const gap = n.e.Box[2] - o.Box[5]; if (gap > 0.002 && gap <= 0.05 && (!best || gap < best.gap)) best = { id: String(n.id), below: String(o.Id), gap }; }
+    if (best) gaps.push(best);
+  }
+  return { nodes, unread, oneSided, cycles, gaps };
+}
+
+// ===== Ground-bearing, suspended or raised, from the support graph (the structure stage, step 3; shadow beside r.slabKind) =====
+// For each concrete floor and foundation (not blinding, screeds, benching, aprons and the like), with why:
+//   ground     half or more of its underside lies on bedding (blinding, no-fines, fill), or on a floor that is itself on the ground
+//              (a pad on a base); or nothing that carries it has a floor under this one
+//   suspended  (a foundation: raised) it stands on columns or beams; or what carries it, by its underside or its sides, goes down
+//              to a floor lying under 30% or more of it (a cover slab on the walls of a chamber). Walls on strip footings under
+//              a building's surface bed don't make it suspended: the footings aren't under the slab.
+//   unknown    its contacts weren't all read: said, not guessed
+// Sides alone never decide: an apron held by the chamber walls, with nothing modelled under it, has no floor below it.
+const FACE_BEDDING = ["blinding", "noFines", "fill"], FACE_NOT_SLAB = ["blinding", "screed", "noFines", "fill", "benching", "chamfer", "plinth", "kerb", "apron"];
+function faceSlabKind(r, g = faceGraph(r)) {
+  if (!g) return null;
+  const role = (e) => r.roles?.[e?.Id]?.role || "", concrete = (e) => r.tradeOfId?.[e?.Id] === "concrete";
+  const floorish = (e) => !!e && (e.Bic === "OST_Floors" || e.Bic === "OST_StructuralFoundation");
+  const bedding = (e) => !!e && (FACE_BEDDING.includes(role(e)) || (floorish(e) && !concrete(e)));
+  const slab = (e) => floorish(e) && concrete(e) && !FACE_NOT_SLAB.includes(role(e));
+  // Everything under an element, through what it stands on and what holds its sides
+  const under = (n, seen = new Set()) => { for (const x of [...n.on, ...n.into]) if (!seen.has(x.id)) { seen.add(x.id); const o = g.nodes.get(x.id); if (o) under(o, seen); } return seen; };
+  const out = new Map(), busy = new Set();
+  const kindOf = (n) => {
+    if (out.has(n.id)) return out.get(n.id);
+    const e = n.e, up = e.Bic === "OST_StructuralFoundation" ? "raised" : "suspended";
+    const set = (kind, why) => { const v = { kind, why }; out.set(n.id, v); return v; };
+    if (!n.read || n.unreadArea > 0) return set("unknown", "its contacts weren't all read");
+    if (busy.has(n.id)) return { kind: "ground", why: "" };
+    busy.add(n.id);
+    let bed = 0, onGroundFloor = 0, onFloor = null, carried = false;
+    for (const x of n.on) { const o = g.nodes.get(x.id), oe = o?.e;
+      if (bedding(oe)) bed += x.area;
+      else if (slab(oe) && o.read) { if (kindOf(o).kind === "ground") { onGroundFloor += x.area; if (!onFloor || x.area > onFloor.area) onFloor = x; } }
+      else if (oe && ["OST_StructuralColumns", "OST_Columns", "OST_StructuralFraming"].includes(oe.Bic)) carried = true; }
+    busy.delete(n.id);
+    const pc = (a) => `${Math.round((100 * a) / (n.soffit || 1))}%`, nm = (id) => { const x = g.nodes.get(id)?.e; return x ? `${x.Type || x.Family} [${id}]` : `[${id}]`; };
+    if (n.soffit > 0 && bed + onGroundFloor >= 0.5 * n.soffit)
+      return set("ground", bed >= onGroundFloor ? `${pc(bed)} of its underside lies on bedding` : `${pc(onGroundFloor)} of its underside lies on ${nm(onFloor.id)}, which is on the ground`);
+    if (carried) return set(up, "it stands on columns or beams");
+    // A floor under it, reached through what carries it
+    const below = [...under(n)].map((id) => g.nodes.get(id)?.e).filter((o) => floorish(o) && o.Box && e.Box && o.Box[5] <= e.Box[2] + 0.01);
+    const share = below.length ? facePlanShare(e, below) : 0;
+    if (share >= 0.3) return set(up, `what carries it goes down to a floor under ${Math.round(100 * share)}% of it`);
+    return set("ground", n.on.length || n.into.length ? `nothing that carries it has a floor under it${share > 0 ? ` (only under ${Math.round(100 * share)}%)` : ""}` : "nothing is modelled under it");
+  };
+  for (const n of g.nodes.values()) if (n.e && slab(n.e)) kindOf(n);
+  return out;
+}
+// The share of an element's underside, seen in plan, that lies over any of the elements given (their tops, else their boxes):
+// sampled on a grid over its box, from the faces' outlines (so a ring or an L counts as it is, not as its box)
+function facePlanShare(e, below) {
+  const inLoops = (f, x, y) => { let inside = false;
+    for (const l of f.Loops || []) for (let i = 0, k = l.length / 3, j = k - 1; i < k; j = i++) { const xi = l[3 * i], yi = l[3 * i + 1], xj = l[3 * j], yj = l[3 * j + 1];
+      if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside; }
+    return inside; };
+  const flat = (o, kind) => (o.Faces || []).filter((f) => f.Kind === kind && (f.Loops || []).length);
+  const mine = flat(e, "soffit"), b = e.Box, N = 40;
+  let inS = 0, both = 0;
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const x = b[0] + ((i + 0.5) * (b[3] - b[0])) / N, y = b[1] + ((j + 0.5) * (b[4] - b[1])) / N;
+    if (mine.length ? !mine.some((f) => inLoops(f, x, y)) : false) continue;
+    inS++;
+    if (below.some((o) => { const tops = flat(o, "top"); return tops.length ? tops.some((f) => inLoops(f, x, y)) : x >= o.Box[0] && x <= o.Box[3] && y >= o.Box[1] && y <= o.Box[4]; })) both++;
+  }
+  return inS ? both / inS : 0;
 }
 
 
@@ -6915,7 +7189,7 @@ function calcFits(L, c) {
   const dw = wordScore(words(L.description), c.words), hw = wordScore(words(L.heading), c.words);
   // An earthworks item only takes a calculation of the same item: working space never takes the excavation (8 Nov 2026: with
   // working space in m², his m³ working-space line took the excavation figure, the closest wording in m³)
-  if (k === "earth") { const same = (re) => re.test(t) === re.test(ct); if (![/working space/, /stockpil/, /hard rock/, /hand excavation/, /pioneer/, /g5/, /g6/, /g7/].every(same)) return false; return dw >= 0.5 || (dw >= 0.25 && hw >= 0.5); }
+  if (k === "earth") { const same = (re) => re.test(t) === re.test(ct); if (![/working space/, /stockpil/, /hard rock/, /hand excavation/, /pioneer/, /\bg5\b/, /\bg6\b/, /\bg7\b/].every(same)) return false; return dw >= 0.5 || (dw >= 0.25 && hw >= 0.5); }
   if (k === "rebar") return dw >= 0.5 || hw >= 0.5;
   return true;
 }
@@ -8777,6 +9051,7 @@ function editorFor(L, lines) {
   const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
   body.push(h("div", { class: "edfield" },
     h("span", { class: "edlabel" }, "Where it comes from"),
+    L.est && !L.edited ? h("p", { class: "edtext warn", id: "estNote" }, "An estimate, not a measurement. " + L.est) : null,
     h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
     ...reasons.map((r) => h("p", { class: "edtext" }, r)),
     /joint/i.test(L.description) ? jointLayoutNote() : null,
@@ -8831,8 +9106,24 @@ function editorOverview(lines, groups) {
     lnOverview(),
     revOverview(),
     yourConfirmations(groups).length ? h("button", { type: "button", class: "link", onclick: () => undoConfirmations(groups) }, `Undo my confirmations on this model (${plural(yourConfirmations(groups).length, "group")})`) : null,
+    basisOverview(lines),
     h("span", { class: "edtitle sm" }, "How lines were mapped"),
     h("div", { class: "howlist" }, ...how.map(([l, n]) => h("div", {}, h("span", {}, l), h("b", {}, String(n))))))];
+}
+// How the quantities were arrived at: measured from the model (a volume, a count, a length read off the elements), worked out from
+// it by a rule (formwork from faces, finishes, joints on a drawn layout), estimated (a rate, a share or a depth that isn't in the
+// model), or not in the model at all. The estimates are listed with what would make each a measurement. Counted by line: SolvBoQ
+// holds no rates, so it can't say what share of the bill's value each is, and says so.
+function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
+function basisOverview(lines) {
+  const n = (b) => lines.filter((L) => basisOf(L) === b).length, est = lines.filter((L) => basisOf(L) === "estimated");
+  const rows = [["Measured from the model", n("measured")], ["Worked out from the model", n("worked")], ["Estimated", n("estimated")], ["Not in the model: to measure", n("none")], ["Quantity typed by you", n("edited")]].filter(([, c], i) => c || i < 3);
+  return h("div", { class: "edfield", id: "basisBox" },
+    h("span", { class: "edtitle sm" }, "How the quantities were arrived at"),
+    h("div", { class: "howlist" }, ...rows.map(([l, c]) => h("div", {}, h("span", {}, l), h("b", {}, String(c))))),
+    est.length ? h("p", { class: "edtext warn" }, `${plural(est.length, "line")} ${est.length === 1 ? "is an estimate" : "are estimates"}, not measured from the model. These are often a large part of a bill’s value (reinforcement, earthworks), and the count of lines doesn’t show that: SolvBoQ has no rates.`) : h("p", { class: "edtext" }, "No line is an estimate."),
+    ...est.map((L) => h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${L.description}${L.shownQty != null ? ` · ${mapQty(L.shownQty, L.unit)} ${L.unit || ""}` : ""}`), h("span", {}, L.est)),
+      h("button", { type: "button", class: "btn sm", onclick: () => selectLine(L) }, "Open"))));
 }
 // What changed since an earlier run of this model in the project (hybrid plan, Phase 5: revisions.js). Both runs are worked out with
 // the same settings and decisions, so what differs is the model and the data the add-in read
@@ -8891,7 +9182,7 @@ function boqRows() {
     out.push({ item: n, section: L.unmapped ? "" : L.section, clause: L.clause, heading: L.unmapped ? "" : L.heading, description: L.description, unit: L.unit || "",
       quantity: L.status === "prov" ? "Prov." : L.shownQty == null ? "" : mapQty(L.shownQty, L.unit),
       status: { done: "confirmed", confirm: "to confirm", claude: "to confirm", flag: "model problem", measure: "to measure", prov: "provisional", unmapped: "not mapped" }[L.status],
-      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.inferred ? "inferred" : "modelled",
+      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "inferred" : "modelled",
       element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") });
   }
   return out;
