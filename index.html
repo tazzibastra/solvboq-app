@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-14T15:25:02Z">
+<meta name="solvboq-build" content="2026-11-14T15:45:02Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -7916,6 +7916,9 @@ const Store = (() => {
     saveInputs: (pid, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "inputs", "main"), JSON.parse(JSON.stringify(doc))); }),
 
     // His notes on generated bill lines (notes.js): one document each
+    // His decisions on a model's bill (decisions.js): one document per model
+    loadDecisions: (pid, id) => wrap(async () => { need(); const d = await F.getDoc(F.doc(db, "projects", pid, "decisions", id)); return d.exists() ? d.data() : null; }),
+    saveDecisions: (pid, id, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "decisions", id), JSON.parse(JSON.stringify(doc))); }),
     listNotes: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "notes")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
     saveNote: (pid, n) => wrap(async () => { need(); const { id, ...rest } = n; await F.setDoc(F.doc(db, "projects", pid, "notes", id), JSON.parse(JSON.stringify(rest))); }),
     deleteNote: (pid, id) => wrap(async () => { need(); await F.deleteDoc(F.doc(db, "projects", pid, "notes", id)); }),
@@ -7934,7 +7937,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", createProject: "project", joinProject: "project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDecisions: "bill decisions", createProject: "project", joinProject: "project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -8040,7 +8043,8 @@ async function saveFile(filename, data, mime) {
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
-  Object.assign(state, { mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  if (typeof decFlush === "function") decFlush();   // the model being left: its decisions saved, none carried into the next
+  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   state.result = runChecks(records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -8051,6 +8055,7 @@ function load(records, name, meta = {}) {
   state.prev = recordHistory($("fProject").value.trim(), $("fRev").value.trim(), Math.round(sm.quantities * 100), Math.round(sm.overall * 100));
   render();
   window.scrollTo(0, 0);
+  if (typeof decLoad === "function") decLoad();   // his decisions on this model, from the project (or this browser)
 }
 $("sampleSel").addEventListener("change", (e) => { const s = SAMPLES[e.target.value]; if (s) load(recordsFromJSON(s.data), s.name, s); });
 $("uploadLabel").addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); $("file").click(); } });
@@ -8120,6 +8125,7 @@ function scoreWithout(key, quantities) {
 
 // ===== Render: overview =====
 function render() {
+  if (typeof decTouch === "function") decTouch();
   if (state.view !== "master" && $("mbDlg")?.open) { MB.sel = null; MB.ov = false; $("mbDlg").close(); }
   $("viewOverview").hidden = state.view !== "overview";
   $("viewDetail").hidden = state.view !== "detail";
@@ -8794,6 +8800,102 @@ function lnHeadBox(L) {
 const lnIcon = () => svg('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--accent)" stroke-width="2.2" aria-label="Has your note"><path d="M4 5h16v11H9l-5 4z"></path></svg>');
 Store.onUser(() => lnLoad());
 
+// ===== His decisions on a model's bill, kept with the project (engine plan A5, built 14 Nov 2026) =====
+// What he decided on a bill used to live in the page (confirmations: gone on a reload) or in one browser (typed quantities,
+// earthworks figures), so the page Revit opens and the published page didn't share them, and a bill couldn't be rebuilt from
+// its parts. Now one document per model holds them: projects/{pid}/decisions/{model}, or this browser when there is no project
+// (moved into the project the first time it has none, as the project inputs are). A bill is then the extract + the conventions
+// + the project inputs + this document + the page build it records.
+//   map       his decision per group of elements: the item, how it was decided, confirmed or not
+//   manual    quantities he typed, per line        less   lines billed less the concrete they overlap
+//   out, prov lines left out, or billed as provisional      accepted   elements whose readiness flag he took on himself
+//   earth     the earthworks and coating figures he set for the model
+//   extract   the run they were made on; by, at, build
+// Groups are still known by Revit type name (the group key), so a renamed type is asked again; keying by Revit's stable ids
+// is the next step (hybrid plan, Phase 5).
+// One shared page scope: the top-level names here are dec*, DEC*.
+const DEC_LOCAL = "solvboq-decisions-v1";
+const DEC = { key: "", saved: "", timer: null, loading: false, err: "", held: 0, at: "" };
+const decId = (name) => "d-" + (String(name || "model").toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "model");
+
+// The decisions as they are stored: plain lists, sorted, so two equal states give the same text
+function decPack(st) {
+  const byK = (a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : 0);
+  return { model: st.name || "", extract: st.checked || "",
+    map: Object.entries(st.mapDecisions || {}).map(([k, d]) => ({ k, item: d.item || null, method: d.method || "", confirmed: !!d.confirmed, ...(d.confidence != null ? { confidence: d.confidence } : {}) })).sort(byK),
+    manual: Object.entries(st.manual || {}).filter(([, q]) => Number.isFinite(q)).map(([k, q]) => ({ k, q })).sort(byK),
+    less: [...(st.lessOverlap || [])].sort(), out: [...(st.lineOut || [])].sort(), prov: [...(st.prov || [])].sort(),
+    accepted: [...(st.accepted || [])].map(String).sort(), earth: st.earth || {} };
+}
+// Stored decisions back into the page's state. On another run of the model than the one they were made on, a confirmation of a
+// group whose model problem is still open (openFlag gives its title) is not brought back: the line is his to look at again, as
+// with a saved mapping. An item he chose himself stays chosen. Returns the state fields and the groups held back.
+function decUnpack(doc, { extract = "", openFlag = () => "" } = {}) {
+  const same = !doc.extract || doc.extract === extract, map = {}, held = [];
+  for (const d of doc.map || []) {
+    if (!d || !d.k) continue;
+    if (!same && d.confirmed && d.method !== "edited" && openFlag(d.k)) { held.push(d.k); continue; }
+    map[d.k] = { item: d.item || null, method: d.method || "confirmed", confirmed: !!d.confirmed, ...(d.confidence != null ? { confidence: d.confidence } : {}) };
+  }
+  return { mapDecisions: map, manual: Object.fromEntries((doc.manual || []).filter((x) => x && x.k && Number.isFinite(x.q)).map((x) => [x.k, x.q])),
+    lessOverlap: new Set(doc.less || []), lineOut: new Set(doc.out || []), prov: new Set(doc.prov || []), accepted: new Set((doc.accepted || []).map(String)), earth: doc.earth || {}, held };
+}
+
+// ----- In the page -----
+const decOnCloud = () => !!(typeof Store !== "undefined" && Store.user && typeof CL !== "undefined" && CL.pid);
+const decLocal = () => { try { return JSON.parse(localStorage.getItem(DEC_LOCAL) || "{}") || {}; } catch (e) { return {}; } };
+// The open tier 1 problem on a group's modelled elements, if any
+function decOpenFlag(result) {
+  const groups = new Map(buildGroups(result, {}, {}).map((g) => [g.key, g]));
+  return (k) => { const g = groups.get(k); if (!g || g.inferred) return "";
+    const i = g.elements.flatMap((x) => result.byElement[x.Id] || []).find((x) => x.tier === 1 && (x.severity === "eyes" || x.severity === "unknown")); return i ? i.title : ""; };
+}
+// After a model opens, and when the project changes: bring its decisions in
+async function decLoad() {
+  if (typeof state === "undefined" || !state.records || !state.name || state.fromSample) { DEC.key = ""; return; }
+  const id = decId(state.name), key = `${decOnCloud() ? CL.pid : "local"}|${id}|${state.checked || ""}`;
+  if (DEC.key === key) return;
+  DEC.key = key; DEC.loading = true; DEC.held = 0;
+  const local = decLocal()[id] || null;
+  let doc = null;
+  try { doc = decOnCloud() ? await Store.loadDecisions(CL.pid, id) : local; DEC.err = ""; } catch (e) { DEC.err = e.message; }
+  if (DEC.key !== key) return;   // another model or project was opened meanwhile
+  const move = decOnCloud() && !doc && !DEC.err && local;   // made before the project existed: into the project
+  doc = doc || (DEC.err ? null : local);
+  if (doc) {
+    const u = decUnpack(doc, { extract: state.checked || "", openFlag: decOpenFlag(state.result) });
+    const earthChanged = JSON.stringify(u.earth) !== JSON.stringify(state.earth || {});
+    Object.assign(state, { mapDecisions: u.mapDecisions, manual: u.manual, lessOverlap: u.lessOverlap, lessFor: state.name, lineOut: u.lineOut, prov: u.prov, accepted: u.accepted, earth: u.earth });
+    saveManual(state.name, state.manual); saveLess(state.name, state.lessOverlap); saveEarth(state.name, state.earth);
+    DEC.held = u.held.length; DEC.at = doc.at || "";
+    if (earthChanged && typeof rerunChecks === "function") rerunChecks();
+  }
+  DEC.saved = move ? "" : JSON.stringify(decPack(state));
+  DEC.loading = false;
+  if (doc) { render(); if (DEC.held) toast(`${plural(DEC.held, "confirmation")} from an earlier run ${DEC.held === 1 ? "is" : "are"} back to confirm: the model problem is still open`); }
+  if (move) decTouch();
+}
+// After anything is drawn: if his decisions changed, save them shortly
+function decTouch() {
+  if (typeof state === "undefined" || !state.records || DEC.loading || !DEC.key || state.fromSample) return;
+  if (JSON.stringify(decPack(state)) === DEC.saved) return;
+  clearTimeout(DEC.timer); DEC.timer = setTimeout(decSave, 1200);
+}
+// Before another model opens: what is waiting to be saved goes now, and nothing of this model's is saved under the next one
+function decFlush() { if (DEC.timer) { clearTimeout(DEC.timer); DEC.timer = null; decSave(); } DEC.key = ""; }
+async function decSave() {
+  DEC.timer = null;
+  if (!state.records || DEC.loading || !DEC.key) return;
+  const pack = decPack(state), text = JSON.stringify(pack), id = decId(state.name);
+  const doc = { ...pack, by: Store.user?.email || (Store.user ? "guest" : ""), at: new Date().toISOString(), build: document.querySelector('meta[name="solvboq-build"]')?.content || "" };
+  try {
+    if (decOnCloud()) await Store.saveDecisions(CL.pid, id, doc);
+    else { const all = decLocal(); all[id] = doc; localStorage.setItem(DEC_LOCAL, JSON.stringify(all)); }
+    DEC.saved = text; DEC.at = doc.at; DEC.err = "";
+  } catch (e) { DEC.err = e.message; }
+}
+
+
 // ===== Map to SANS: the bill as a tree (sections › clause headings › lines), and an item editor beside it =====
 // Built from the Claude Design redesign. Lines come from mapping.js (boqLines) and the engine's inferred and expected
 // items; this file only presents them and records decisions in `state`.
@@ -8847,6 +8949,7 @@ function mapLines(groups) {
 
 function renderMap() {
   const groups = currentGroups(), lines = mapLines(groups);
+  if (typeof decTouch === "function") decTouch();   // his decisions are saved with the project as they change
   if (state.collFor !== state.name) {
     // Start with the sections that still need something open, and the finished ones closed
     state.collFor = state.name; state.coll = new Set();
@@ -10867,7 +10970,7 @@ $("projSel").addEventListener("change", async (e) => {
 $("projCode").addEventListener("click", () => copyText(CL.pid, "Project code copied. On another computer, or in the page Revit opens, choose Join with a code and paste it."));
 
 // Called when the project list loads or the project changes (claimsview.js)
-function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); }
+function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); }
 
 // ----- The project's models -----
 // The model last used in each project, so choosing a project (or reloading the page) opens it again
