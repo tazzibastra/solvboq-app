@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-14T19:56:23Z">
+<meta name="solvboq-build" content="2026-11-14T20:07:51Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4452,6 +4452,24 @@ function runChecks(input, opts = {}) {
 
 
 // ===== BoQ items worked out from model data, and items that always come from the drawings =====
+// Whether the model is a manhole (or several): its title or the project says so, or it has precast manhole parts (LD codes) and
+// most of its concrete belongs to them. A concrete element belongs to a manhole when it overlaps one of those parts in plan and
+// is itself manhole-sized (no side over MANHOLE_SIDE in plan). One precast slab on a chamber beside a tank doesn't make the tank
+// a manhole: on the Supernatant Holding Tanks (14 Nov 2026) one Generic-Ring coded LD.SLAB turned the tank's walls into
+// “manhole walls”, rough outside, and its 426 m³ of excavation, fill and rock into 48 m³ “for manholes”.
+const MANHOLE_SIDE = 5;
+function manholeModel(r, live, opts = {}) {
+  if (/manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole") return true;
+  if (typeof cardOf !== "function") return false;
+  const ld = live.filter((e) => /^LD\./.test(cardOf(e)?.code || ""));
+  if (!ld.length) return false;
+  const conc = live.filter((e) => r.tradeOfId?.[e.Id] === "concrete" && e.Volume > 0 && !ld.includes(e)), total = sumVol(conc);
+  if (!(total > 0)) return true;   // precast parts only
+  const small = (e) => !e.Box || Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) <= MANHOLE_SIDE;
+  const mine = (e) => small(e) && (!e.Box || ld.some((q) => !q.Box || planOverlap(e.Box, q.Box)));
+  return sumVol(conc.filter(mine)) >= 0.5 * total;
+}
+
 // Whether an inferred line is an estimate, and what would make it a measurement (engine plan: the 3 Way Splitter's readiness said
 // “100% trusted” while half the bill's value was estimated). An inferred line is either worked out from the model's geometry by
 // a rule (formwork from faces, finishes, joints on a drawn layout, working space round the footprint): "" here; or it rests on a
@@ -4599,7 +4617,7 @@ function deriveItems(r, opts = {}) {
     item({ key: "floorfinish", label: "Floor finishes (for example resin or quartz)", ref: "1200 G 8.23", unit: "m²", qty: allSlabArea, status: slabs.length ? "partly" : "none", note: "The area comes from the slabs. Which finish goes where comes from the finishes schedule." });
   }
   // Formwork and reinforcement are inferred line by line (inferLines); readiness shows their totals, Map to SANS the lines
-  const manhole = (typeof cardOf === "function" && live.some((e) => /^LD\./.test(cardOf(e)?.code || ""))) || /manhole/i.test(String(opts.title || "")) || opts.inputs?.structure?.module === "manhole";
+  const manhole = manholeModel(r, live, opts);
   r.layout = jointLayout(opts.annotations);
   r.annotations = opts.annotations || null;
   r.ngl = modelNgl(opts.annotations, live);
@@ -4629,7 +4647,7 @@ function deriveItems(r, opts = {}) {
 
   // Earthworks: inferred from the lowest parts of the structure and stated assumptions (inferEarthworks)
   // A precast-only manhole has no concrete slabs, but its parts have positions: it still gets its earthworks
-  const manholeOnly = !withBoxes && ((typeof cardOf === "function" && live.some((e) => e.Box && /^LD\./.test(cardOf(e)?.code || ""))) || (opts.inputs?.structure?.module === "manhole" && live.some((e) => e.Box)));
+  const manholeOnly = !withBoxes && manhole && live.some((e) => e.Box);
   const earth = withBoxes || manholeOnly ? inferEarthworks(r, { live, ground }, opts) : { lines: [], assumptions: null };
   const eTotal = (k) => earth.lines.find((l) => l.key === "earth|" + k)?.qty;
   if (earth.assumptions?.manhole) {
@@ -5406,7 +5424,7 @@ function inferEarthworks(r, ctx, opts) {
   const from = (k) => (mine[k] != null ? "model" : fromS[k] != null ? "project" : "default");
   const fromText = (k) => (from(k) === "model" ? "set for this model under Earthworks" : `from ${S?.name || "the structure"} in the project, ${srcWords(S?.srcOf(k))}`);
   const mhCode = (e) => (typeof cardOf === "function" && cardOf(e)?.code) || "";
-  if (live.some((e) => /^LD\./.test(mhCode(e))) || /manhole/i.test(String(opts.title || "")) || S?.module === "manhole") return manholeEarthworks(r, live, A, opts);
+  if (manholeModel(r, live, opts) || S?.module === "manhole") return manholeEarthworks(r, live, A, opts);
   const civil = r.structure === "civil";
   // Rock and intermediate excavation from his reading of the borehole logs, over the depth that's dug (unless set for this model)
   const geo = S && typeof geoShares === "function" ? geoShares(S.raw, civil ? A.replacementDepth : A.buildingDepth) : null;
@@ -6425,7 +6443,7 @@ function faceSupport(r) {
   // (a wall drawn 7 mm above its slab, the 3 Way Splitter). A gap in the model: said, never closed by a guess.
   const gaps = [];
   for (const n of nodes.values()) {
-    if (!n.read || n.on.length || n.into.length || !(n.soffit > 0) || !n.e.Box) continue;
+    if (!n.read || n.on.length || n.into.length || !(n.soffit > 0) || !n.e.Box || r.tradeOfId?.[n.e.Id] !== "concrete") continue;   // concrete only: steel on packers isn't a gap in the structure
     let best = null;
     for (const o of all) { if (o === n.e || !o.Box || !Array.isArray(o.Faces) || planShared(n.e.Box, o.Box) <= 0) continue;
       const gap = n.e.Box[2] - o.Box[5]; if (gap > 0.002 && gap <= 0.05 && (!best || gap < best.gap)) best = { id: String(n.id), below: String(o.Id), gap }; }
