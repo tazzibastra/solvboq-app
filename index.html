@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-14T14:50:55Z">
+<meta name="solvboq-build" content="2026-11-14T15:04:43Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -4144,6 +4144,9 @@ function runChecks(input, opts = {}) {
     inf.InfillLess = (inf.InfillLess || 0) + p.v; (inf.InfillFrom ||= []).push({ id: other.Id, name: nameOf(other), v: p.v });
   }
   for (const e of live) if (e.InfillLess > (e.Volume || 0)) e.InfillLess = e.Volume || 0;
+  // The other unjoined pairs (structural concrete over structural concrete: a footing ring and a floor over the same area) are
+  // never taken off by the engine: the line is held as a model problem. deriveItems works out what could come off, for him to choose
+  const freePairs = pl.filter((p) => p.v > 0 && !roleIs(p.a, ...INFILL) && !roleIs(p.b, ...INFILL));
   const unjoinedIds = new Set(unjoined.map((e) => e.Id));
   const overlapping = live.filter((e) => !dupIds.has(e.Id) && !unjoinedIds.has(e.Id) && (e.Warnings || []).some((w) => RX.overlapWarn.test(w)));
   add("overlapwarn", "eyes", "Revit says these elements overlap",
@@ -4441,6 +4444,7 @@ function runChecks(input, opts = {}) {
   out.cuts = input.filter((e) => e.Box && (/Opening$/.test(e.Bic || "") || /opening cut/i.test(e.Category || "")));   // opening cuts in floors, roofs and shafts: billed as box-outs   // chamfers modelled as reveals are billed from these
   out.inputs = opts.inputs || null;   // the project's inputs used (inputs.js): the structure, its kind, its geotech
   out.structureWhy = structureWhy;
+  out.overlapPairs = freePairs;
   out.derived = deriveItems(out, { ...opts, annotations: input.annotations });
   out.derived.expected = expectedItems(out, out.derived.lines);
   return out;
@@ -4532,6 +4536,19 @@ function deriveItems(r, opts = {}) {
   }
   // Which slabs bear on the ground and which are suspended or raised, kept for the face rules (structure.js, hybrid plan Phase 2)
   r.slabKind = {}; for (const [k, list] of [["ground", ground], ["suspended", suspended], ["raised", raised]]) for (const e of list) r.slabKind[e.Id] = k;
+  // What could come off each element for concrete it overlaps without being joined (decided 14 Nov 2026: offered, never applied by
+  // the engine). The volume two elements share is in both; billed once, it stays with the one cast first and comes off the one cast
+  // later (the order of casting, structure.js; the same pour: off the one drawn later). Map to SANS offers “Bill less the overlap” on
+  // the line; until he chooses it the line bills Revit's volume and stays a model problem. Where two of the elements it overlaps
+  // also overlap each other, the shared volumes may themselves overlap (Revit gives pairs only), so the figure is marked
+  // approximate; it never exceeds the element's volume.
+  for (const e of r.elements) { delete e.OverlapLess; delete e.OverlapFrom; delete e.OverlapApprox; }
+  { const ord = (e) => (typeof faceOrder === "function" ? faceOrder(r, e) : 0), paired = new Set((r.overlapPairs || []).flatMap((p) => [p.a.Id + "|" + p.b.Id, p.b.Id + "|" + p.a.Id]));
+    for (const p of r.overlapPairs || []) {
+      const oa = ord(p.a), ob = ord(p.b), later = oa > ob ? p.a : ob > oa ? p.b : (Number(p.a.Id) > Number(p.b.Id) || (Number.isNaN(Number(p.a.Id) - Number(p.b.Id)) && String(p.a.Id) > String(p.b.Id))) ? p.a : p.b, first = later === p.a ? p.b : p.a;
+      later.OverlapLess = Math.min(later.Volume || 0, (later.OverlapLess || 0) + p.v); (later.OverlapFrom ||= []).push({ id: first.Id, name: nameOf(first), v: p.v });
+      if (later.OverlapFrom.some((x) => x.id !== first.Id && paired.has(x.id + "|" + first.Id))) later.OverlapApprox = true;
+    } }
   // His tank bill splits reinforced concrete into watertight (what holds the water) and non-watertight (bridge, beams, columns,
   // stairs, landings, footings). A wall standing on nothing, above the floor, is a beam (GT's bridge beams are 400 RC Wall elements);
   // a suspended slab or base is watertight only when water-retaining walls stand on it (a launder or chamber floor).
@@ -8471,6 +8488,10 @@ const lineKey = (L) => [L.section, L.clause, L.heading || "", L.description].joi
 // The key of the line an item lands on, as the bill sets it out
 const itemKey = (it) => lineKey(typeof presentItem === "function" ? presentItem(it) : it);
 const MANUAL_KEY = "solvboq-manual-qty-v1";
+// Lines he chose to bill less the concrete they overlap without being joined (Map to SANS), kept per model in this browser
+const LESS_KEY = "solvboq-less-overlap-v1";
+function loadLess(name) { try { return new Set((JSON.parse(localStorage.getItem(LESS_KEY) || "{}") || {})[name] || []); } catch (e) { return new Set(); } }
+function saveLess(name, set) { try { const all = JSON.parse(localStorage.getItem(LESS_KEY) || "{}") || {}; all[name] = [...set]; localStorage.setItem(LESS_KEY, JSON.stringify(all)); } catch (e) {} }
 function loadManual(name) { try { return (JSON.parse(localStorage.getItem(MANUAL_KEY) || "{}") || {})[name] || {}; } catch (e) { return {}; } }
 function saveManual(name, v) { try { const all = JSON.parse(localStorage.getItem(MANUAL_KEY) || "{}") || {}; all[name] = v; localStorage.setItem(MANUAL_KEY, JSON.stringify(all)); } catch (e) {} }
 $("btnBoqCopy").addEventListener("click", () => {
@@ -8753,7 +8774,7 @@ function problemsOf(L) {
 
 // Every line of the bill, with its key, status and the quantity to show
 function mapLines(groups) {
-  state.manual = state.manual || {}; state.lineOut = state.lineOut || new Set(); state.prov = state.prov || new Set();
+  state.manual = state.manual || {}; if (state.lessFor !== state.name) { state.lessOverlap = loadLess(state.name); state.lessFor = state.name; } state.lineOut = state.lineOut || new Set(); state.prov = state.prov || new Set();
   const mapped = boqLines(groups, { full: true });
   const have = new Set(mapped.map(lineKey));
   const expected = [...(state.result.derived.expected || []), ...(state.aiExpected || [])].filter((x) => !have.has(lineKey(x))).map((x) => ({ ...x, groups: [], elements: 0, expected: true, qty: null }));
@@ -8764,6 +8785,12 @@ function mapLines(groups) {
   all.forEach((L, i) => {
     L.key = L.key || lineKey(L); L.n = i + 1;
     L.modelQty = L.qty;
+    // Concrete the line's elements overlap without being joined, which could come off it (engine: OverlapLess), and whether he
+    // chose to bill it less that. Only on modelled lines in m³; the engine never takes it off by itself
+    const lessEls = !L.inferred && !L.expected && !L.unmapped && L.unit === "m³" ? L.groups.flatMap((g) => g.elements.filter((e) => e.OverlapLess > 0 && state.result.status[e.Id] !== "excluded")) : [];
+    L.overlapLess = lessEls.reduce((t, e) => t + e.OverlapLess, 0); L.overlapFrom = lessEls.flatMap((e) => e.OverlapFrom || []); L.overlapApprox = lessEls.some((e) => e.OverlapApprox);
+    L.lessOn = L.overlapLess > 0 && state.lessOverlap.has(L.key);
+    if (L.lessOn) L.qty = Math.max(0, L.qty - L.overlapLess);
     const over = state.manual[L.key];
     L.edited = !L.expected && !L.unmapped && Number.isFinite(over);
     L.shownQty = Number.isFinite(over) ? over : L.qty;
@@ -8895,7 +8922,7 @@ function setLineItem(L, item) {
 }
 // Undo decisions made on a line: back to what the rules suggest, and forget any saved mapping for its groups
 async function undoLine(L) {
-  state.lineOut.delete(L.key); state.prov.delete(L.key);
+  state.lineOut.delete(L.key); state.prov.delete(L.key); if (state.lessOverlap?.delete(L.key)) saveLess(state.name, state.lessOverlap);
   if (L.expected) { delete state.manual[L.key]; saveManual(state.name, state.manual); renderMap(); return; }
   const keys = new Set(L.groups.map((g) => g.key));
   for (const k of keys) delete state.mapDecisions[k];
@@ -8904,6 +8931,10 @@ async function undoLine(L) {
   if (p.mapping.length !== before) { await Profiles.save(p); rerunChecks(); }
   toast("Back to the suggestion"); render();
 }
+// Bill the line less the concrete its elements overlap without being joined (his choice; the flag and the fix stay)
+function overlapNames(L) { const by = new Map(); for (const o of L.overlapFrom || []) by.set(o.name, (by.get(o.name) || 0) + o.v);
+  return [...by].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([n, v]) => `“${n}” (${fmt2(v)} m³)`).join(", ") + (by.size > 3 ? " and others" : ""); }
+function billLess(L) { state.lessOverlap.add(L.key); saveLess(state.name, state.lessOverlap); toast(`Billed less ${fmt2(L.overlapLess)} m³ of overlap`); confirmLine(L); }
 function leaveOut(L) {
   state.lineOut.add(L.key);
   for (const i of L.problems) state.fix.add(i.id);
@@ -8969,7 +9000,12 @@ function editorFor(L, lines) {
   // A model problem: bill it as it is, or leave it out and send it to the modeller
   if (L.status === "flag") body.push(h("div", { class: "edprob" },
     h("span", {}, h("b", {}, "Model problem. "), L.problems.map((p) => p.title).join("; ") + ". " + (L.problems[0]?.body || "")),
-    h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => confirmLine(L) }, "Bill as is"), h("button", { type: "button", class: "btn sm", onclick: () => leaveOut(L) }, "Leave out, send to modeller"))));
+    L.lessOn ? h("span", { id: "lessNote" }, `You chose to bill this line less the ${fmt2(L.overlapLess)} m³ it shares with ${overlapNames(L)}: ${mapQty(L.qty, L.unit)} m³, against Revit’s ${mapQty(L.modelQty, L.unit)} m³. Joining them in Revit is still the fix.`)
+      : L.overlapLess > 0 ? h("span", { id: "lessNote" }, `Billed as is, ${fmt2(L.overlapLess)} m³ of this line is counted twice: it is also in ${overlapNames(L)}, cast first. Billed less the overlap, the line is ${mapQty(Math.max(0, L.modelQty - L.overlapLess), L.unit)} m³${L.overlapApprox ? " (approximate: an element here overlaps more than one other, and those parts may overlap each other)" : ""}. Joining them in Revit is still the fix.`)
+      : L.problems.some((p) => p.key === "unjoined") ? h("span", {}, "The volume these elements share with others would come off the other line (the element cast later), not this one.") : null,
+    h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { if (state.lessOverlap.delete(L.key)) saveLess(state.name, state.lessOverlap); confirmLine(L); } }, "Bill as is"),
+      L.overlapLess > 0 ? h("button", { type: "button", class: "btn sm", id: "btnLess", onclick: () => billLess(L) }, `Bill less the overlap (${fmt2(L.overlapLess)} m³)`) : null,
+      h("button", { type: "button", class: "btn sm", onclick: () => leaveOut(L) }, "Leave out, send to modeller"))));
   if (L.status === "claude") { const ai = L.groups.find((g) => g.method === "claude"); body.push(h("div", { class: "edai" }, h("b", {}, `Claude suggests this${ai.confidence != null ? ` (${Math.round(ai.confidence * 100)}% sure)` : ""}. `), ai.reason || "")); }
   // The SANS item, with quick picks and the full form for anything else
   if (!L.expected) {
@@ -9051,6 +9087,8 @@ function editorFor(L, lines) {
   const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
   body.push(h("div", { class: "edfield" },
     h("span", { class: "edlabel" }, "Where it comes from"),
+    L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
+      h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
     L.est && !L.edited ? h("p", { class: "edtext warn", id: "estNote" }, "An estimate, not a measurement. " + L.est) : null,
     h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
     ...reasons.map((r) => h("p", { class: "edtext" }, r)),
@@ -9070,7 +9108,7 @@ function editorFor(L, lines) {
     if (L.status === "measure") {
       foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { const v = $("edqty")?.value.trim(); if (!v) return toast("Enter the quantity first."); setQty(L, v); advance(L); renderMap(); } }, "Save quantity and next"),
         h("button", { type: "button", class: "btn", onclick: () => { state.prov.add(L.key); advance(L); toast("Billed as provisional"); renderMap(); } }, "Bill as provisional"));
-    } else foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => confirmLine(L) }, L.status === "flag" ? "Bill as is and next" : L.status === "claude" ? "Accept and next" : "Confirm and next"));
+    } else foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => confirmLine(L) }, L.status === "flag" ? (L.lessOn ? "Bill less the overlap and next" : "Bill as is and next") : L.status === "claude" ? "Accept and next" : "Confirm and next"));
   } else if (L.status === "done" && by && !L.edited) {
     foot.push(h("span", { class: "edok" }, "Matched by a rule"), h("button", { type: "button", class: "btn", onclick: () => selectLine(nextOpenAfter(L)) }, "Next"));
   } else if (L.status !== "unmapped") {
@@ -9182,7 +9220,7 @@ function boqRows() {
     out.push({ item: n, section: L.unmapped ? "" : L.section, clause: L.clause, heading: L.unmapped ? "" : L.heading, description: L.description, unit: L.unit || "",
       quantity: L.status === "prov" ? "Prov." : L.shownQty == null ? "" : mapQty(L.shownQty, L.unit),
       status: { done: "confirmed", confirm: "to confirm", claude: "to confirm", flag: "model problem", measure: "to measure", prov: "provisional", unmapped: "not mapped" }[L.status],
-      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "inferred" : "modelled",
+      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "inferred" : L.lessOn ? "modelled, less overlap" : "modelled",
       element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") });
   }
   return out;
