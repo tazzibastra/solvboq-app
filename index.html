@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-14T15:45:02Z">
+<meta name="solvboq-build" content="2026-11-14T15:55:38Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -6027,7 +6027,8 @@ function loadLearned() { try { return JSON.parse(localStorage.getItem(LEARN_KEY)
 function saveLearned(map) { try { localStorage.setItem(LEARN_KEY, JSON.stringify(map)); return true; } catch (e) { return false; } }
 
 // Build mapping groups from a readiness result. decisions: key -> { item, method, confirmed }
-function buildGroups(result, decisions, learned) {
+// held: Map of rule id → why, for rules he has often overruled in this project (decisions.js): their matches wait for him
+function buildGroups(result, decisions, learned, held = null) {
   const groups = new Map();
   for (const e of result.elements) {
     if (NON_MEASURED.has(e.Bic)) continue;
@@ -6068,7 +6069,8 @@ function buildGroups(result, decisions, learned) {
       const flagged = r && flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : "";
       const look = !r || r.check ? flagged : flag ? `Readiness: ${flag.title.charAt(0).toLowerCase() + flag.title.slice(1)}. Check the quantity before billing it.` : coded ? "" : g.elements.some((x) => x.InPlace) ? "An in-place family, drawn by hand in the model. Check what it is and that this item fits it."
         : r.item.section === "SANS 1200 L" || r.ruleId === "H-GRATING" || r.ruleId === "G-CASTIN" ? "Pipework, fittings, puddle flanges and gratings are often priced in the mechanical bill. Confirm they belong in this one, or leave them out." : "";
-      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = (r.check && flagged ? `${flagged} ${r.check}` : r.check) || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : ""); }
+      if (r) { item = r.item; ruleId = r.ruleId; method = r.check || look ? "check" : "rule"; confirmed = !r.check && !look; reason = (r.check && flagged ? `${flagged} ${r.check}` : r.check) || look || (coded ? `From the BoQ code ${cardOf(e).code} on its type.` : "");
+        if (confirmed && held?.has(ruleId)) { method = "check"; confirmed = false; reason = held.get(ruleId); } }
       else reason = "No rule matches this category, family and material.";
     }
     // A structure label (SolvBoQ Structure, for example MH1) names the structure on its line: separate items for separate structures
@@ -7918,6 +7920,7 @@ const Store = (() => {
     // His notes on generated bill lines (notes.js): one document each
     // His decisions on a model's bill (decisions.js): one document per model
     loadDecisions: (pid, id) => wrap(async () => { need(); const d = await F.getDoc(F.doc(db, "projects", pid, "decisions", id)); return d.exists() ? d.data() : null; }),
+    listDecisions: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "decisions")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
     saveDecisions: (pid, id, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "decisions", id), JSON.parse(JSON.stringify(doc))); }),
     listNotes: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "notes")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
     saveNote: (pid, n) => wrap(async () => { need(); const { id, ...rest } = n; await F.setDoc(F.doc(db, "projects", pid, "notes", id), JSON.parse(JSON.stringify(rest))); }),
@@ -8458,7 +8461,7 @@ const needsDecision = (g) => !g.excluded && g.method !== "excluded" && !g.confir
 const batchKey = (g) => `${g.trade}|${g.method}|${g.reason}`;
 // A suggestion with a placeholder such as [grade] isn't finished, so it isn't saved for future models
 const savable = (g) => g.item && !/\[[^\]]*\]/.test(g.item.description);
-function currentGroups() { return buildGroups(state.result, state.mapDecisions, CONV.mapping); }
+function currentGroups() { return buildGroups(state.result, state.mapDecisions, CONV.mapping, typeof decHeldRules === "function" ? decHeldRules() : null); }
 function goMap() { state.view = "map"; render(); window.scrollTo(0, 0); }
 $("navMap").addEventListener("click", goMap);
 $("navReady").addEventListener("click", () => { state.view = "overview"; render(); window.scrollTo(0, 0); });
@@ -8815,14 +8818,17 @@ Store.onUser(() => lnLoad());
 // is the next step (hybrid plan, Phase 5).
 // One shared page scope: the top-level names here are dec*, DEC*.
 const DEC_LOCAL = "solvboq-decisions-v1";
-const DEC = { key: "", saved: "", timer: null, loading: false, err: "", held: 0, at: "" };
+const DEC = { key: "", saved: "", timer: null, loading: false, err: "", held: 0, at: "", docs: [], sug: null, sugFor: null };
 const decId = (name) => "d-" + (String(name || "model").toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "model");
 
 // The decisions as they are stored: plain lists, sorted, so two equal states give the same text
-function decPack(st) {
+function decPack(st, suggestions = null) {
   const byK = (a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : 0);
   return { model: st.name || "", extract: st.checked || "",
-    map: Object.entries(st.mapDecisions || {}).map(([k, d]) => ({ k, item: d.item || null, method: d.method || "", confirmed: !!d.confirmed, ...(d.confidence != null ? { confidence: d.confidence } : {}) })).sort(byK),
+    map: Object.entries(st.mapDecisions || {}).map(([k, d]) => { const sg = suggestions?.get(k);
+      return { k, item: d.item || null, method: d.method || "", confirmed: !!d.confirmed, ...(d.confidence != null ? { confidence: d.confidence } : {}),
+        ...(sg ? { rule: sg.rule || "", kept: sg.item ? decSame(d.item, sg.item) : null } : {}) }; }).sort(byK),
+    ...(suggestions ? { rules: decRules(st, suggestions) } : {}),
     manual: Object.entries(st.manual || {}).filter(([, q]) => Number.isFinite(q)).map(([k, q]) => ({ k, q })).sort(byK),
     less: [...(st.lessOverlap || [])].sort(), out: [...(st.lineOut || [])].sort(), prov: [...(st.prov || [])].sort(),
     accepted: [...(st.accepted || [])].map(String).sort(), earth: st.earth || {} };
@@ -8841,7 +8847,55 @@ function decUnpack(doc, { extract = "", openFlag = () => "" } = {}) {
     lessOverlap: new Set(doc.less || []), lineOut: new Set(doc.out || []), prov: new Set(doc.prov || []), accepted: new Set((doc.accepted || []).map(String)), earth: doc.earth || {}, held };
 }
 
+
+// ===== How often he keeps each rule's suggestion (engine plan D5, built 14 Nov 2026) =====
+// Each stored decision also says which rule suggested the item (rule) and whether he kept it (kept: true, false = he chose
+// another item, null = the rule had no suggestion), and the document counts the groups each rule confirmed by itself that he
+// left alone (rules: [{ rule, label, auto }]). So the documents of a project give, per rule, how often its suggestion stood.
+// A rule he keeps changing stops confirming by itself: DEC_HOLD.
+const DEC_HOLD = { changed: 2, share: 0.2 };   // held back from 2 changes on, when they are over 20% of what the rule decided
+const decSame = (a, b) => !!a && !!b && ["section", "clause", "heading", "description", "unit"].every((k) => (a[k] || "") === (b[k] || ""));
+// suggestions: Map of group key → { rule, item, auto } (what the rules alone give: buildGroups with no decisions)
+function decRules(st, suggestions) {
+  const out = new Map();
+  for (const [k, s] of suggestions || []) {
+    if (!s.rule) continue;
+    const r = out.get(s.rule) || { rule: s.rule, label: s.item ? [String(s.item.heading || "").split(" › ")[0], s.item.description].filter(Boolean).join(": ").slice(0, 90) : s.rule, auto: 0 };
+    if (s.auto && !(st.mapDecisions || {})[k]) r.auto++;
+    out.set(s.rule, r);
+  }
+  return [...out.values()].sort((a, b) => (a.rule < b.rule ? -1 : 1));
+}
+// Per rule over the documents given: kept, changed, left alone (auto), and whether it is held back
+function decAccuracy(docs) {
+  const acc = new Map(), at = (rule, label) => { if (!acc.has(rule)) acc.set(rule, { rule, label: label || rule, kept: 0, changed: 0, auto: 0 }); const a = acc.get(rule); if (label && a.label === rule) a.label = label; return a; };
+  for (const d of docs || []) {
+    for (const r of d?.rules || []) at(r.rule, r.label).auto += r.auto || 0;
+    for (const m of d?.map || []) { if (!m?.rule || m.kept == null || !m.confirmed) continue; at(m.rule)[m.kept ? "kept" : "changed"]++; }
+  }
+  for (const a of acc.values()) { a.n = a.kept + a.changed + a.auto; a.share = a.n ? a.changed / a.n : 0; a.held = a.changed >= DEC_HOLD.changed && a.share > DEC_HOLD.share; }
+  return acc;
+}
+// The rules held back, with the sentence the line shows
+function decHeld(acc) {
+  const out = new Map();
+  for (const a of (acc || new Map()).values()) if (a.held) out.set(a.rule, `You chose another item for ${a.changed} of the ${a.n} groups this rule decided in this project, so it no longer confirms by itself. Check that the item fits.`);
+  return out;
+}
+
 // ----- In the page -----
+// What the rules alone suggest for each group of the open model (worked out once per result)
+function decSuggestions() {
+  if (DEC.sugFor !== state.result) { DEC.sugFor = state.result;
+    DEC.sug = new Map(buildGroups(state.result, {}, {}).map((g) => [g.key, { rule: g.ruleId || "", item: g.item || null, auto: !g.inferred && g.method === "rule" && g.confirmed }])); }
+  return DEC.sug;
+}
+// Every model's decisions in the project (or this browser), with the open model's as they are now: for the rules' record
+function decAllDocs() {
+  const id = typeof state !== "undefined" && state.name ? decId(state.name) : "", live = id && state.records && !state.fromSample ? { ...decPack(state, decSuggestions()), id } : null;
+  return [...(DEC.docs || []).filter((d) => d && d.id !== id), ...(live ? [live] : [])];
+}
+function decHeldRules() { return typeof state === "undefined" || !state.records ? new Map() : decHeld(decAccuracy(decAllDocs())); }
 const decOnCloud = () => !!(typeof Store !== "undefined" && Store.user && typeof CL !== "undefined" && CL.pid);
 const decLocal = () => { try { return JSON.parse(localStorage.getItem(DEC_LOCAL) || "{}") || {}; } catch (e) { return {}; } };
 // The open tier 1 problem on a group's modelled elements, if any
@@ -8859,6 +8913,7 @@ async function decLoad() {
   const local = decLocal()[id] || null;
   let doc = null;
   try { doc = decOnCloud() ? await Store.loadDecisions(CL.pid, id) : local; DEC.err = ""; } catch (e) { DEC.err = e.message; }
+  try { DEC.docs = decOnCloud() ? await Store.listDecisions(CL.pid) : Object.entries(decLocal()).map(([k, v]) => ({ ...v, id: k })); } catch (e) { DEC.docs = []; }
   if (DEC.key !== key) return;   // another model or project was opened meanwhile
   const move = decOnCloud() && !doc && !DEC.err && local;   // made before the project existed: into the project
   doc = doc || (DEC.err ? null : local);
@@ -8870,7 +8925,7 @@ async function decLoad() {
     DEC.held = u.held.length; DEC.at = doc.at || "";
     if (earthChanged && typeof rerunChecks === "function") rerunChecks();
   }
-  DEC.saved = move ? "" : JSON.stringify(decPack(state));
+  DEC.saved = move ? "" : JSON.stringify(decPack(state, decSuggestions()));
   DEC.loading = false;
   if (doc) { render(); if (DEC.held) toast(`${plural(DEC.held, "confirmation")} from an earlier run ${DEC.held === 1 ? "is" : "are"} back to confirm: the model problem is still open`); }
   if (move) decTouch();
@@ -8878,7 +8933,7 @@ async function decLoad() {
 // After anything is drawn: if his decisions changed, save them shortly
 function decTouch() {
   if (typeof state === "undefined" || !state.records || DEC.loading || !DEC.key || state.fromSample) return;
-  if (JSON.stringify(decPack(state)) === DEC.saved) return;
+  if (JSON.stringify(decPack(state, decSuggestions())) === DEC.saved) return;
   clearTimeout(DEC.timer); DEC.timer = setTimeout(decSave, 1200);
 }
 // Before another model opens: what is waiting to be saved goes now, and nothing of this model's is saved under the next one
@@ -8886,7 +8941,7 @@ function decFlush() { if (DEC.timer) { clearTimeout(DEC.timer); DEC.timer = null
 async function decSave() {
   DEC.timer = null;
   if (!state.records || DEC.loading || !DEC.key) return;
-  const pack = decPack(state), text = JSON.stringify(pack), id = decId(state.name);
+  const pack = decPack(state, decSuggestions()), text = JSON.stringify(pack), id = decId(state.name);
   const doc = { ...pack, by: Store.user?.email || (Store.user ? "guest" : ""), at: new Date().toISOString(), build: document.querySelector('meta[name="solvboq-build"]')?.content || "" };
   try {
     if (decOnCloud()) await Store.saveDecisions(CL.pid, id, doc);
@@ -9291,6 +9346,7 @@ function editorOverview(lines, groups) {
     revOverview(),
     yourConfirmations(groups).length ? h("button", { type: "button", class: "link", onclick: () => undoConfirmations(groups) }, `Undo my confirmations on this model (${plural(yourConfirmations(groups).length, "group")})`) : null,
     basisOverview(lines),
+    rulesOverview(),
     h("span", { class: "edtitle sm" }, "How lines were mapped"),
     h("div", { class: "howlist" }, ...how.map(([l, n]) => h("div", {}, h("span", {}, l), h("b", {}, String(n))))))];
 }
@@ -9299,6 +9355,18 @@ function editorOverview(lines, groups) {
 // model), or not in the model at all. The estimates are listed with what would make each a measurement. Counted by line: SolvBoQ
 // holds no rates, so it can't say what share of the bill's value each is, and says so.
 function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
+// How often he kept each rule's suggestion, over every model of the project (decisions.js): the rules he changed, and the ones
+// that no longer confirm by themselves because of it
+function rulesOverview() {
+  if (typeof decAccuracy !== "function") return null;
+  const acc = [...decAccuracy(decAllDocs()).values()].filter((a) => a.n > 0), tot = acc.reduce((t, a) => ({ n: t.n + a.n, changed: t.changed + a.changed }), { n: 0, changed: 0 });
+  if (!tot.n) return null;
+  const rows = acc.filter((a) => a.changed > 0).sort((a, b) => b.changed - a.changed || b.share - a.share).slice(0, 8);
+  return h("div", { class: "edfield", id: "rulesBox" },
+    h("span", { class: "edtitle sm" }, "How often you kept SolvBoQ’s item"),
+    h("p", { class: "edtext" }, rows.length ? `Over this project’s models, the rules decided ${plural(tot.n, "group")} and you chose another item for ${tot.changed}. The rules you changed:` : `Over this project’s models, the rules decided ${plural(tot.n, "group")} and you kept every one.`),
+    rows.length ? h("div", { class: "howlist" }, ...rows.map((a) => h("div", { title: a.rule }, h("span", {}, a.label + (a.held ? " · no longer confirms by itself" : "")), h("b", {}, `${a.changed} of ${a.n} changed`)))) : null);
+}
 // The Master BoQ whose rates price the bill: the one open in Master BoQ, else his choice here, else the project's first
 function rateMaster() {
   if (typeof MB === "undefined") return null;
