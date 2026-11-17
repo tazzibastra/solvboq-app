@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-17T16:26:27Z">
+<meta name="solvboq-build" content="2026-11-17T16:59:39Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,6 +16,8 @@
   --red:#D93A2E; --red-t:#B42318; --red-s:#FDECEA; --red-b:#E5383B;
   --indigo:#7C3AED; --indigo-t:#7C3AED; --indigo-s:#F4EEFE; --accent:#7C3AED; --accent-s:#F4EEFE; --lime:#D4F23A;
   --grey:#8C90A0; --sel:#F4EEFE; --focus:#7C3AED;
+  /* The project overview's dark card (“Next for you”), the structure row's progress track, the violet chip's text (17 Nov 2026) */
+  --night:#111214; --night-rule:#33353C; --night-sub:#C4C6CC; --night-line:#6B6F76; --track-2:#E3E5EC; --violet-t:#6D28D9;
   --shadow:none;
   --sans:"Plus Jakarta Sans",system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   --mono:ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
@@ -28,14 +30,14 @@
   --amber:#F0A23B; --amber-t:#F5C27A; --amber-s:#2E2414; --amber-b:#E9B93E; --amber-bt:#2B1C00;
   --red:#F06A60; --red-t:#F7A39C; --red-s:#3A1A18; --red-b:#E5484A;
   --indigo:#A57BF5; --indigo-t:#B996F7; --indigo-s:#271E3A; --accent:#A57BF5; --accent-s:#271E3A; --lime:#C5E33A;
-  --grey:#6F7380; --sel:#271E3A; --focus:#A57BF5; color-scheme:dark;}}
+  --grey:#6F7380; --sel:#271E3A; --focus:#A57BF5; --night:#000000; --night-rule:#33353C; --night-sub:#C4C6CC; --night-line:#6B6F76; --track-2:#33353C; --violet-t:#B996F7; color-scheme:dark;}}
 :root[data-theme="dark"]{
   --bg:#0F1013; --card:#1A1B1F; --ink:#F1F1F4; --ink-2:#C4C6CC; --muted:#9A9DA6; --line:#33353C; --rule:#26282E; --chip:#24262C; --head:#202227; --track:#2A2C33;
   --green:#3FBF82; --green-t:#6FD9A3; --green-s:#12291F; --green-b:#2FB884; --green-bt:#04281A;
   --amber:#F0A23B; --amber-t:#F5C27A; --amber-s:#2E2414; --amber-b:#E9B93E; --amber-bt:#2B1C00;
   --red:#F06A60; --red-t:#F7A39C; --red-s:#3A1A18; --red-b:#E5484A;
   --indigo:#A57BF5; --indigo-t:#B996F7; --indigo-s:#271E3A; --accent:#A57BF5; --accent-s:#271E3A; --lime:#C5E33A;
-  --grey:#6F7380; --sel:#271E3A; --focus:#A57BF5; color-scheme:dark;}
+  --grey:#6F7380; --sel:#271E3A; --focus:#A57BF5; --night:#000000; --night-rule:#33353C; --night-sub:#C4C6CC; --night-line:#6B6F76; --track-2:#33353C; --violet-t:#B996F7; color-scheme:dark;}
 *,*::before,*::after{box-sizing:inherit}
 body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
 button,input,select{font:inherit;color:inherit}
@@ -44,23 +46,36 @@ a{color:var(--ink)}a:hover{color:var(--accent)}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 [hidden]{display:none!important}
 
-/* app frame: icon rail on the left, page on the right */
-.shell{min-height:100vh;padding:20px;display:flex;align-items:flex-start;gap:20px}
-.rail{flex:0 0 88px;background:var(--card);border-radius:28px;padding:22px 6px;display:flex;flex-direction:column;align-items:center;gap:18px;position:sticky;top:20px;min-height:calc(100vh - 40px);max-height:calc(100vh - 40px);overflow-y:auto}
-.brand{width:44px;height:44px;border-radius:14px;background:#111214;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-.ritem{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:0;padding:0;color:var(--muted);font-size:11px;font-weight:500;cursor:pointer;text-decoration:none}
-.ritem .ric{width:48px;height:48px;border-radius:24px;display:flex;align-items:center;justify-content:center}
-.ritem:hover .ric{background:var(--chip);color:var(--ink)}
-.ritem[aria-current="page"]{color:var(--ink);font-weight:700}
-.ritem[aria-current="page"] .ric{width:52px;height:52px;border-radius:26px;background:var(--lime);color:#111214}
-.ritem.soon{color:var(--grey);cursor:default;opacity:.7}
-.ritem.soon:hover .ric{background:transparent;color:inherit}
-.rspace{flex:1}
-.page{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:20px}
-.phead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:6px 4px 0}
-.ptitle{display:flex;flex-direction:column;gap:2px;min-width:0}
-.ptitle h1{margin:0;font-size:40px;line-height:1.1;font-weight:700;letter-spacing:-.035em}
-.modelpick{position:relative;align-self:flex-start}
+/* app frame (the canvas's Web 1 and Web 2, 17 Nov 2026): a top bar over the page, 1400 px at most */
+.shell{min-height:100vh;padding:20px}
+.page{max-width:1400px;margin:0 auto;min-width:0;display:flex;flex-direction:column;gap:20px}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;background:var(--card);border-radius:28px;padding:12px 20px;min-width:0}
+.tbleft,.tbright{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-width:0}
+.tblogo{width:44px;height:44px;flex:none;border-radius:14px;border:0;background:var(--night);color:var(--lime);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;cursor:pointer}
+.tbname{font-size:16px}
+.projpick select{appearance:none;min-height:44px;max-width:min(420px,70vw);padding:0 40px 0 16px;border-radius:22px;border:1px solid var(--line);background-color:var(--card);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23111214' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4 L6 8 L10 4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;font-weight:600;color:var(--ink);cursor:pointer;text-overflow:ellipsis}
+.projpick select:disabled{color:var(--muted);cursor:default}
+.tbtabs{display:flex;flex-wrap:wrap;gap:4px}
+.tbtab{min-height:44px;padding:0 20px;border-radius:22px;border:0;background:transparent;color:var(--ink-2);font-weight:600;display:flex;align-items:center;cursor:pointer}
+.tbtab:hover{color:var(--ink);background:var(--chip)}
+.tbtab[aria-current="page"]{background:var(--lime);color:var(--night);font-weight:700}
+.tbfirm{color:var(--ink-2)}
+.tbfirm:empty{display:none}
+.tbme{width:44px;height:44px;flex:none;border-radius:22px;border:0;background:var(--chip);font-weight:700;color:var(--ink);cursor:pointer}
+.phead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:12px 4px 0}
+.ptitle{display:flex;flex-direction:column;gap:4px;min-width:0}
+.ptitle h1{margin:0;font-size:40px;line-height:1.1;font-weight:700;letter-spacing:-.035em;overflow-wrap:anywhere}
+.psub{margin:0;color:var(--ink-2);font-size:16px}
+.psub:empty{display:none}
+/* Under Bills and Settings: the views, and the tools for the model */
+.subbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 16px;min-width:0}
+.subtabs{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border-radius:24px;background:var(--card)}
+.subtab{min-height:40px;padding:0 16px;border-radius:20px;border:0;background:transparent;color:var(--ink-2);font-weight:600;cursor:pointer}
+.subtab:hover{color:var(--ink);background:var(--chip)}
+.subtab[aria-current="page"]{background:var(--night);color:#fff}
+.subtools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;min-width:0}
+main.opening>*{opacity:.35;pointer-events:none}
+.modelpick{position:relative}
 .mbtn{min-height:30px;padding:0 10px 0 0;border:0;background:transparent;border-radius:15px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);cursor:pointer}
 .mbtn b{font-weight:600;color:var(--ink)}
 .mbtn:hover b{color:var(--accent)}
@@ -222,10 +237,10 @@ tr.click:hover td{background:var(--head)}
 .toast.show{opacity:1}
 footer{color:var(--muted);font-size:12px;max-width:80ch}
 @media (max-width:760px){
-  .shell{flex-direction:column;padding:12px;gap:12px}
-  .rail{position:static;min-height:0;flex:none;width:100%;flex-direction:row;justify-content:space-around;padding:10px 6px;border-radius:20px;gap:6px}
-  .brand,.rspace,.ritem.soon{display:none}
-  .ptitle h1{font-size:28px}
+  .shell{padding:12px}
+  .topbar{padding:10px 12px;border-radius:22px;gap:8px}
+  .tbtab{padding:0 12px}
+  .ptitle h1,.hvtitletext h1{font-size:28px}
   .grid3{grid-template-columns:minmax(0,1fr)}
 }
 @media (prefers-reduced-motion: reduce){.toast{transition:none}}
@@ -659,11 +674,7 @@ button.prow:hover{background:var(--chip)}
 .cltable.clmaster td small{color:var(--muted)}
 .cltable.clmaster td:first-child{white-space:nowrap;color:var(--muted)}
 /* Header: the project, then the model */
-.headpicks{display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
-.projpick{display:flex;align-items:center;gap:6px;color:var(--muted)}
-.projpick select{border:0;background:transparent;font-size:13px;font-weight:600;color:var(--ink);max-width:260px;padding:4px 2px;cursor:pointer}
-.projpick select:hover{color:var(--accent)}
-.projpick select:disabled{color:var(--muted);font-weight:500;cursor:default}
+.projpick{display:flex;align-items:center;min-width:0}
 .pcode{min-height:24px;padding:0 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:11.5px;color:var(--ink-2);cursor:pointer}
 .pcode:hover{border-color:var(--accent);color:var(--accent)}
 .pmodels{display:flex;flex-direction:column;gap:6px;padding-top:12px;margin-top:4px;border-top:1px solid var(--rule)}
@@ -693,7 +704,7 @@ button.prow:hover{background:var(--chip)}
 .savestate.warn{background:var(--amber-s);color:var(--amber-t)}
 .savestate.bad{background:var(--red-s);color:var(--red-t)}
 .savestate.wait{background:var(--chip);color:var(--muted)}
-.savepanel{position:absolute;top:30px;left:0;z-index:40;width:min(440px,90vw);display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 32px rgba(16,24,40,.14);font-size:13px}
+.savepanel{position:absolute;top:calc(100% + 8px);right:0;z-index:40;width:min(440px,90vw);display:flex;flex-direction:column;gap:8px;padding:16px;border-radius:18px;background:var(--card);border:1px solid var(--line);box-shadow:0 12px 32px rgba(16,24,40,.14);font-size:13px}
 .savepanel .edrow b{font-weight:600;text-align:right;overflow-wrap:anywhere}
 /* Master BoQ: the line editor and the overview as a dialog, so the bill keeps the whole width */
 .mbdlg{width:min(1180px,96vw);max-width:none;max-height:92vh;padding:0;border:0;border-radius:28px;background:var(--card);color:var(--ink);overflow:hidden;box-shadow:0 24px 64px rgba(16,24,40,.25)}
@@ -734,12 +745,11 @@ button.prow:hover{background:var(--chip)}
 .stdtable td{border-bottom:1px solid var(--rule);padding:5px 6px;vertical-align:top}
 .stdtable td:nth-child(2),.stdtable td:nth-child(3){white-space:nowrap}
 @media (max-width:860px){.stdgrid{grid-template-columns:minmax(0,1fr)}.stdlist{padding:0 16px}.stdhead{padding:20px 16px}}
-@media print{.rail,.phead,.toast,.stdhead .tools,.stdbody .maphead,.stdcovs{display:none!important}.page,main{margin:0!important;padding:0!important}.stdcard{break-inside:avoid}.card{box-shadow:none!important}body{background:#fff!important}}
+@media print{.topbar,.subbar,.phead,.toast,.stdhead .tools,.stdbody .maphead,.stdcovs{display:none!important}.page,main{margin:0!important;padding:0!important}.stdcard{break-inside:avoid}.card{box-shadow:none!important}body{background:#fff!important}}
 /* The save status wraps under the project picker on a narrow screen, and never widens the page */
-.projpick{flex-wrap:wrap;min-width:0;max-width:100%}
+.projpick{min-width:0;max-width:100%}
 .savewrap{min-width:0;max-width:100%}
-.savestate{max-width:100%}
-.headpicks{min-width:0;max-width:100%}
+.savestate{max-width:min(360px,100%)}
 .stdmats{padding:24px 28px}.stdmats .stdtable td:nth-child(4){white-space:normal}
 @media (max-width:860px){.stdmats{padding:20px 16px;overflow-x:auto}}
 .stdwrap > *{min-width:0;max-width:100%}
@@ -747,8 +757,7 @@ button.prow:hover{background:var(--chip)}
 .stdlabels .tools{margin:4px 0 12px}
 .stdsteps{margin:4px 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55;max-width:100ch}.stdsteps ul{margin:6px 0 0;padding-left:18px;font-size:13px}
 /* On a phone the header never widens the page: the save status shortens with an ellipsis */
-@media (max-width:640px){.phead{min-width:0;max-width:100%}.ptitle{max-width:100%}.projpick select{max-width:52vw}.savewrap{flex:1 1 100%;min-width:0}.savestate{display:block;width:100%;max-width:calc(100vw - 40px)}.savepanel{left:0;right:auto;max-width:calc(100vw - 32px)}}
-@media (max-width:640px){.ptitle,.headpicks,.projpick{max-width:calc(100vw - 32px)}.savewrap{flex:0 1 auto;max-width:calc(100vw - 32px)}}
+@media (max-width:640px){.phead{min-width:0;max-width:100%}.ptitle{max-width:100%}.projpick select{max-width:calc(100vw - 120px)}.savestate{max-width:calc(100vw - 120px)}.savepanel{right:auto;left:0;max-width:calc(100vw - 32px)}}
 .stdlabels .stdtable td,.stdlabels .stdtable th{white-space:normal}
 @media (max-width:640px){.stdlabels .stdtable td,.stdlabels .stdtable th{overflow-wrap:anywhere}}
 .stdlabels,.stdmats{overflow-x:auto}
@@ -812,7 +821,7 @@ button.prow:hover{background:var(--chip)}
 .maphead .seg{max-width:100%;min-width:0}
 .maphead>*{min-width:0}
 /* Phone: each part of the page is the screen's width (not its content's), and the rail scrolls sideways on its own */
-@media (max-width:760px){.shell{align-items:stretch}.page{width:100%}.rail{overflow-x:auto;justify-content:flex-start;scrollbar-width:none}.rail>*{flex:none}}
+@media (max-width:760px){.page{width:100%}}
 /* The header's Revit add-in download, with the latest version's date */
 .addinbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:999px;background:var(--card);color:var(--ink);text-decoration:none;font-size:13px;font-weight:600;box-shadow:0 1px 2px rgba(16,24,40,.06)}
 .addinbtn:hover{background:var(--head)}
@@ -841,16 +850,21 @@ button.prow:hover{background:var(--chip)}
    a strip along the top, the bill takes the whole width with its status shown by the icon alone, and a line's panel (or the
    overview) opens over the bill, full size, with a way back. Nothing here applies in a browser. */
 body.docked{font-size:13px}
-body.docked .shell{flex-direction:column;align-items:stretch;padding:8px;gap:8px}
-body.docked .rail{position:static;min-height:0;flex:none;width:auto;flex-direction:row;justify-content:flex-start;padding:4px 8px;border-radius:14px;gap:2px;overflow-x:auto;scrollbar-width:none}
-body.docked .rail>*{flex:none}
-body.docked .brand,body.docked .rspace,body.docked .ritem.soon{display:none}
-body.docked .ritem{flex-direction:row;gap:4px;font-size:11px;padding-right:8px}
-body.docked .ritem .ric,body.docked .ritem[aria-current="page"] .ric{width:30px;height:30px;border-radius:15px}
-body.docked .ritem .ric svg{width:16px;height:16px}
+body.docked .shell{padding:8px}
 body.docked .page{width:100%;gap:8px}
+body.docked .topbar{padding:6px 8px;border-radius:14px;gap:6px}
+body.docked .tbleft,body.docked .tbright{gap:6px}
+body.docked .tblogo,body.docked .tbme{width:32px;height:32px;border-radius:10px;font-size:14px}
+body.docked .tbme{border-radius:16px}
+body.docked .projpick select{min-height:32px;font-size:12.5px;padding:0 30px 0 10px;background-position:right 10px center;max-width:46vw}
+body.docked .tbtab{min-height:32px;padding:0 10px;font-size:12.5px}
+body.docked .savestate,body.docked .tbright{display:none}
 body.docked .phead{padding:0;gap:6px}
 body.docked .ptitle h1{font-size:18px;margin:0}
+body.docked .psub{font-size:12px}
+body.docked .subtabs{padding:2px}
+body.docked .subtab{min-height:30px;padding:0 10px;font-size:12px}
+body.docked .roundbtn{width:36px;height:36px}
 body.docked .addinbtn{display:none}
 body.docked .card,body.docked .editor{border-radius:14px}
 body.docked .mapwrap{gap:8px}
@@ -921,36 +935,116 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
 .pplinvite select{min-height:44px;border-radius:999px;padding:0 12px}
 .pplinvite .btn{min-height:44px}
 .pplfirm{margin-top:12px;gap:12px}
+
+/* ===== Projects (Web 1) and the project overview (Web 2): homeview.js. Sizes as on the canvas; colours are the tokens ===== */
+.hvtitle{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;padding:12px 4px 0}
+.hvtitletext{display:flex;flex-direction:column;gap:4px;min-width:0}
+.hvtitletext h1{margin:0;font-size:40px;line-height:1.1;font-weight:700;letter-spacing:-.035em;overflow-wrap:anywhere}
+.hvtitletext p{margin:0;color:var(--ink-2);font-size:16px}
+.hvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:20px}
+.hvcard{display:flex;flex-direction:column;gap:16px;background:var(--card);border-radius:28px;padding:24px;text-decoration:none;color:var(--ink);min-width:0}
+a.hvcard:hover{color:var(--ink);box-shadow:0 0 0 2px var(--line)}
+.hvcard.plain p{margin:0;color:var(--ink-2)}
+.hvcard.plain .hvbtn{align-self:flex-start}
+.hvcardhead{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hvcardhead b{font-size:20px;line-height:1.3;overflow-wrap:anywhere}
+.hvcardhead span,.hvstname span{color:var(--ink-2)}
+.hvsigned{display:flex;flex-direction:column;gap:8px}
+.hvrow{display:flex;justify-content:space-between;gap:12px}
+.hvbar{height:8px;border-radius:4px;display:flex}
+.hvbar.light{background:var(--track)}
+.hvbar.mid{background:var(--track-2)}
+.hvfill{border-radius:4px}
+.hvfill.green{background:var(--green)}
+.hvfill.ink{background:var(--ink)}
+.hvchips{display:flex;flex-wrap:wrap;gap:8px}
+.hvchip{padding:4px 12px;border-radius:14px;font-weight:600;background:var(--chip);color:var(--ink-2)}
+.hvchip.amber{background:var(--amber-s);color:var(--amber-t)}
+.hvchip.red{background:var(--red-s);color:var(--red-t)}
+.hvchip.green{background:var(--green-s);color:var(--green-t)}
+.hvchip.violet{background:var(--indigo-s);color:var(--violet-t)}
+.hvfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--rule);padding-top:16px;color:var(--ink-2)}
+.hvopen{font-weight:600;color:var(--ink)}
+.hvbtn{min-height:44px;padding:0 20px;border-radius:22px;border:0;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;text-decoration:none;white-space:nowrap}
+.hvbtn.big{min-height:48px;padding:0 24px;border-radius:24px}
+.hvbtn.night{background:var(--night);color:#fff}
+.hvbtn.outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
+.hvbtn.lime{background:var(--lime);color:var(--night);font-weight:700}
+.hvbtn.ghost{background:transparent;border:1px solid var(--night-line);color:#fff}
+.hvov{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
+.hvstructs{flex:999 1 560px;min-width:0;background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px}
+.hvstructshead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px}
+.hvstructs h2,.hvnext h2,#viewOv #pplCard h2{margin:0;font-size:20px;line-height:1.3;font-weight:700;color:inherit}
+.hvst{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:16px;border-radius:18px;background:var(--head);text-decoration:none;color:var(--ink)}
+.hvst:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
+.hvstname{flex:1 1 240px;min-width:0;display:flex;flex-direction:column}
+.hvstname b{font-size:16px;overflow-wrap:anywhere}
+.hvststep{flex:1 1 200px;display:flex;flex-direction:column;gap:6px}
+.hvside{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.hvnext{background:var(--night);color:#fff;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.hvnextitem{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--night-rule);padding-top:16px}
+.hvnextitem b{font-size:16px}
+.hvnextitem span{color:var(--night-sub)}
+.hvnextitem .hvbtn{align-self:flex-start;margin-top:8px}
+#viewOv #pplCard{border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
+#viewOv #pplCard .ppllist{margin-top:0}
+#viewOv #pplCard .pplchip{padding:6px 14px;border-radius:16px;line-height:1.5}
+#viewOv #pplCard .pplinvite{margin-top:0}
+#viewOv #pplCard .pplinvite input{min-height:44px;border-radius:22px}
+#viewOv #pplCard .pplinvite .btn{min-height:44px;border-radius:22px;padding:0 20px;font-weight:600}
+body.docked .hvtitletext h1{font-size:20px}
+body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #viewOv #pplCard{border-radius:14px;padding:14px}
+#loadErr:empty{display:none}
+#viewHome,#viewOv{display:flex;flex-direction:column;gap:20px;min-width:0}
+#viewOv #pplCard .pplinvite input{flex:1 1 100px}
 </style>
 </head>
 <body>
 <div class="shell">
-<nav class="rail" aria-label="SolvBoQ">
-  <span class="brand" title="SolvBoQ"><svg width="20" height="20" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14V8h3v6M6.5 14V3h3v11M11 14v-4h3v4" stroke="#D4F23A" stroke-width="1.6" stroke-linejoin="round"></path></svg></span>
-  <button type="button" class="ritem" id="navProj"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path><path d="M8 13h8M8 16h5"></path></svg></span>Project</button>
-  <button type="button" class="ritem" id="navReady"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 16a8 8 0 1116 0"></path><path d="M12 16l4-5"></path></svg></span>Readiness</button>
-  <button type="button" class="ritem" id="navMap"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"></path></svg></span>Map to SANS</button>
-  <button type="button" class="ritem" id="navSign"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h16"></path><path d="M6 16l9.5-9.5a2.1 2.1 0 0 1 3 3L9 19H6z"></path></svg></span>Sign off</button>
-  <button type="button" class="ritem" id="navParts"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="14" width="18" height="6" rx="1"></rect><rect x="5" y="4" width="4" height="10" rx="1"></rect><rect x="15" y="4" width="4" height="10" rx="1"></rect></svg></span>Parts</button>
-  <button type="button" class="ritem" id="navMaster"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"></rect><path d="M3 9h18M3 14h18M9 9v11M15 9v11"></path></svg></span>Master BoQ</button>
-  <button type="button" class="ritem" id="navClaims"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"></path><path d="M9 8h6M9 12h4"></path><path d="M14.5 14.5l1.5 1.5 3-3"></path></svg></span>Claims</button>
-  <button type="button" class="ritem" id="navStd"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"></rect><path d="M8 8h8M8 12h8M8 16h5"></path></svg></span>Standards</button>
-  <span class="rspace"></span>
-  <button type="button" class="ritem" id="btnConv"><span class="ric"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"></path></svg></span>Conventions</button>
-</nav>
 <div class="page">
-<header class="phead">
-  <div class="ptitle">
-    <div class="headpicks">
+<!-- The top bar (the canvas's Web 1 and Web 2): the logo goes to all projects; the project switcher, three tabs and Settings;
+     the account. On the Projects page only the logo, the firm and the account. (homeview.js) -->
+<header class="topbar" id="topbar">
+  <div class="tbleft">
+    <button type="button" class="tblogo" id="navHome" aria-label="SolvBoQ, all projects">S</button>
+    <b class="tbname" id="tbName">SolvBoQ</b>
     <div class="projpick" id="projPick">
       <label class="sr" for="projSel">Project</label>
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>
       <select id="projSel"><option>Connecting…</option></select>
-      <span class="savewrap">
-        <button type="button" class="savestate" id="saveState" aria-expanded="false" aria-controls="savePanel">Connecting…</button>
-        <div class="savepanel" id="savePanel" hidden></div>
-      </span>
     </div>
+  </div>
+  <nav class="tbtabs" id="tbTabs" aria-label="Project">
+    <button type="button" class="tbtab" id="tabOverview">Overview</button>
+    <button type="button" class="tbtab" id="tabBills">Bills</button>
+    <button type="button" class="tbtab" id="tabClaims">Claims</button>
+    <button type="button" class="tbtab" id="tabSettings">Settings</button>
+  </nav>
+  <div class="tbright">
+    <span class="tbfirm" id="tbFirm"></span>
+    <span class="savewrap">
+      <button type="button" class="savestate" id="saveState" aria-expanded="false" aria-controls="savePanel">Connecting…</button>
+      <div class="savepanel" id="savePanel" hidden></div>
+    </span>
+    <button type="button" class="tbme" id="meBtn" aria-label="Your account" aria-expanded="false" aria-controls="savePanel">·</button>
+  </div>
+</header>
+<!-- Under Bills: the structure's bill and the views it is made from (until T-026 replaces them); under Settings: the project's
+     inputs, the conventions and the modelling standard -->
+<header class="phead" id="phead">
+  <div class="ptitle">
+    <h1 id="pageTitle">Readiness</h1>
+    <p class="psub" id="pageSub"></p>
+  </div>
+</header>
+<div class="subbar" id="subBills">
+  <nav class="subtabs" aria-label="The bill">
+    <button type="button" class="subtab" id="navMap">The bill</button>
+    <button type="button" class="subtab" id="navReady">Readiness</button>
+    <button type="button" class="subtab" id="navParts">Parts</button>
+    <button type="button" class="subtab" id="navSign">Sign off</button>
+    <button type="button" class="subtab" id="navMaster">Master BoQ</button>
+  </nav>
+  <div class="subtools">
     <div class="modelpick">
       <button type="button" class="mbtn" id="modelBtn" aria-expanded="false" aria-controls="modelMenu"><b id="modelName">Model</b><span id="modelRev"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
       <div class="mmenu" id="modelMenu" hidden>
@@ -969,14 +1063,19 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
         <div id="projModels"></div>
       </div>
     </div>
-    </div>
-    <h1 id="pageTitle">Readiness</h1>
-  </div>
-  <div class="phtools">
-    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span><small id="addinDate"></small></a>
     <button type="button" class="roundbtn" id="btnGoFix" title="Fix list" aria-label="Fix list"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"></path></svg><span class="badge" id="fixCount"></span></button>
   </div>
-</header>
+</div>
+<div class="subbar" id="subSettings">
+  <nav class="subtabs" aria-label="Settings">
+    <button type="button" class="subtab" id="navProj">Project</button>
+    <button type="button" class="subtab" id="btnConv">Conventions</button>
+    <button type="button" class="subtab" id="navStd">Modelling standard</button>
+  </nav>
+  <div class="subtools">
+    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span><small id="addinDate"></small></a>
+  </div>
+</div>
 
 <main>
   <div id="loadErr"></div>
@@ -989,7 +1088,11 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
 
   <div id="loadErr"></div>
 
-  <!-- ===== Overview ===== -->
+  <!-- ===== Projects (Web 1) and the project overview (Web 2): homeview.js ===== -->
+  <div id="viewHome" hidden></div>
+  <div id="viewOv" hidden></div>
+
+  <!-- ===== Readiness (under Bills) ===== -->
   <div id="viewOverview" class="ready">
     <div class="rhead"><h2>Is this model ready to bill?</h2><p class="sub" id="rMeta"></p></div>
 
@@ -8504,6 +8607,8 @@ const MISSING_SCHEMA = { type: "object", additionalProperties: false, required: 
 //   projects/{pid}/masters/{mid}                    a master BoQ: his lines, quantity columns and links to the model
 //   projects/{pid}/notes/{id}                      his note on a generated bill line: his figure, SolvBoQ's, why (notes.js)
 //   projects/{pid}/inputs/main                     the project's inputs: method, stage, policy, structures and geotech (inputs.js)
+//   projects/{pid}/structures/{sid}                 a structure: name, kind, its runs (models) by date, where its bill stands,
+//                                                   its signed versions; bills/{n} under it are the signed bills (create-only)
 //   projects/{pid}/models/{mid}                     a model extract: title, date, element count, and parts/{n} with the
 //                                                   extract gzip-compressed in 900 KB pieces (the large ones are 12–18 MB)
 const Store = (() => {
@@ -8847,6 +8952,7 @@ const Store = (() => {
       for (let j = 0; j < parts; j++) await F.setDoc(F.doc(db, "projects", pid, "structures", sid, "bills", String(doc.n), "extract", `${token}-${j}`), { data: F.Bytes.fromUint8Array(z.subarray(j * PIECE, (j + 1) * PIECE)) });
       // As signed, nothing dropped (clean() would drop a provisional line's empty quantity and an expected line's empty elements)
       await F.setDoc(F.doc(db, "projects", pid, "structures", sid, "bills", String(doc.n)), JSON.parse(JSON.stringify({ ...doc, extract: { ...doc.extract, token, parts, bytes: z.length }, signedBy: user.uid })));
+      await api.noteSigned(pid, sid, doc);
     }),
     // His tender bill imported from Excel and locked (claims.js billFromBoq; T-017): a version like a signed one, marked “imported”,
     // under the same create-only rule; no extract with it
@@ -8854,7 +8960,26 @@ const Store = (() => {
       need();
       await F.setDoc(F.doc(db, "projects", pid, "structures", sid), { name: structure.name || "", at: new Date().toISOString() }, { merge: true });
       await F.setDoc(F.doc(db, "projects", pid, "structures", sid, "bills", String(doc.n)), JSON.parse(JSON.stringify({ ...doc, signedBy: user.uid })));
+      await api.noteSigned(pid, sid, { ...doc, kind: "imported" });
     }),
+
+    // ----- Structures, first-class (17 Nov 2026; homeview.js) -----
+    //   projects/{pid}/structures/{sid}   { name, kind, model: the newest run's model id, runs: { mid: { dated, title } },
+    //                                       step: where its bill stands, signed: { n: { at, name, kind, print } }, at }
+    // The id is the project inputs' structure id, else "m-" and the model's name (as signoff.js has always used for the signed
+    // bills under it). The bills stay where they were, under the same document.
+    listStructures: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "structures")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
+    // fields merge into the document (runs and signed gain keys); whole replaces those fields entirely (step)
+    saveStructure: (pid, sid, fields, whole) => wrap(async () => {
+      need();
+      const ref = F.doc(db, "projects", pid, "structures", sid);
+      await F.setDoc(ref, JSON.parse(JSON.stringify({ ...fields, at: new Date().toISOString() })), { merge: true });
+      if (whole) await F.updateDoc(ref, JSON.parse(JSON.stringify(whole)));
+    }),
+    // A signed version, noted on its structure so the Projects page counts bills signed without reading every bill
+    noteSigned: (pid, sid, b) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "structures", sid), { signed: { [String(b.n)]: JSON.parse(JSON.stringify({ at: b.at || "", name: b.name || "", kind: b.kind || "signed", print: b.extract?.print || "" })) } }, { merge: true }); }),
+    // What an open certificate came to (claimsview.js clKeepCheck), kept on the certificate
+    saveCertCheck: (pid, cid, check) => wrap(async () => { need(); await F.updateDoc(F.doc(db, "projects", pid, "certificates", cid), { check: JSON.parse(JSON.stringify(check)) }); }),
     // Every structure's signed versions (signed in SolvBoQ, or imported and locked), for the claims
     listAllSigned: (pid) => wrap(async () => {
       need();
@@ -8998,7 +9123,7 @@ const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decid
 function load(records, name, meta = {}) {
   if (typeof decFlush === "function") decFlush();   // the model being left: its decisions saved, none carried into the next
   if (typeof ovFlush === "function") ovFlush();     // and its corrections kept in SolvBoQ: never laid on the next model
-  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "map", "conv"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   state.result = runChecks(typeof ovRecords === "function" ? ovRecords(records) : records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -9093,19 +9218,15 @@ function render() {
   $("viewStd").hidden = state.view !== "std";
   $("viewProj").hidden = state.view !== "proj";
   $("viewParts").hidden = state.view !== "parts";
-  $("navParts").setAttribute("aria-current", state.view === "parts" ? "page" : "false");
   $("viewSign").hidden = state.view !== "sign";
-  $("navSign").setAttribute("aria-current", state.view === "sign" ? "page" : "false");
-  $("navStd").setAttribute("aria-current", state.view === "std" ? "page" : "false");
-  $("navProj").setAttribute("aria-current", state.view === "proj" ? "page" : "false");
-  $("navReady").setAttribute("aria-current", state.view === "overview" || state.view === "detail" ? "page" : "false");
-  $("navMap").setAttribute("aria-current", state.view === "map" ? "page" : "false");
-  $("navMaster").setAttribute("aria-current", state.view === "master" ? "page" : "false");
-  $("navClaims").setAttribute("aria-current", state.view === "claims" ? "page" : "false");
-  $("btnConv").setAttribute("aria-current", state.view === "conv" ? "page" : "false");
-  $("pageTitle").textContent = { overview: "Readiness", detail: "Readiness", map: "Map to SANS", conv: "Conventions", claims: "Claims", master: "Master BoQ", std: "Standards", proj: "Project", parts: "Parts", sign: "Sign off" }[state.view] || "Readiness";
-  // Claims works on certificates, not the model: no model switcher or fix list there. The master BoQ needs the model.
-  document.querySelector(".modelpick").hidden = false; $("btnGoFix").hidden = ["claims", "master", "std", "proj"].includes(state.view);
+  $("viewHome").hidden = state.view !== "home";
+  $("viewOv").hidden = state.view !== "ov";
+  // The top bar's tab, the sub-bar under Bills or Settings, and the page heading (homeview.js)
+  navMark();
+  if (state.view === "home") return renderHome();
+  if (state.view === "ov") return renderOv();
+  // The master BoQ needs the model; the fix list is the model's
+  $("btnGoFix").hidden = state.view === "master";
   if (state.view === "proj") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderProj(); }
   if (state.view === "claims") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderClaims(); }
   if (state.view === "std") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderStandards(); }
@@ -9975,6 +10096,7 @@ async function decLoad() {
 }
 // After anything is drawn: if his decisions changed, save them shortly
 function decTouch() {
+  if (typeof stTouch === "function") stTouch();   // where the structure's bill stands, kept on it (homeview.js)
   if (typeof state === "undefined" || !state.records || DEC.loading || !DEC.key || state.fromSample) return;
   if (JSON.stringify(decPack(state, decSuggestions())) === DEC.saved) return;
   clearTimeout(DEC.timer); DEC.timer = setTimeout(decSave, 1200);
@@ -10845,6 +10967,7 @@ async function signLoad() {
       SIGN.since = { n: last.n, at: last.at, name: last.name, rows: last.lines, records: recordsFromJSON(data) }; }
     catch (e) { SIGN.err = `The extract version ${last.n} was signed on couldn’t be fetched (${e.message}): the changes since can’t be shown.`; }
   }
+  SIGN.ready = key;   // this structure's signed versions, and what moved since (homeview.js reads where its bill stands only then)
   render();
 }
 // Mark the lines that moved since the signed version (called from mapLines). Unchanged lines keep their status
@@ -11326,6 +11449,8 @@ function renderClaims() {
   const shown = res.findings.filter((f) => inBill(f) && groups[CL.filter](f));
   const count = (k) => res.findings.filter((f) => inBill(f) && groups[k](f)).length;
   const atStake = res.findings.filter((f) => f.tier === 1 && st(f) !== "accept" && st(f) !== "dismiss").reduce((s, f) => s + (f.impact || 0), 0);
+  clKeepCheck(CL.open.id, { n: m.number ?? null, signed: signedCmps.length > 0, over: fig.over, lines: fig.lines, twice: fig.twice,
+    toQuery: res.findings.filter(groups.query).length, atStake });
   const bills = [...new Set(res.findings.flatMap((f) => (f.lines || []).map(lineBill).concat(f.bill ? [f.bill] : [])).filter(Boolean))].sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 
   const rows = shown.length ? shown.map((f) => {
@@ -11601,8 +11726,19 @@ function downloadQueries(res, m) {
   saveFile(`Certificate ${m.number || ""} queries.csv`, "﻿" + out.map((r) => r.map(csvCell).join(",")).join("\r\n"));
 }
 
+// What an open certificate came to, kept on it (certificates/{cid}.check) so the project overview's “Next for you” and the
+// Projects page can say it without reading the certificate again: the figures against the signed bill and what's left to query.
+// Saved only when it changes; someone who only views the project can't save it, and that's fine.
+function clKeepCheck(cid, check) {
+  if (!Store.user || !CL.pid) return;
+  const c = CL.certs.find((x) => x.id === cid), keys = Object.keys(check);
+  if (c?.check && keys.every((k) => (k === "over" || k === "atStake" ? Math.round(c.check[k] || 0) === Math.round(check[k] || 0) : c.check[k] === check[k]))) return;
+  const doc = { ...check, at: new Date().toISOString() };
+  if (c) c.check = doc;
+  Store.saveCertCheck(CL.pid, cid, doc).catch(() => {});
+}
 function goClaims() { state.view = "claims"; render(); window.scrollTo(0, 0); if (!MB.saved?.length) mbList(); }
-$("navClaims").addEventListener("click", goClaims);
+$("tabClaims").addEventListener("click", goClaims);
 // Drop a certificate anywhere on the Claims page
 document.addEventListener("dragover", (e) => { if (state.view === "claims") { e.preventDefault(); document.body.classList.add("dropping"); } });
 document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dropping"); });
@@ -12526,7 +12662,7 @@ $("projSel").addEventListener("change", async (e) => {
 });
 
 // Called when the project list loads or the project changes (claimsview.js)
-function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); }
+function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
 
 // ----- The project's models -----
 // The model last used in each project, so choosing a project (or reloading the page) opens it again
@@ -12601,6 +12737,8 @@ async function pvTrySave() {
     PV.saving = `Saving ${p.info.title} to the project…`; renderProjModels();
     await Store.saveModel(CL.pid, p.mid, p.info, p.data);
     PV.saving = ""; state.pmid = p.mid; pvLast(CL.pid, p.mid);
+    // The run joins its structure (homeview.js): the newest run is the one its bill is read from
+    if (typeof stNoteRun === "function") stNoteRun(CL.pid, { id: p.mid, ...p.info });
     toast(`Saved to ${CL.projects.find((x) => x.id === CL.pid)?.name || "the project"}: ${p.info.title}, ${pvDate(p.info.dated)}`);
     await pvListModels();
   } catch (e) { PV.saving = `Not saved: ${e.message}`; renderProjModels(); }
@@ -12760,10 +12898,12 @@ async function pplLoad(force) {
   PPL.pid = CL.pid; PPL.busy = "load"; PPL.err = "";
   try { const d = await Store.people(CL.pid); if (PPL.pid === d.project.id) PPL.data = d; } catch (e) { PPL.err = e.message; PPL.data = null; }
   PPL.busy = "";
-  if (state.view === "proj") renderProj();
+  pplRedraw();
 }
+// The card is on the project overview (homeview.js)
+function pplRedraw() { if (state.view === "ov" && typeof renderOv === "function") renderOv(); }
 async function pplDo(what, fn, done) {
-  PPL.busy = what; PPL.err = ""; renderProj();
+  PPL.busy = what; PPL.err = ""; pplRedraw();
   try { const r = await fn(); if (done) toast(typeof done === "function" ? done(r) : done); } catch (e) { PPL.err = e.message; }
   PPL.busy = ""; await pplLoad(true);
 }
@@ -12781,7 +12921,7 @@ function pplCard() {
   if (!d) return h("section", { class: "card stdbody stdmats", id: "pplCard" }, ...head);
   const word = (r) => pplRole(r).replace(/ \(signs bills\)$/, "").toLowerCase();
   const who = (m) => (m.me ? "You" : m.name || m.email || "Someone");
-  const open = (key) => () => { PPL.open = PPL.open === key ? null : key; renderProj(); };
+  const open = (key) => () => { PPL.open = PPL.open === key ? null : key; pplRedraw(); };
   const chip = (key, label, sub, extra = {}) => h(key && d.canManage ? "button" : "span",
     { class: `pplrow pplchip${extra.cls ? " " + extra.cls : ""}${PPL.open === key ? " on" : ""}`, title: extra.title || null,
       ...(key && d.canManage ? { type: "button", "aria-expanded": PPL.open === key ? "true" : "false", onclick: open(key) } : {}) },
@@ -12812,7 +12952,7 @@ function pplCard() {
     h("div", { class: "ppllist" }, chips), edit,
     d.canManage ? h("form", { class: "pplinvite", onsubmit: (e) => { e.preventDefault();
         const to = email.value.trim(), r = role.value;
-        if (d.firm && to.toLowerCase().endsWith("@" + d.firm.id)) { PPL.err = `${to} is in the firm: they see this project once they sign in, no invitation needed.`; return renderProj(); }
+        if (d.firm && to.toLowerCase().endsWith("@" + d.firm.id)) { PPL.err = `${to} is in the firm: they see this project once they sign in, no invitation needed.`; return pplRedraw(); }
         pplDo("invite", () => Store.invite(d.project.id, to, r), (x) => { PPL.email = ""; return x.mailed ? `Invited ${x.email}: they got an email with a sign-in link` : `Invited ${x.email}. The email didn’t go: tell them to sign in at ${location.protocol === "file:" ? "the SolvBoQ page" : location.host} with that address`; }); } },
       email, role, h("button", { type: "submit", class: "btn dark", disabled: PPL.busy ? true : null }, PPL.busy === "invite" ? "Inviting…" : "Invite")) : null,
     firmMine && Store.firm.members?.[me.uid] === "admin" ? h("label", { class: "edrow pplfirm" }, h("span", { class: "sub" }, "Your firm’s name (you’re its admin)"),
@@ -12854,7 +12994,7 @@ async function piLoad() {
 // After the inputs change: the model is checked again with them, and the page shown again
 function piAfter() {
   if (state.records && typeof rerunChecks === "function") rerunChecks();
-  if (state.view === "proj") renderProj(); else if (["overview", "detail", "map"].includes(state.view)) render();
+  if (state.view === "proj") renderProj(); else if (["overview", "detail", "map", "ov"].includes(state.view)) render();
 }
 function piChanged(rerender = true) {
   PI.doc = normInputs(PI.doc);
@@ -12916,11 +13056,10 @@ function renderProj() {
             h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
           h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum")))))),
 
-    typeof pplCard === "function" ? pplCard() : null,
     piProposals(),
     piReportCard(),
 
-    h("section", { class: "card stdbody stdmats" },
+    h("section", { class: "card stdbody stdmats", id: "piStructs" },
       h("div", { class: "stdintro" }, h("h2", null, "Structures"),
         h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it. Kinds follow the Uniclass 2015 Entities table.")),
       d.structures.length ? null : h("p", { class: "sub" }, "None yet. Without them, each model is one structure and its kind is taken from its title."),
@@ -13155,6 +13294,330 @@ function piReportCard() {
 function goProj() { state.view = "proj"; render(); window.scrollTo(0, 0); }
 $("navProj").addEventListener("click", goProj);
 Store.onUser(() => piLoad());
+
+// ===== Projects, the project overview and the top bar (the canvas's “Web 1: Projects” and “Web 2: Project overview”) =====
+// Built 17 Nov 2026. The rail of seven destinations and the model picker gave way to a top bar: the logo goes to all projects,
+// then the project switcher, three tabs (Overview, Bills, Claims), Settings and the account. Bills holds a structure's bill and
+// the views it is made from (The bill, Readiness, Parts, Sign off, Master BoQ) until T-026 replaces them; Settings holds the
+// project's inputs, the conventions and the modelling standard. From sign-in: a project's card, then a structure's row, is its bill.
+//
+// Structures are first-class: projects/{pid}/structures/{sid} (Store.listStructures) with its name, kind, its runs (the project's
+// models) by date, the newest run, where its bill stands and its signed versions. Where a bill stands is worked out from the bill
+// itself while its newest run is open (hvStep) and kept on the structure, so the overview and the Projects page can say it
+// without reading the model again. A structure's id is the project inputs' structure id, else “m-” and the model's name, as
+// signoff has always filed the signed bills (signStructure).
+// “Next for you” is made from what is kept: the newest certificate's check (claimsview.js clKeepCheck) and each structure's step.
+// The one queue of questions line by line is T-012.
+// Top-level names: HV, hv*, st*, navMark, renderHome, renderOv, goHome, goOv, goBills, goSettings, homeAfter.
+
+const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "proj", stTimer: null, stSaved: {} };
+const HV_SECTION = { home: "home", ov: "ov", claims: "claims", proj: "settings", conv: "settings", std: "settings" };
+const hvSection = () => HV_SECTION[state.view] || "bills";
+const hvDay = (iso) => { const d = new Date(iso); return iso && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""; };
+const hvRand = (v) => `R ${Math.round(v || 0).toLocaleString("en-GB")}`;
+const hvByDated = (a, b) => String(b.dated || "").localeCompare(String(a.dated || ""));
+const hvInputsHere = (pid) => typeof PI !== "undefined" && PI.pid === pid && PI.loaded;
+
+// ----- The top bar -----
+function hvInitials() {
+  const u = Store.user; if (!u) return "·";
+  const name = String(u.displayName || "").trim(), words = name ? name.split(/\s+/) : String(u.email || "").split("@")[0].split(/[._\-+]+/);
+  return words.filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "·";
+}
+// The tab and sub-tab that are current, which bar shows, and the heading (render() calls it for every view)
+function navMark() {
+  const sec = hvSection(), home = sec === "home";
+  document.body.dataset.section = sec;
+  for (const [id, s] of [["tabOverview", "ov"], ["tabBills", "bills"], ["tabClaims", "claims"], ["tabSettings", "settings"]]) $(id).setAttribute("aria-current", sec === s ? "page" : "false");
+  for (const [id, vs] of [["navMap", ["map"]], ["navReady", ["overview", "detail"]], ["navParts", ["parts"]], ["navSign", ["sign"]], ["navMaster", ["master"]], ["navProj", ["proj"]], ["btnConv", ["conv"]], ["navStd", ["std"]]])
+    $(id).setAttribute("aria-current", vs.includes(state.view) ? "page" : "false");
+  if (sec === "bills") HV.billView = state.view === "detail" ? "overview" : state.view;
+  if (sec === "settings") HV.setView = state.view;
+  $("subBills").hidden = sec !== "bills"; $("subSettings").hidden = sec !== "settings";
+  $("tbTabs").hidden = home; $("projPick").hidden = home; $("tbName").hidden = !home; $("saveState").hidden = home;
+  $("tbFirm").textContent = home && Store.firm ? Store.firm.name || "" : "";
+  $("meBtn").textContent = hvInitials();
+  $("phead").hidden = home || sec === "ov";   // those two pages carry their own heading, as designed
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  const head = sec === "claims" ? ["Claims", p ? `${p.name}: payment certificates, checked against the signed bills` : "Payment certificates, checked against the bill"]
+    : sec === "settings" ? ["Settings", p ? `${p.name}: the project’s inputs, your conventions and the modelling standard` : "Your conventions and the modelling standard"]
+    : sec === "bills" ? hvBillHead() : ["", ""];
+  $("pageTitle").textContent = head[0]; $("pageSub").textContent = head[1];
+  document.querySelector("main").classList.toggle("opening", !!HV.opening && sec === "bills");
+  stTouch();
+}
+// Under Bills: the structure the open model is, and its run
+function hvBillHead() {
+  if (HV.opening) return [HV.opening, "Opening its newest model…"];
+  if (!state.records) return ["Bills", ""];
+  if (state.fromSample) return [$("fProject").value.trim() || cleanName(state.name), `A sample model, not one of your projects · ${plural(state.records.length, "element")}`];
+  const st = stOf(state.name), inProject = !!state.pmid && PV.models.some((x) => x.id === state.pmid);
+  return [st.name, [`Model of ${state.checked}`, plural(state.records.length, "element"), inProject ? "" : "not saved to a project"].filter(Boolean).join(" · ")];
+}
+function goHome() { HV.sum = {}; state.view = "home"; render(); window.scrollTo(0, 0); }
+function goOv() { state.view = "ov"; render(); window.scrollTo(0, 0); }
+function goBills() { state.view = HV.billView || "map"; render(); window.scrollTo(0, 0); }
+function goSettings() { const v = HV.setView; if (v === "conv") return goConventions(); if (v === "std") return goStandards(); goProj(); }
+$("navHome").addEventListener("click", goHome);
+$("tabOverview").addEventListener("click", goOv);
+$("tabBills").addEventListener("click", goBills);
+$("tabSettings").addEventListener("click", goSettings);
+// The account: who you are, your firm, what's saved, sign out (the save panel, projectview.js)
+$("meBtn").addEventListener("click", (e) => {
+  e.stopPropagation(); const box = $("savePanel"); box.hidden = !box.hidden;
+  $("meBtn").setAttribute("aria-expanded", String(!box.hidden)); $("saveState").setAttribute("aria-expanded", String(!box.hidden));
+  if (!box.hidden) renderSavePanel();
+});
+
+// ----- Structures -----
+// The structure a model belongs to (the same as signStructure for the open model)
+function stOf(title) {
+  const name = cleanName(title), s = typeof structureFor === "function" ? structureFor(piDoc(), name) : null;
+  return s && s.id ? { id: String(s.id), name: s.name || name, kind: s.kind || "" } : { id: "m-" + signSlug(name), name, kind: typeof guessKind === "function" ? guessKind(name, "") : "" };
+}
+// A model saved to the project joins its structure as a run (projectview.js pvTrySave). Only once the project's inputs are
+// read, or the run could be filed under the wrong structure; the overview files any it missed.
+function stNoteRun(pid, m) {
+  if (!Store.user || pid !== CL.pid || !hvInputsHere(pid)) return;
+  const st = stOf(m.fileName || m.title), newest = !PV.models.some((x) => x.id !== m.id && stOf(x.fileName || x.title).id === st.id && String(x.dated || "") > String(m.dated || ""));
+  Store.saveStructure(pid, st.id, { name: st.name, ...(st.kind ? { kind: st.kind } : {}), ...(newest ? { model: m.id } : {}), runs: { [m.id]: { dated: m.dated || "", title: m.title || "" } } }).catch(() => {});
+  HV.ovFor = "";   // the overview reads the project again
+}
+// Where the open model's bill stands, from the bill itself: a step of the loop, or signed. Step 1 (the structure set up) and
+// step 2 (a model read) are behind it once a model is open. Parts are step 3 only while SolvBoQ isn't sure of some element.
+function hvStep() {
+  if (!state.result || state.fromSample) return null;
+  const lines = mapLines(currentGroups()).filter((L) => L.status !== "out"), n = (f) => lines.filter(f).length;
+  const open = n((L) => OPEN.has(L.status)), asks = n((L) => ["flag", "unmapped", "measure"].includes(L.status)), review = n((L) => ["confirm", "claude"].includes(L.status));
+  const moved = n((L) => L.status === "moved"), done = n((L) => L.status === "done" || L.status === "prov"), est = n((L) => basisOf(L) === "estimated");
+  const unsure = (typeof partsNow === "function" ? partsNow()?.rows.filter((x) => !x.sure).length : 0) || 0;
+  const last = SIGN.list.length ? SIGN.list[SIGN.list.length - 1] : null, print = signPrint();
+  const base = { lines: lines.length, open, est, unsure, moved, mid: state.pmid || "" };
+  if (last && last.extract?.print && last.extract.print === print) return { ...base, n: 7, kind: "signed", label: `Signed, version ${last.n}`, chip: "Up to date", tone: "green", pct: 100, bar: "green", v: last.n };
+  if (last && last.extract?.print && SIGN.changes) return { ...base, n: 7, kind: "revision", label: `New revision: ${plural(SIGN.changes.length, "line")} changed`,
+    chip: moved ? "Review the changes" : `Sign version ${last.n + 1}`, tone: "amber", pct: 100, bar: "green", v: last.n, changed: SIGN.changes.length };
+  const need = `${plural(open, "line")} need${open === 1 ? "s" : ""} you`;
+  if (unsure) return { ...base, n: 3, label: "Step 3 of 6: confirm the parts", chip: `${plural(unsure, "element")} to place`, tone: "amber", pct: 33, bar: "ink" };
+  if (asks) return { ...base, n: 4, label: "Step 4 of 6: answer the questions", chip: need, tone: "amber", pct: 50, bar: "ink" };
+  if (review) return { ...base, n: 5, label: "Step 5 of 6: review the bill", chip: need, tone: "amber", pct: lines.length ? Math.round((100 * done) / lines.length) : 0, bar: "ink" };
+  return { ...base, n: 6, label: "Step 6 of 6: sign off", chip: "Ready to sign", tone: "amber", pct: 100, bar: "ink" };
+}
+// Kept on the structure as it changes, while its newest run is open and its signed versions are read
+function stTouch() {
+  if (!Store.user || !CL.pid || !state.pmid || state.fromSample) return;
+  clearTimeout(HV.stTimer); HV.stTimer = setTimeout(stKeep, 2500);
+}
+function stKeep() {
+  const pid = CL.pid, mid = state.pmid;
+  if (!Store.user || !pid || !mid || state.fromSample || !hvInputsHere(pid) || !PV.models.some((x) => x.id === mid)) return;
+  const st = stOf(state.name);
+  if (!SIGN.key || SIGN.ready !== SIGN.key || !SIGN.key.startsWith(`${pid}|${st.id}|`)) return;
+  const runs = PV.models.filter((x) => stOf(x.fileName || x.title).id === st.id).sort(hvByDated);
+  if (runs[0]?.id !== mid) return;   // an older run doesn't say where the structure stands
+  const step = hvStep(); if (!step) return;
+  const k = `${pid}|${st.id}`, json = JSON.stringify(step);
+  if (HV.stSaved[k] === json) return;
+  HV.stSaved[k] = json;
+  Store.saveStructure(pid, st.id, { name: st.name, ...(st.kind ? { kind: st.kind } : {}), model: mid }, { step: { ...step, at: new Date().toISOString() } }).catch(() => { delete HV.stSaved[k]; });
+  if (HV.ov && HV.ovFor === pid) { const d = HV.ov.docs.find((x) => x.id === st.id); if (d) d.step = step; }
+  if (HV.sum[pid]) delete HV.sum[pid];
+}
+// Open a structure's bill: its newest run, on the bill (or where asked: the lines that need him, Parts, Sign off)
+async function stOpen(s, where) {
+  const run = s.runs[0];
+  if (!run) return toast(`${s.name}: no model read yet. Open it in Revit and read it with the SolvBoQ add-in; it’s saved here with its date.`);
+  state.view = where === "sign" ? "sign" : where === "parts" ? "parts" : "map";
+  state.mFilter2 = where === "need" ? "need" : "all";
+  if (state.pmid === run.id && !state.fromSample) { render(); window.scrollTo(0, 0); return; }
+  HV.opening = s.name; render(); window.scrollTo(0, 0);
+  await pvOpenModel(run.id, true);
+  HV.opening = ""; render();
+  if (state.pmid !== run.id) toast(`${s.name} didn’t open: ${PV.saving || "try again"}`);
+}
+
+// ----- Projects (Web 1) -----
+function hvPeople(p) {
+  const ids = new Set(p.memberIds || Object.keys(p.members || {}));
+  if (Store.firm && p.firm === Store.firm.id) for (const u of Object.keys(Store.firm.members || {})) ids.add(u);
+  ids.delete(Store.user?.uid);
+  return ids.size ? `You and ${plural(ids.size, "other")}` : "Only you";
+}
+const hvMethod = (inp) => { const id = inp?.project?.method || "sans1200"; return id === "sans1200" ? "SANS 1200" : (MEASUREMENT_METHODS.find((m) => m.id === id)?.title || id).replace(/\s*\(.*$/, ""); };
+// What a project's card says: its structures, bills signed, and what is waiting, from what is kept (no model is read)
+async function hvSum(p) {
+  const [docs, certs, raw] = await Promise.all([Store.listStructures(p.id), Store.listCertificates(p.id), Store.loadInputs(p.id).catch(() => null)]);
+  const inp = normInputs(raw || inputsBlank());
+  let structures = docs.filter((d) => !d.id.startsWith("m-") || Object.keys(d.runs || {}).length || Object.keys(d.signed || {}).length).length;
+  for (const s of inp.structures) if (!docs.some((d) => d.id === String(s.id))) structures++;
+  let firstModel = docs.some((d) => Object.keys(d.runs || {}).length);
+  if (!docs.length) {   // not opened since structures were kept: its models stand in
+    const models = await Store.listModels(p.id);
+    structures = Math.max(inp.structures.length, new Set(models.map((m) => modelKey(m.fileName || m.title))).size);
+    firstModel = models.length > 0;
+  }
+  const signed = docs.filter((d) => Object.keys(d.signed || {}).length).length;
+  const asks = docs.reduce((t, d) => t + (d.step && d.step.n >= 3 && d.step.n <= 6 ? d.step.open || 0 : 0) + (d.step?.kind === "revision" ? d.step.moved || 0 : 0), 0);
+  const chips = [];
+  if (asks) chips.push([`${plural(asks, "question")} waiting`, "amber"]);
+  const c = certs[0], k = c?.check, num = c?.meta?.number ?? "";
+  if (c && k?.signed && k.lines > 0) chips.push([`Certificate ${num}: ${plural(k.lines, "claim")} to check`, "red"]);
+  else if (c && k && k.toQuery > 0) chips.push([`Certificate ${num}: ${k.toQuery} to query`, "red"]);
+  else if (c && !k) chips.push([`Certificate ${num}: not checked yet`, "red"]);
+  if (!firstModel && !signed) chips.push(["Waiting for the first model", "violet"]);
+  else if (!chips.length && docs.length && docs.every((d) => !Object.keys(d.runs || {}).length || d.step)) chips.push(["Nothing waiting", "green"]);
+  return { structures, signed, chips, method: hvMethod(inp) };
+}
+function hvSums() {
+  for (const p of CL.projects) if (!HV.sum[p.id]) {
+    HV.sum[p.id] = { loading: true };
+    hvSum(p).then((s) => { HV.sum[p.id] = s; }, (e) => { HV.sum[p.id] = { err: e.message, structures: 0, signed: 0, chips: [], method: "" }; })
+      .then(() => { if (state.view === "home") renderHome(); });
+  }
+}
+function hvBar(pct, fill, track) {
+  return h("div", { class: "hvbar " + track, "aria-hidden": "true" }, pct > 0 ? h("div", { class: "hvfill " + fill, style: `width:${Math.max(0, Math.min(100, Math.round(pct)))}%` }) : null);
+}
+function hvCard(p) {
+  const s = HV.sum[p.id] || { loading: true };
+  return h("a", { class: "hvcard", href: "#", "data-pid": p.id, onclick: (e) => { e.preventDefault(); hvOpenProject(p.id); } },
+    h("div", { class: "hvcardhead" }, h("b", null, p.name), h("span", null, s.loading ? "…" : s.err ? s.err : `${s.method} · ${plural(s.structures, "structure")}`)),
+    h("div", { class: "hvsigned" }, h("div", { class: "hvrow" }, h("span", null, "Bills signed"), h("b", null, s.loading || s.err ? "–" : `${s.signed} of ${s.structures}`)),
+      hvBar(s.structures ? (100 * s.signed) / s.structures : 0, "green", "light")),
+    (s.chips || []).length ? h("div", { class: "hvchips" }, s.chips.map(([t, tone]) => h("span", { class: "hvchip " + tone }, t))) : null,
+    h("div", { class: "hvfoot" }, h("span", null, hvPeople(p)), h("span", { class: "hvopen" }, "Open")));
+}
+function hvOpenProject(pid) { if (pid !== CL.pid) chooseProject(pid); goOv(); }
+async function hvNewProject() { const was = CL.pid; await newProject(null); if (CL.pid && CL.pid !== was) goOv(); }
+function renderHome() {
+  const v = $("viewHome"), u = Store.user;
+  const head = h("div", { class: "hvtitle" },
+    h("div", { class: "hvtitletext" }, h("h1", null, "Projects"),
+      h("p", null, Store.firm ? "Everyone at your firm sees the firm’s projects. Add outside people by email." : "Your projects, and the ones you were invited to. Add people by email.")),
+    u && CL.loaded ? h("button", { type: "button", class: "hvbtn night big", id: "hvNew", onclick: hvNewProject }, "New project") : null);
+  const note = (text, btn) => h("section", { class: "hvcard plain" }, h("p", null, text), btn || null);
+  let body;
+  if (!Store.available) body = note(`Projects are kept in the cloud, and it’s off in this copy of the page. ${Store.why || ""}`, h("button", { type: "button", class: "hvbtn night", onclick: goBills }, "Open the bill"));
+  else if (!u) body = note(Store.ready ? "Sign in to see your projects." : "Connecting…");
+  else if (!CL.loaded) body = note("Loading your projects…");
+  else if (CL.err && !CL.projects.length) body = note(`Your projects couldn’t be read: ${CL.err}`);
+  else if (!CL.projects.length) body = note("No projects yet. Start one for the contract: its structures, bills and payment certificates are kept in it, for everyone you add.");
+  else { hvSums(); body = h("div", { class: "hvgrid" }, CL.projects.map(hvCard)); }
+  v.replaceChildren(head, body);
+}
+
+// ----- The project overview (Web 2) -----
+async function hvLoad(force) {
+  const pid = CL.pid; if (!Store.user || !pid) return;
+  if (!force && HV.ovFor === pid && (HV.ov || HV.ovBusy || HV.ovErr)) return;
+  HV.ovFor = pid; HV.ovBusy = true; HV.ovErr = ""; HV.filled = "";
+  try {
+    const [docs, models, signed] = await Promise.all([Store.listStructures(pid), Store.listModels(pid), Store.listAllSigned(pid)]);
+    if (HV.ovFor !== pid) return;
+    HV.ov = { docs, models, signed };
+  } catch (e) { HV.ov = null; HV.ovErr = e.message; }
+  HV.ovBusy = false;
+  if (state.view === "ov") renderOv();
+}
+// Every structure of the project: the kept ones, the inputs' ones, the ones its models and signed bills belong to
+function hvStructures() {
+  const { docs, models, signed } = HV.ov, by = new Map();
+  const get = (id, name) => { let s = by.get(id); if (!s) by.set(id, (s = { id, name: "", kind: "", runs: [], signed: [], doc: null, inInputs: false })); if (!s.name && name) s.name = name; return s; };
+  for (const d of docs) Object.assign(get(d.id, d.name), { doc: d, kind: d.kind || "" });
+  if (hvInputsHere(CL.pid)) for (const x of piDoc().structures) { const s = get(String(x.id), x.name); s.name = x.name || s.name; s.kind = x.kind || s.kind; s.inInputs = true; }
+  for (const m of models) { const st = stOf(m.fileName || m.title); get(st.id, st.name).runs.push(m); }
+  for (const b of signed) get(b.sid).signed.push(b);
+  return [...by.values()].filter((s) => s.runs.length || s.signed.length || s.inInputs).map((s) => {
+    s.runs.sort(hvByDated); s.signed.sort((a, b) => a.n - b.n); s.last = s.signed[s.signed.length - 1] || null; s.name ||= s.last?.structure?.name || s.id;
+    s.step = hvStepOf(s); return s;
+  }).sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
+}
+function hvStepOf(s) {
+  const run = s.runs[0], kept = s.doc?.step, last = s.last;
+  if (run && state.pmid === run.id && !state.fromSample && SIGN.key && SIGN.ready === SIGN.key && SIGN.key.startsWith(`${CL.pid}|${s.id}|`)) { const live = hvStep(); if (live) return live; }
+  if (run && kept && kept.mid === run.id) return kept;
+  if (!run) return last ? { n: 7, kind: "signed", label: `${last.kind === "imported" ? "Imported" : "Signed"}, version ${last.n}`, chip: "Up to date", tone: "green", pct: 100, bar: "green" }
+    : { n: 2, label: "Step 2 of 6: bring the model", chip: "Open it in Revit", tone: "violet", pct: 17, bar: "ink" };
+  return { n: 0, label: "Not opened since this model was read", chip: "Open the bill", tone: "plain", pct: 0, bar: "ink" };
+}
+// What the overview found that isn't kept yet: structures, runs and signed versions (someone who only views can't write; fine)
+function hvBackfill(pid, list) {
+  if (HV.filled === pid || !hvInputsHere(pid)) return;
+  HV.filled = pid;
+  for (const s of list) {
+    const d = s.doc, run = s.runs[0], f = {}, runs = {};
+    if (s.name && (!d || d.name !== s.name)) f.name = s.name;
+    if (s.kind && (!d || d.kind !== s.kind)) f.kind = s.kind;
+    if (run && (!d || d.model !== run.id)) f.model = run.id;
+    for (const m of s.runs) if (!d?.runs?.[m.id]) runs[m.id] = { dated: m.dated || "", title: m.title || "" };
+    if (Object.keys(runs).length) f.runs = runs;
+    if (Object.keys(f).length) Store.saveStructure(pid, s.id, f).catch(() => {});
+    for (const b of s.signed) if (!d?.signed?.[String(b.n)]) Store.noteSigned(pid, s.id, b).catch(() => {});
+  }
+}
+function hvRowEl(s) {
+  const st = s.step, run = s.runs[0];
+  const sub = run ? [`Model of ${hvDay(run.dated)}`, s.last && s.last.kind !== "imported" ? `signed ${hvDay(s.last.at)}` : st.lines ? plural(st.lines, "line") : ""]
+    : [s.last ? `${s.last.kind === "imported" ? "Imported" : "Signed"} ${hvDay(s.last.at)}` : "No model read yet"];
+  return h("a", { class: "hvst", href: "#", "data-sid": s.id, onclick: (e) => { e.preventDefault(); stOpen(s, st.kind === "revision" || (st.n >= 4 && st.n <= 5) ? "need" : st.n === 3 ? "parts" : st.n === 6 ? "sign" : "map"); } },
+    h("div", { class: "hvstname" }, h("b", null, s.name), h("span", null, sub.filter(Boolean).join(" · "))),
+    h("div", { class: "hvststep" }, h("span", null, st.label), hvBar(st.pct, st.bar === "green" ? "green" : "ink", "mid")),
+    h("span", { class: "hvchip " + st.tone }, st.chip));
+}
+function hvNext(list) {
+  const items = [], c = CL.certs[0];
+  if (c) {
+    const k = c.check, num = c.meta?.number ?? "", go = () => { goClaims(); openCertificate(c.id); };
+    if (k?.signed && k.lines > 0) items.push({ t: `Certificate ${num}: ${plural(k.lines, "claim")} over the signed bill`, s: `${hvRand(k.over)} claimed above your quantities`, b: "Check the claims", go, lime: true });
+    else if (k && k.toQuery > 0) items.push({ t: `Certificate ${num}: ${k.toQuery} to query`, s: `${hvRand(k.atStake)} at stake`, b: "Check the claims", go, lime: true });
+    else if (!k) items.push({ t: `Certificate ${num}: not checked yet`, s: "Open it to check it against the bill", b: "Check the claims", go, lime: true });
+  }
+  const open = (s) => (s.step.kind === "revision" ? s.step.moved || 0 : s.step.open || 0);
+  for (const s of (list || []).slice().sort((a, b) => open(b) - open(a))) {
+    const st = s.step;
+    if (st.kind === "revision") items.push({ t: `${s.name}: the model changed`, s: `${plural(st.changed || 0, "line")} moved since the signed bill`, b: "See what changed", go: () => stOpen(s, "need") });
+    else if (st.n === 3) items.push({ t: `${s.name}: ${plural(st.unsure, "element")} to place`, s: "SolvBoQ wasn’t sure which part they are", b: "Confirm the parts", go: () => stOpen(s, "parts") });
+    else if (st.n === 4 || st.n === 5) items.push({ t: `${s.name}: ${plural(st.open, "line")} need${st.open === 1 ? "s" : ""} you`, s: st.est ? `${plural(st.est, "line")} still estimated` : st.label.replace(/^Step \d of 6: /, "Next: "), b: "Review the bill", go: () => stOpen(s, "need") });
+    else if (st.n === 6) items.push({ t: `${s.name}: ready to sign`, s: "Every line is confirmed", b: "Sign it off", go: () => stOpen(s, "sign") });
+  }
+  const unknown = (list || []).some((s) => s.step.n === 0);
+  return h("section", { class: "hvnext", id: "hvNext" }, h("h2", null, "Next for you"),
+    items.length ? items.slice(0, 4).map((it) => h("div", { class: "hvnextitem" }, h("b", null, it.t), h("span", null, it.s),
+      h("button", { type: "button", class: "hvbtn " + (it.lime ? "lime" : "ghost"), onclick: it.go }, it.b)))
+      : h("div", { class: "hvnextitem" }, h("b", null, list ? "Nothing waiting for you" : "…"), list ? h("span", null, unknown ? "Open a structure to see where its bill stands." : "Every structure is signed or up to date.") : null));
+}
+function renderOv() {
+  const v = $("viewOv"), p = CL.projects.find((x) => x.id === CL.pid);
+  if (!Store.user || !p) {
+    v.replaceChildren(h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, "Overview"))),
+      h("section", { class: "hvcard plain" }, h("p", null, !Store.available ? "Projects are kept in the cloud, and it’s off in this copy of the page." : !Store.user ? "Sign in to see your projects." : !CL.loaded ? "Loading your projects…" : "Choose a project, or start one."),
+        Store.user && CL.loaded ? h("button", { type: "button", class: "hvbtn night", onclick: goHome }, "All projects") : null));
+    return;
+  }
+  hvLoad();
+  const ready = HV.ov && HV.ovFor === p.id, list = ready ? hvStructures() : null;
+  if (list) hvBackfill(p.id, list);
+  const signed = list ? list.filter((s) => s.last).length : 0;
+  const sub = [`Measured to ${hvMethod(hvInputsHere(p.id) ? piDoc() : null)}`, list ? plural(list.length, "structure") : "", list ? `${plural(signed, "bill")} signed` : ""].filter(Boolean).join(" · ");
+  const structs = h("section", { class: "hvstructs", id: "hvStructs" },
+    h("div", { class: "hvstructshead" }, h("h2", null, "Structures"),
+      h("button", { type: "button", class: "hvbtn outline", onclick: () => { goProj(); setTimeout(() => $("piStructs")?.scrollIntoView({ block: "start" }), 50); } }, "Add a structure")),
+    HV.ovErr ? h("div", { class: "err" }, `The project couldn’t be read: ${HV.ovErr}`)
+      : !list ? h("p", { class: "sub" }, "Loading the structures…")
+      : list.length ? list.map(hvRowEl)
+      : h("p", { class: "sub" }, "No structures yet. Open a model of this project in Revit and read it with the SolvBoQ add-in (or upload model data under Bills): each model is a structure until you name them under Settings."));
+  v.replaceChildren(
+    h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, p.name), h("p", null, sub))),
+    h("div", { class: "hvov" }, structs, h("div", { class: "hvside" }, hvNext(list), typeof pplCard === "function" ? pplCard() : null)));
+}
+
+// After the project list loads or the project changes (projectview.js pvAfterProjects)
+function homeAfter() {
+  HV.sum = {}; HV.ovFor = "";
+  if (state.view === "home") renderHome(); else if (state.view === "ov") renderOv(); else navMark();
+}
+Store.onUser(() => { HV.sum = {}; HV.ov = null; HV.ovFor = ""; HV.stSaved = {}; if (state.view === "home" || state.view === "ov") render(); else navMark(); });
+// In a browser with the cloud, SolvBoQ opens on your projects; opened from Revit, on the model it was handed
+if (!FROM_REVIT && Store.available) state.view = "home";
 
 // ===== Conventions profiles and corrections =====
 // Shared mode (inside Claude, with the db capability): profiles/<id> documents and a corrections collection that
