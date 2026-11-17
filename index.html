@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-17T16:59:39Z">
+<meta name="solvboq-build" content="2026-11-17T18:02:57Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -997,6 +997,77 @@ body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #view
 #loadErr:empty{display:none}
 #viewHome,#viewOv{display:flex;flex-direction:column;gap:20px;min-width:0}
 #viewOv #pplCard .pplinvite input{flex:1 1 100px}
+
+/* ===== The bill, one screen per structure (the canvas's “Web 3: The bill”, 18 Nov 2026): the steps, the table, the line's panel ===== */
+#phead #btnGoSign{align-self:flex-end}
+.billsteps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.bstep{padding:8px 16px;border-radius:20px;border:0;font-weight:600;cursor:pointer;background:var(--card);color:var(--ink-2)}
+.bstep.done{background:var(--green-s);color:var(--green-t)}
+.bstep.warn{background:var(--amber-s);color:var(--amber-t)}
+.bstep.cur{background:var(--night);color:#fff;font-weight:700}
+.bstep[data-here]{box-shadow:0 0 0 2px var(--accent)}
+#viewMap .mapcard{flex:999 1 560px;border-radius:28px;padding:24px;gap:16px;overflow:visible}
+#viewMap .maphead{padding:0;gap:8px 12px}
+#viewMap .maphead h2{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+#viewMap .maphead .seg{background:transparent;padding:0;gap:8px;flex:1 1 auto}
+#viewMap .maphead .seg button{min-height:44px;padding:0 18px;border-radius:22px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:14px;font-weight:600}
+#viewMap .maphead .seg button[aria-pressed="true"]{background:var(--night);border-color:var(--night);color:#fff;box-shadow:none}
+#viewMap .mtree{overflow-x:auto}
+#viewMap .mrow{grid-template-columns:minmax(0,1fr) 52px 100px 140px 112px;gap:0;padding:0;min-width:620px;border-bottom:0;border-top:1px solid var(--rule);min-height:0}
+#viewMap .mrow>*{padding:14px 12px}
+#viewMap .mrow.mth{background:transparent;border-top:0;font-size:13px;font-weight:600;color:var(--ink-2)}
+#viewMap .mrow.mth>*{padding:8px 12px}
+#viewMap .mrow.node{cursor:default}
+#viewMap .mrow.node:hover{background:transparent}
+#viewMap .mrow.node .nlabel{grid-column:1/-1}
+#viewMap .mrow.sec .ntext{font-size:13px;font-weight:700;color:var(--ink-2)}
+#viewMap .mrow.sec>*{padding:16px 12px 8px}
+#viewMap .mrow.head{border-top:0}
+#viewMap .mrow.head>*{padding:6px 12px 2px}
+#viewMap .mrow.head .ntext{font-size:13px;font-weight:600;color:var(--ink)}
+#viewMap .mrow.subhead{border-top:0}
+#viewMap .mrow.subhead>*{padding:2px 12px 4px}
+#viewMap .mrow.line .ldesc{white-space:normal;overflow:visible;line-height:1.4}
+#viewMap .mrow.line.sel{background:var(--accent-s);box-shadow:none}
+#viewMap .mrow.line.sel .ldesc{font-weight:600}
+#viewMap .lqty{font-weight:600}
+#viewMap .lunit{font-size:14px;color:var(--ink)}
+.bchip{display:inline-block;padding:4px 12px;border-radius:14px;font-weight:600;font-size:13px;white-space:nowrap;background:var(--chip);color:var(--ink-2)}
+.bchip.b-meas{background:var(--green-s);color:var(--green-t)}
+.bchip.b-est{background:var(--amber-s);color:var(--amber-t)}
+.bchip.b-doc{background:var(--indigo-s);color:var(--violet-t)}
+.lstate{font-weight:600}
+.lstate.s-need{font-weight:700;color:var(--ink)}
+.lstate.s-ok{color:var(--green-t)}
+.lstate.s-out{color:var(--grey)}
+/* The line's panel */
+#viewMap .editor{flex:1 1 380px;border-radius:28px}
+#viewMap .edbody{background:var(--card);gap:20px;padding:20px 24px 24px}
+#viewMap .edhead{border-bottom:0;padding:24px 24px 0}
+#viewMap .edhead h2{font-size:20px}
+.edfigure{display:flex;flex-wrap:wrap;align-items:baseline;gap:12px}
+.edbig{font-size:40px;line-height:1.1;font-weight:700;letter-spacing:-.035em}
+.edwhy{padding:16px;border-radius:18px;background:var(--amber-s);color:var(--ink);font-size:14px;line-height:1.5}
+.edmeasure{padding:16px;border-radius:18px;background:var(--indigo-s);display:flex;flex-direction:column;gap:12px}
+.edmeasure .edtext{margin:0}
+.edmtitle{color:var(--violet-t);font-weight:700}
+.btn.outline-accent{align-self:flex-start;min-height:44px;padding:0 20px;border-radius:22px;border:1px solid var(--accent);background:var(--card);color:var(--violet-t);font-weight:600}
+#viewMap .edbody .edfoot{padding:0;border-top:0;gap:8px}
+#viewMap .edbody .edfoot .btn{flex:1 1 140px;min-height:48px;border-radius:24px;justify-content:center;font-weight:600}
+#viewMap .edbody .edfoot .edok{flex:1 1 100%}
+.edchange{display:flex;flex-direction:column;gap:14px;padding-top:16px;border-top:1px solid var(--rule)}
+body.docked .billsteps{gap:4px}
+body.docked .bstep{padding:4px 10px;font-size:12px}
+body.docked #btnGoSign{min-height:32px;padding:0 12px;font-size:12.5px}
+body.docked #viewMap .mapcard{padding:10px;border-radius:14px}
+body.docked #viewMap .maphead .seg button{min-height:32px;padding:0 10px;font-size:12px}
+body.docked #viewMap .mrow{grid-template-columns:minmax(0,1fr) 34px 74px 78px;min-width:0}
+body.docked #viewMap .mrow>*{padding:8px 6px}
+body.docked #viewMap .mrow>:nth-child(4){display:none}
+body.docked #viewMap .mrow .nlabel{padding-left:6px!important}
+body.docked .edbig{font-size:26px}
+@media (max-width:760px){#viewMap .mapcard{padding:16px}#viewMap .mrow{grid-template-columns:minmax(0,1fr) 72px 84px;min-width:0}#viewMap .mrow>*{padding:10px 6px}#viewMap .mrow>:nth-child(2),#viewMap .mrow>:nth-child(4){display:none}}
+.lstate{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1035,16 +1106,25 @@ body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #view
     <h1 id="pageTitle">Readiness</h1>
     <p class="psub" id="pageSub"></p>
   </div>
+  <button type="button" class="hvbtn night big" id="btnGoSign">Go to sign-off</button>
 </header>
+<!-- Under Bills: one screen per structure (the canvas's Web 3). The six steps, the current one and what is left (homeview.js
+     billSteps); step 3 opens Parts and step 6 Sign off -->
+<ol class="billsteps" id="billSteps" aria-label="Steps">
+  <li><button type="button" class="bstep" id="stepSetup">1 Set up</button></li>
+  <li><button type="button" class="bstep" id="stepModel">2 Model</button></li>
+  <li><button type="button" class="bstep" id="navParts">3 Structure</button></li>
+  <li><button type="button" class="bstep" id="stepAsks">4 Questions</button></li>
+  <li><button type="button" class="bstep" id="stepReview">5 Review the bill</button></li>
+  <li><button type="button" class="bstep" id="navSign">6 Sign off</button></li>
+</ol>
 <div class="subbar" id="subBills">
   <nav class="subtabs" aria-label="The bill">
     <button type="button" class="subtab" id="navMap">The bill</button>
-    <button type="button" class="subtab" id="navReady">Readiness</button>
-    <button type="button" class="subtab" id="navParts">Parts</button>
-    <button type="button" class="subtab" id="navSign">Sign off</button>
-    <button type="button" class="subtab" id="navMaster">Master BoQ</button>
+    <button type="button" class="subtab" id="navReady">Model checks</button>
   </nav>
   <div class="subtools">
+    <button type="button" class="btn" id="navMaster">Your bill (Master BoQ)</button>
     <div class="modelpick">
       <button type="button" class="mbtn" id="modelBtn" aria-expanded="false" aria-controls="modelMenu"><b id="modelName">Model</b><span id="modelRev"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
       <div class="mmenu" id="modelMenu" hidden>
@@ -1092,9 +1172,9 @@ body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #view
   <div id="viewHome" hidden></div>
   <div id="viewOv" hidden></div>
 
-  <!-- ===== Readiness (under Bills) ===== -->
+  <!-- ===== The model checks (Readiness), opened from the bill: the checks are also on the lines they touch ===== -->
   <div id="viewOverview" class="ready">
-    <div class="rhead"><h2>Is this model ready to bill?</h2><p class="sub" id="rMeta"></p></div>
+    <div class="rhead"><h2>The model checks</h2><p class="sub" id="rMeta"></p></div>
 
     <section class="card rverdict" aria-label="Verdict and steps">
       <div class="vtop" id="rVerdict"></div>
@@ -1137,13 +1217,12 @@ body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #view
         <h2 id="mboq-h">Bill of Quantities</h2>
         <div class="seg" role="group" aria-label="Show" id="mFilter"></div>
         <div class="search"><label class="sr" for="mSearch">Search the bill</label><span id="mSearchIcon"></span><input id="mSearch" type="search" placeholder="Search"></div>
-        <button class="btn sm" id="btnExpand" type="button">Collapse all</button>
         <button class="btn sm" id="btnBoqCopy" type="button">Copy</button>
         <button class="btn sm" id="btnBoqCsv" type="button" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg>Download</button>
       </div>
       <div id="mInputs"></div>
       <div class="mtree">
-        <div class="mrow mth" aria-hidden="true"><span>SANS item</span><span>Unit</span><span class="r">Quantity</span><span>Status</span></div>
+        <div class="mrow mth" aria-hidden="true"><span>Description</span><span>Unit</span><span class="r">Quantity</span><span>How we got it</span><span>Status</span></div>
         <div id="mTree"></div>
       </div>
       <div class="mfoot" id="mFoot"></div>
@@ -9577,7 +9656,7 @@ if (HOST && typeof document !== "undefined") {
   const bar = h("div", { class: "dockbar" },
     h("button", { type: "button", class: "btn sm", id: "btnOverview", onclick: () => { state.sel = null; state.ovOpen = true; if (state.view !== "map") { state.view = "map"; render(); } else renderMap(); } }, "Overview and fixes"),
     h("button", { type: "button", class: "btn sm", id: "btnReread", title: "Read the model in Revit again and show the new bill", onclick: () => hostReread() }, "Read the model again"));
-  const at = document.getElementById("btnExpand"); if (at) at.before(bar);
+  const at = document.getElementById("btnBoqCopy"); if (at) at.before(bar);
 }
 // He selected elements in the model: open the bill line they are on (the modelled line, where their volume, area or count
 // is billed), and say how many other lines they are also behind
@@ -10210,62 +10289,59 @@ function renderMap() {
   renderEditor(lines, groups);
 }
 
+// The bill as one table (the canvas's “Web 3: The bill”, 18 Nov 2026): description, unit, quantity, how we got it and one of two
+// statuses for him, Confirmed or Needs you. Why a line needs him (a model problem, a rule to confirm, Claude's suggestion, a
+// figure to measure) is said in its panel. His layout stays: a row per section, then the clause and its heading, then a
+// sub-heading (“Vertical formwork to:”), then the items (8 Nov 2026).
+const BASIS_WORD = { measured: ["Measured", "b-meas"], worked: ["Worked out", "b-work"], estimated: ["Estimated", "b-est"], edited: ["From a document", "b-doc"], none: ["Not measured yet", "b-none"], prov: ["Provisional", "b-none"], unmapped: ["No item yet", "b-none"] };
+// How we got the line's figure, in the table's words (a figure he typed comes from his drawings or schedules)
+function lineBasis(L) {
+  if (L.status === "out") return null;
+  if (L.status === "prov") return "prov";
+  if (L.unmapped) return "unmapped";
+  if (L.expected) return L.shownQty == null ? "none" : "edited";
+  return basisOf(L);
+}
+const lineState = (L) => (L.status === "out" ? ["Left out", "s-out"] : OPEN.has(L.status) ? ["Needs you", "s-need"] : ["Confirmed", "s-ok"]);
+function basisChip(L) { const b = lineBasis(L); if (!b) return h("span", { class: "bchip b-none" }, "—"); const [t, c] = BASIS_WORD[b]; return h("span", { class: "bchip " + c, title: b === "edited" ? "Typed in by you" : b === "estimated" ? L.est || "" : "" }, t); }
 function renderTree(lines, groups) {
-  const need = lines.filter((L) => OPEN.has(L.status)).length, flags = lines.filter((L) => L.status === "flag" || L.status === "unmapped").length, out = lines.filter((L) => L.status === "out").length;
-  const f = state.mFilter2 || "all";
-  const filters = [["all", "All", lines.length], ["need", "Needs you", need], ["flag", "Model problems", flags], ...(out ? [["out", "Left out", out]] : [])];
-  const noted = lines.filter((L) => lnFor(L)).length;
-  if (noted) filters.push(["notes", "Your notes", noted]);
-  $("mFilter").replaceChildren(...filters.map(([k, l, n]) => h("button", { type: "button", "aria-pressed": String(f === k), onclick: () => { state.mFilter2 = k; renderMap(); } }, l, h("span", { class: "segn" }, String(n)))));
+  const live = lines.filter((L) => L.status !== "out"), need = live.filter((L) => OPEN.has(L.status)).length, out = lines.length - live.length;
+  const est = live.filter((L) => lineBasis(L) === "estimated").length, noted = lines.filter((L) => lnFor(L)).length;
+  const f = ["all", "need", "est", "out", "notes"].includes(state.mFilter2) ? state.mFilter2 : "all";
+  const filters = [["all", "All lines", live.length], ["need", "Needs you", need], ["est", "Estimated", est], ...(out ? [["out", "Left out", out]] : []), ...(noted ? [["notes", "Your notes", noted]] : [])];
+  $("mFilter").replaceChildren(...filters.map(([k, l, n]) => h("button", { type: "button", "aria-pressed": String(f === k), "data-f": k, onclick: () => { state.mFilter2 = k; renderMap(); } }, `${l} · ${n}`)));
   const q = (state.mQ || "").trim().toLowerCase();
-  const show = (L) => (f === "all" ? L.status !== "out" : f === "need" ? OPEN.has(L.status) || L.key === state.sel : f === "flag" ? L.status === "flag" || L.status === "unmapped" : f === "notes" ? !!lnFor(L) || L.key === state.sel : L.status === "out")
+  const show = (L) => (f === "all" ? L.status !== "out" : f === "need" ? OPEN.has(L.status) || L.key === state.sel : f === "est" ? (lineBasis(L) === "estimated" || L.key === state.sel) : f === "notes" ? !!lnFor(L) || L.key === state.sel : L.status === "out")
     && (!q || [L.description, L.heading, L.section, L.clause, ...L.groups.flatMap((g) => [g.sample.Family, g.sample.Type, g.sample.Material])].some((x) => String(x || "").toLowerCase().includes(q)));
   const rows = [];
-  const summary = (ls) => {
-    const o = ls.filter((L) => OPEN.has(L.status)).length, fl = ls.filter((L) => L.status === "flag" || L.status === "unmapped").length;
-    return !o ? h("span", { class: "nsum ok" }, "Done") : h("span", { class: "nsum " + (fl ? "bad" : "open") }, fl ? `${fl} flagged, ${o} open` : `${o} open`);
-  };
-  const folder = (open) => svg(`<svg width="17" height="17" viewBox="0 0 24 24" fill="none" style="stroke:${open ? "var(--accent)" : "var(--grey)"}" stroke-width="1.8" aria-hidden="true"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg>`);
-  const chev = (open) => svg(`<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke-width="2.2" aria-hidden="true" style="stroke:var(--muted);flex:none;transition:transform .15s;${open ? "transform:rotate(90deg)" : ""}"><path d="M9 6l6 6-6 6"></path></svg>`);
-  const searching = !!q || f !== "all";
   for (const sec of [...new Set(lines.map((L) => L.section))]) {
     const secLines = lines.filter((L) => L.section === sec), vis = secLines.filter(show);
     if (!vis.length) continue;
-    const sc = state.coll.has(sec) && !searching;
-    const toggle = (k) => { state.coll.has(k) ? state.coll.delete(k) : state.coll.add(k); renderMap(); };
-    rows.push(h("button", { type: "button", class: "mrow node sec", "aria-expanded": String(!sc), onclick: () => toggle(sec) },
-      h("span", { class: "nlabel" }, chev(!sc), folder(secLines.some((L) => OPEN.has(L.status))), h("span", { class: "ntext" }, h("span", { class: "ncode" }, SECTION_LABEL(sec)), " ", sec === "Not mapped" ? "" : SECTION_TITLE[sec] || "", lnForHead(lnHeadKey(sec)) ? h("span", { class: "lnmark", title: "Your note on this section" }, lnIcon()) : null), h("span", { class: "ncount" }, plural(secLines.length, "item"))),
-      h("span", {}), h("span", {}), summary(secLines)));
-    if (sc) continue;
+    rows.push(h("div", { class: "mrow node sec", role: "row" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" }, SECTION_LABEL(sec), sec === "Not mapped" || !SECTION_TITLE[sec] ? "" : ` · ${SECTION_TITLE[sec]}`,
+      lnForHead(lnHeadKey(sec)) ? h("span", { class: "lnmark", title: "Your note on this section" }, lnIcon()) : null))));
     let head = null, lastSub = null;
     for (const L of vis) {
-      // His layout (8 Nov 2026): the clause and its heading on one line, a sub-heading (“Vertical formwork to:”) on the next,
-      // underlined, then the items. The fold is on the clause and heading.
       const hk = headKey(L), sub = subHeadOf(L);
       if (hk !== head) {
         head = hk; lastSub = null;
-        const hl = secLines.filter((x) => headKey(x) === hk), hc = state.coll.has(hk) && !searching;
-        rows.push(h("button", { type: "button", class: "mrow node head", "aria-expanded": String(!hc), onclick: () => toggle(hk) },
-          h("span", { class: "nlabel", style: "padding-left:24px" }, chev(!hc), folder(hl.some((x) => OPEN.has(x.status))), h("span", { class: "ntext", style: "font-weight:500" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", headOf(L), lnForHead(lnHeadKey(sec, L.clause, headOf(L))) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null), h("span", { class: "ncount" }, hl.length === 1 ? "1 entry" : `${hl.length} entries`)),
-          h("span", {}), h("span", {}), summary(hl)));
+        rows.push(h("div", { class: "mrow node head", role: "row" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" }, L.clause ? h("span", { class: "ncode" }, L.clause) : null, " ", headOf(L),
+          lnForHead(lnHeadKey(sec, L.clause, headOf(L))) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null))));
       }
-      if (state.coll.has(hk) && !searching) continue;
-      if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "presentation" }, h("span", { class: "nlabel", style: "padding-left:50px" }, h("span", { class: "ntext" }, sub), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null))); }
-      const [label, cls] = STATUS[L.status];
-      const ai = L.status === "claude" ? L.groups.find((g) => g.method === "claude") : null;
+      if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "row" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" }, sub), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null))); }
+      const [st, sc] = lineState(L);
       rows.push(h("button", { type: "button", class: "mrow line" + (L.key === state.sel ? " sel" : "") + (L.status === "out" ? " struck" : ""), "aria-pressed": String(L.key === state.sel), "data-key": L.key,
         onclick: () => { state.sel = L.key === state.sel ? null : L.key; state.showEls = false; LN.edit = null; state.itemMenu = false; renderMap(); } },
-        h("span", { class: "nlabel", style: "padding-left:50px" }, statusIcon(L.status), h("span", { class: "lnum" }, String(L.n)), h("span", { class: "ldesc" }, L.description), lnFor(L) ? h("span", { class: "lnmark", title: lnFor(L).his != null ? `Your figure: ${mapQty(lnFor(L).his, L.unit)} ${L.unit}. ${lnFor(L).reason}` : lnFor(L).reason }, lnIcon()) : null),
+        h("span", { class: "nlabel" }, h("span", { class: "lnum" }, String(L.n)), h("span", { class: "ldesc" }, L.description), lnFor(L) ? h("span", { class: "lnmark", title: lnFor(L).his != null ? `Your figure: ${mapQty(lnFor(L).his, L.unit)} ${L.unit}. ${lnFor(L).reason}` : lnFor(L).reason }, lnIcon()) : null),
         h("span", { class: "lunit" }, L.unit || ""),
         h("span", { class: "r lqty" + (L.edited ? " edited" : L.shownQty == null ? " none" : "") }, L.status === "out" ? "—" : L.status === "prov" ? "Prov." : L.shownQty == null ? "—" : mapQty(L.shownQty, L.unit)),
-        h("span", {}, h("span", { class: "stpill " + cls }, ai && ai.confidence != null ? `${label} · ${Math.round(ai.confidence * 100)}%` : label))));
+        h("span", { class: "lbasis" }, basisChip(L)),
+        h("span", { class: "lstate " + sc }, st)));
     }
   }
-  $("mTree").replaceChildren(...(rows.length ? rows : [h("div", { class: "empty", style: "text-align:center;padding:48px 24px" }, f === "need" ? "Nothing needs you. Every line is confirmed." : f === "flag" ? "No model problems left." : "No lines match.")]));
+  $("mTree").replaceChildren(...(rows.length ? rows : [h("div", { class: "empty", style: "text-align:center;padding:48px 24px" }, f === "need" ? "Nothing needs you. Every line is confirmed." : f === "est" ? "No line is an estimate." : "No lines match.")]));
   const left = groups.filter(isLeftGroup);
   $("mFoot").replaceChildren(left.length ? `${plural(left.length, "group")} left out automatically: ${[...new Set(left.map((g) => { const t = (g.reason || "").replace(/\.$/, ""); return t ? t[0].toLowerCase() + t.slice(1) : t; }))].slice(0, 2).join("; ")}.` : "Every group in the model is in the bill.");
-  const anyOpen = [...new Set(lines.map((L) => L.section))].some((s) => !state.coll.has(s));
-  $("btnExpand").textContent = anyOpen ? "Collapse all" : "Expand all";
+  if (typeof billHeadNow === "function") billHeadNow(lines);
 }
 function statusIcon(st) {
   const i = {
@@ -10388,34 +10464,93 @@ function renderEditor(lines, groups) {
   const back = docked ? h("div", { class: "edhead" }, h("button", { type: "button", class: "btn sm", id: "btnBackBill", style: "align-self:flex-start", onclick: () => { state.ovOpen = false; renderMap(); } }, "‹ Back to the bill")) : null;
   $("mEditor").replaceChildren(...(L ? editorFor(L, lines) : docked && !state.ovOpen ? [] : [back, ...editorOverview(lines, groups)].filter(Boolean)));
 }
+// A line's panel, in the order of the canvas's “Web 3: The bill” (18 Nov 2026): why it needs him (one sentence: a model problem,
+// a rule to confirm, Claude's suggestion, a figure to measure, a change since the signed bill), the figure and how it was got,
+// how it is worked out and the elements behind it, what would make an estimate a measurement, then Accept, Change, Leave out.
+// Below them, the changes themselves (the item, the quantity, the assumptions) and his notes. Every action Map to SANS had is here.
 function editorFor(L, lines) {
-  const [label, cls] = STATUS[L.status];
   const g0 = L.groups[0], inferred = L.groups.some((g) => g.inferred), kind = inferred ? (g0.ruleId || "").replace("INFER-", "") : "";
   const i = lines.indexOf(L), go = (d) => selectLine(lines[(i + d + lines.length) % lines.length]);
   const iconBtn = (path, lbl, fn) => h("button", { type: "button", class: "ibtn", "aria-label": lbl, title: lbl, onclick: fn }, svg(`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="${path}"></path></svg>`));
+  const [st, sc] = lineState(L), open = OPEN.has(L.status);
   const head = h("div", { class: "edhead" },
     h("div", { class: "edpath" }, h("span", {}, `Item ${L.n} · ${L.unmapped ? "Not mapped" : `${SECTION_LABEL(L.section)}${L.clause ? " " + L.clause : ""} · ${L.heading}`}`),
       iconBtn("M15 6l-6 6 6 6", "Previous item", () => go(-1)), iconBtn("M9 6l6 6-6 6", "Next item", () => go(1)), iconBtn("M6 6l12 12M18 6L6 18", "Close", () => selectLine(null))),
-    h("h2", {}, L.description), h("span", { class: "stpill " + cls }, label));
+    h("h2", {}, L.description));
   const body = [];
-  // Changed since the signed version: what it was, what it is, what that's worth, and the elements behind it (signview.js)
+  // The figure, how it was got, and where it stands
+  const b = lineBasis(L);
+  body.push(h("div", { class: "edfigure", id: "edFigure" },
+    h("span", { class: "edbig" }, L.status === "out" ? "Left out" : L.status === "prov" ? "Provisional" : L.shownQty == null ? "Not measured yet" : `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`),
+    b ? basisChip(L) : null, h("span", { class: "lstate " + sc }, st)));
+  // Why it needs him, in one sentence (with what that reason offers)
+  const issues = [...new Set(L.groups.flatMap((g) => g.issues))];
+  const ruleWhy = [...new Set(L.groups.filter((g) => !g.inferred && (g.method === "rule" || g.method === "check")).flatMap((g) => explainRule(g, state.result)))];
   if (L.status === "moved" && typeof signMovedBox === "function") body.push(signMovedBox(L));
-  // A model problem: bill it as it is, or leave it out and send it to the modeller
   if (L.status === "flag") body.push(h("div", { class: "edprob" },
-    h("span", {}, h("b", {}, "Model problem. "), L.problems.map((p) => p.title).join("; ") + ". " + (L.problems[0]?.body || "")),
+    h("span", {}, h("b", {}, "It needs you: a model problem. "), L.problems.map((p) => p.title).join("; ") + ". " + (L.problems[0]?.body || "")),
     L.lessOn ? h("span", { id: "lessNote" }, `You chose to bill this line less the ${fmt2(L.overlapLess)} m³ it shares with ${overlapNames(L)}: ${mapQty(L.qty, L.unit)} m³, against Revit’s ${mapQty(L.modelQty, L.unit)} m³. Joining them in Revit is still the fix.`)
       : L.overlapLess > 0 ? h("span", { id: "lessNote" }, `Billed as is, ${fmt2(L.overlapLess)} m³ of this line is counted twice: it is also in ${overlapNames(L)}, cast first. Billed less the overlap, the line is ${mapQty(Math.max(0, L.modelQty - L.overlapLess), L.unit)} m³${L.overlapApprox ? " (approximate: an element here overlaps more than one other, and those parts may overlap each other)" : ""}. Joining them in Revit is still the fix.`)
       : L.problems.some((p) => p.key === "unjoined") ? h("span", {}, "The volume these elements share with others would come off the other line (the element cast later), not this one.") : null,
     h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { if (state.lessOverlap.delete(L.key)) saveLess(state.name, state.lessOverlap); confirmLine(L); } }, "Bill as is"),
       L.overlapLess > 0 ? h("button", { type: "button", class: "btn sm", id: "btnLess", onclick: () => billLess(L) }, `Bill less the overlap (${fmt2(L.overlapLess)} m³)`) : null,
       h("button", { type: "button", class: "btn sm", onclick: () => leaveOut(L) }, "Leave out, send to modeller"))));
-  if (L.status === "claude") { const ai = L.groups.find((g) => g.method === "claude"); body.push(h("div", { class: "edai" }, h("b", {}, `Claude suggests this${ai.confidence != null ? ` (${Math.round(ai.confidence * 100)}% sure)` : ""}. `), ai.reason || "")); }
-  // The SANS item, with quick picks and the full form for anything else
+  else if (L.status === "claude") { const ai = L.groups.find((g) => g.method === "claude"); body.push(h("div", { class: "edai edwhy" }, h("b", {}, `It needs you: Claude suggested the item${ai.confidence != null ? ` (${Math.round(ai.confidence * 100)}% sure)` : ""}. `), ai.reason || "", " Accept it, or change it below.")); }
+  else if (L.status === "confirm") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: a rule chose the item, and it’s yours to confirm. "), ruleWhy.length ? ruleWhy.join(" ") : L.inferred ? "It is worked out from the model by SolvBoQ’s rule." : "Check the item is the one you would bill."));
+  else if (L.status === "measure") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: it isn’t in the model. "), `${L.why || ""} Enter the quantity from the drawings below, or bill it as provisional.`));
+  else if (L.status === "unmapped") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: no item fits it yet. "), "Choose its item below", sampleFn ? ", or ask Claude." : "."));
+  // A check on the model that touches this line's elements (Readiness), said on the line it affects
+  if (issues.length && L.status !== "flag") body.push(h("p", { class: "edtext warn", id: "edChecks" }, "A check on the model: " + issues.slice(0, 3).join("; ") + ". ",
+    h("button", { type: "button", class: "link accent", onclick: () => { state.view = "overview"; render(); } }, "See the model checks")));
+  // How the figure is worked out, and the elements behind it
+  // (on a model problem the check is said above, in its words)
+  const reasons = [...new Set(L.groups.map((g) => (g.reason || "").replace(/^Inferred: /, "")).filter((r) => r && !(L.status === "flag" && /^Readiness: /.test(r))))];
+  const els = L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => ({ e, g })));
+  const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
+  const cb = calcBox(L);
+  body.push(h("div", { class: "edfield", id: "edWorking" },
+    cb ? null : h("span", { class: "edlabel" }, "How this figure is worked out"),
+    cb,
+    L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
+      h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
+    h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
+    ...reasons.map((r) => h("p", { class: "edtext" }, r)),
+    /joint/i.test(L.description) ? jointLayoutNote() : null,
+    els.length && HOST ? h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn sm", id: "btnSelRevit", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, `Select in Revit (${els.length})`),
+      h("button", { type: "button", class: "btn sm", id: "btnIsoRevit", title: "Hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, "Isolate in Revit"),
+      state.revitIso ? h("button", { type: "button", class: "link accent", id: "btnShowAll", onclick: () => hostShowAll() }, "Show everything again") : null) : null,
+    els.length ? h("button", { type: "button", class: "link accent", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "Show"} the ${plural(els.length, "element")} in the model`) : h("span", { class: "edsub" }, "No model elements behind this line."),
+    state.showEls && els.length ? h("div", { class: "edels" },
+      h("div", { class: "edelrow eh" }, h("span", {}, "ID"), h("span", {}, "Family : type · level"), h("span", { class: "r" }, L.unit || "")),
+      h("div", { class: "edelscroll" }, ...els.slice(0, 300).map(({ e, g }) => { const q = part.size ? part.get(String(e.Id)) : L.unit ? basisQty(e, g.item?.unit || L.unit) : null;
+        return h("div", { class: "edelrow" }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
+      h("div", { class: "edelfoot" }, h("span", {}, "Paste into Revit: Manage › Select by ID"),
+        h("button", { type: "button", class: "btn xs", onclick: () => copyText(els.map(({ e }) => e.Id).join(";"), plural(els.length, "ID") + " copied for Revit’s Select by ID") }, "Copy IDs for Revit"))) : null));
+  // What would turn an estimate into a measurement
+  if (L.est && !L.edited) body.push(h("div", { class: "edmeasure" }, h("span", { class: "edmtitle" }, "To measure this, not estimate it"),
+    h("p", { class: "edtext", id: "estNote" }, "An estimate, not a measurement. " + L.est),
+    h("button", { type: "button", class: "btn sm outline-accent", onclick: () => edChange() }, kind === "rebar" ? "Change the rate" : kind === "earth" ? "Change the assumptions" : "Enter the measured figure")));
+  // The decisions: Accept, Change, Leave out (or, once decided, Undo)
+  const foot = [], by = L.groups.length && L.groups.every((g) => g.method === "rule");
+  const leave = L.status !== "out" ? h("button", { type: "button", class: "btn", id: "btnLeaveOut", onclick: () => leaveOut(L) }, "Leave out") : null;
+  const change = h("button", { type: "button", class: "btn", id: "btnChange", onclick: () => edChange() }, "Change");
+  if (open && L.status !== "unmapped") {
+    if (L.status === "measure") foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { const v = $("edqty")?.value.trim(); if (!v) { edChange(); return toast("Enter the quantity first."); } setQty(L, v); advance(L); renderMap(); } }, "Save quantity and next"),
+      h("button", { type: "button", class: "btn", onclick: () => { state.prov.add(L.key); advance(L); toast("Billed as provisional"); renderMap(); } }, "Bill as provisional"), leave);
+    else foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => confirmLine(L) }, L.status === "flag" ? (L.lessOn ? "Bill less the overlap and next" : "Bill as is and next") : L.status === "claude" ? "Accept and next" : L.status === "moved" ? "Accept the new quantity and next" : L.est && !L.edited ? "Accept the estimate and next" : "Accept and next"), change, leave);
+  } else if (L.status === "unmapped") foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { state.itemMenu = true; renderMap(); edChange(); } }, "Choose its item"), leave);
+  else if (L.status === "done" && by && !L.edited) foot.push(h("span", { class: "edok" }, "Matched by a rule"), h("button", { type: "button", class: "btn", onclick: () => selectLine(nextOpenAfter(L)) }, "Next"), change, leave);
+  else foot.push(h("span", { class: "edok" }, L.status === "out" ? "Left out and sent to the fix list" : L.status === "prov" ? "Billed as provisional" : L.expected ? "Quantity entered" : "Confirmed"),
+    h("button", { type: "button", class: "btn", onclick: () => undoLine(L) }, "Undo"), L.status === "out" ? null : change);
+  body.push(h("div", { class: "edfoot" }, ...foot.filter(Boolean)));
+  // Change it: the item, the quantity, and the assumptions behind a worked-out line
+  const chg = [];
   if (!L.expected) {
     const opts = quickPicks(g0);
     const cur = L.unmapped ? null : { section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit };
     const was = state.changedFrom?.[L.key];
-    body.push(h("div", { class: "edfield" },
+    chg.push(h("div", { class: "edfield" },
       h("span", { class: "edlabel" }, "SANS item"),
       h("button", { type: "button", class: "edselect", "aria-haspopup": "listbox", "aria-expanded": String(!!state.itemMenu), onclick: () => { state.itemMenu = !state.itemMenu; state.mEdit = null; renderMap(); } },
         h("span", {}, cur ? cur.description : "Choose an item"), svg('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>')),
@@ -10432,26 +10567,21 @@ function editorFor(L, lines) {
           : h("button", { type: "button", class: "btn sm accent", onclick: () => askClaude(L.groups) }, "Ask Claude"),
         state.aiMsg ? h("span", { class: "edsub" }, state.aiMsg) : null) : null));
   }
-  // The quantity: the model's, or one typed in
   if (!L.unmapped) {
     const id = "edqty";
-    body.push(h("div", { class: "edfield" },
+    chg.push(h("div", { class: "edfield" },
       h("label", { class: "edlabel", for: id }, "Quantity"),
       h("div", { class: "edqty" }, h("input", { id, inputmode: "decimal", class: "edinput big", value: L.shownQty == null ? "" : mapQty(L.shownQty, L.unit), placeholder: L.expected ? "Enter from the drawings" : "",
         onchange: (e) => setQty(L, e.target.value.trim() === "" || (!L.expected && e.target.value.trim() === mapQty(L.modelQty, L.unit)) ? "" : e.target.value.trim()) }), h("span", {}, L.unit)),
       L.edited ? h("span", { class: "edhint warn" }, `Edited. The model gives ${mapQty(L.modelQty, L.unit)}. `, h("button", { type: "button", class: "link", onclick: () => setQty(L, "") }, "Reset")) : null,
       L.expected ? h("span", { class: "edhint" }, `Not in the model. ${L.why}`) : null));
   }
-  // His own measure, and why it differs: a note SolvBoQ learns from (notes.js)
-  if (!L.unmapped) body.push(lnEditorBox(L));
-  // Notes on its heading and section (their wording, order, which lines belong under them)
-  if (!L.unmapped) body.push(lnHeadBox(L));
   // Assumptions behind inferred lines, changed right here
   const num = (k, lbl, unit, val, scale = 1) => h("label", { class: "edrow" }, lbl, h("span", {}, h("input", { class: "edinput", inputmode: "decimal", value: val == null ? "" : String(Math.round(val * scale * 100) / 100),
     onchange: (e) => setAssumption(k, e.target.value.trim() === "" ? "" : String(parseFloat(e.target.value) / scale)) }), h("span", { class: "eunit" }, unit)));
   if (kind === "earth" && state.result.derived.earthworks) {
     const a = state.result.derived.earthworks, shared = lines.filter((x) => x.groups.some((g) => g.ruleId === "INFER-earth")).map((x) => x.n);
-    body.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Earthworks assumptions ", h("span", { class: "edsub" }, `· shared by items ${shared.join(", ")}`)),
+    chg.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Earthworks assumptions ", h("span", { class: "edsub" }, `· shared by items ${shared.join(", ")}`)),
       ...(a.manhole ? [] : a.civil ? [num("replacementDepth", "Replacement depth", "m", a.replacementDepth), num("pioneerThickness", "Pioneer layer", "mm", a.pioneerThickness, 1000),
         num("g5Share", "G5 share of the fill", "%", a.g5Share, 100), num("rockShare", "Hard rock", "%", a.rockShare, 100), num("handShare", "Hand excavation", "%", a.handShare, 100),
         num("stockShare", "Stockpiling", "%", a.stockShare, 100)]
@@ -10464,7 +10594,7 @@ function editorFor(L, lines) {
   if (kind === "coat") {
     // Each coating line has its own product (his note, 8 Nov 2026); the line keeps its place in the bill when it changes
     const gk = L.groups[0].key, part = gk.split("|")[2] || "", cur = coatChoice(state.earth, part);
-    body.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, "· this line only")),
+    chg.push(h("div", { class: "edbox" }, h("label", { class: "edlabel", for: "coatSel" }, "Coating product ", h("span", { class: "edsub" }, "· this line only")),
       h("select", { id: "coatSel", class: "edinput coatsel", onchange: (e) => { setAssumption(`coatProduct_${part}`, e.target.value); const N = state.mapLines.find((x) => x.groups.some((g) => g.key === gk)); if (N) selectLine(N); } },
         ...COAT_PRODUCTS.map((p, i) => h("option", { value: String(i), selected: i === cur ? true : null }, p[0].toUpperCase() + p.slice(1))),
         h("option", { value: String(COAT_PRODUCTS.length), selected: cur === COAT_PRODUCTS.length ? true : null }, "Other…")),
@@ -10477,54 +10607,19 @@ function editorFor(L, lines) {
     const kg = Number.isFinite(e.rebarKg) ? e.rebarKg : CONV.rebar[state.result.structure === "civil" ? "civil" : "building"], mild = Number.isFinite(e.rebarMild) ? e.rebarMild : CONV.rebar.mildShare;
     const St = state.result.inputs?.structure, sKg = St && Number.isFinite(St.rebarKg) ? St.rebarKg : null;
     const kgShown = Number.isFinite(e.rebarKg) ? e.rebarKg : sKg != null ? sKg : kg;
-    body.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Reinforcement estimate ", h("span", { class: "edsub" }, `· ${fmtN(rc, 1)} m³ reinforced concrete`)),
+    chg.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Reinforcement estimate ", h("span", { class: "edsub" }, `· ${fmtN(rc, 1)} m³ reinforced concrete`)),
       num("rebarKg", "Steel per m³", "kg", kgShown), num("rebarMild", "Mild steel share", "%", mild, 100),
       h("span", { class: "edsub" }, Number.isFinite(e.rebarKg) ? "Steel per m³: set for this model." : sKg != null ? `Steel per m³: the rate for ${St.name || "the structure"} in the project, ${srcWords(St.srcOf("rebarKg"))}.` : `Steel per m³: assumed (${kg} kg/m³ for ${state.result.structure === "civil" ? "tanks" : "buildings"}). Set the structure’s rate under Project.`)));
   }
-  // Why a built-in rule chose this item (only while the item is still the rule's own)
-  const why = [...new Set(L.groups.filter((g) => !g.inferred && (g.method === "rule" || g.method === "check")).flatMap((g) => explainRule(g, state.result)))];
-  if (why.length) body.push(h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Why this item"), ...why.map((t) => h("p", { class: "edtext" }, t))));
-  // Where it comes from, and the elements behind it
-  const reasons = [...new Set(L.groups.map((g) => (g.reason || "").replace(/^Inferred: /, "")).filter(Boolean))];
-  const els = L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => ({ e, g })));
-  const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
-  body.push(h("div", { class: "edfield" },
-    h("span", { class: "edlabel" }, "Where it comes from"),
-    L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
-      h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
-    L.est && !L.edited ? h("p", { class: "edtext warn", id: "estNote" }, "An estimate, not a measurement. " + L.est) : null,
-    h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
-    ...reasons.map((r) => h("p", { class: "edtext" }, r)),
-    /joint/i.test(L.description) ? jointLayoutNote() : null,
-    calcBox(L),
-    L.groups.some((g) => g.issues.length) && L.status !== "flag" ? h("p", { class: "edtext warn" }, "Readiness: " + [...new Set(L.groups.flatMap((g) => g.issues))].slice(0, 3).join("; ")) : null,
-    els.length && HOST ? h("div", { class: "tools" },
-      h("button", { type: "button", class: "btn sm", id: "btnSelRevit", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, `Select in Revit (${els.length})`),
-      h("button", { type: "button", class: "btn sm", id: "btnIsoRevit", title: "Hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, "Isolate in Revit"),
-      state.revitIso ? h("button", { type: "button", class: "link accent", id: "btnShowAll", onclick: () => hostShowAll() }, "Show everything again") : null) : null,
-    els.length ? h("button", { type: "button", class: "link accent", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "View"} ${plural(els.length, "model element")}`) : h("span", { class: "edsub" }, "No model elements behind this line."),
-    state.showEls && els.length ? h("div", { class: "edels" },
-      h("div", { class: "edelrow eh" }, h("span", {}, "ID"), h("span", {}, "Family : type · level"), h("span", { class: "r" }, L.unit || "")),
-      h("div", { class: "edelscroll" }, ...els.slice(0, 300).map(({ e, g }) => { const q = part.size ? part.get(String(e.Id)) : L.unit ? basisQty(e, g.item?.unit || L.unit) : null;
-        return h("div", { class: "edelrow" }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
-      h("div", { class: "edelfoot" }, h("span", {}, "Paste into Revit: Manage › Select by ID"),
-        h("button", { type: "button", class: "btn xs", onclick: () => copyText(els.map(({ e }) => e.Id).join(";"), plural(els.length, "ID") + " copied for Revit’s Select by ID") }, "Copy IDs for Revit"))) : null));
-  // The footer: the main decision, and a way back
-  const foot = [];
-  const by = L.groups.length && L.groups.every((g) => g.method === "rule");
-  if (OPEN.has(L.status) && L.status !== "unmapped") {
-    if (L.status === "measure") {
-      foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { const v = $("edqty")?.value.trim(); if (!v) return toast("Enter the quantity first."); setQty(L, v); advance(L); renderMap(); } }, "Save quantity and next"),
-        h("button", { type: "button", class: "btn", onclick: () => { state.prov.add(L.key); advance(L); toast("Billed as provisional"); renderMap(); } }, "Bill as provisional"));
-    } else foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => confirmLine(L) }, L.status === "flag" ? (L.lessOn ? "Bill less the overlap and next" : "Bill as is and next") : L.status === "claude" ? "Accept and next" : L.status === "moved" ? "Accept the new quantity and next" : "Confirm and next"));
-  } else if (L.status === "done" && by && !L.edited) {
-    foot.push(h("span", { class: "edok" }, "Matched by a rule"), h("button", { type: "button", class: "btn", onclick: () => selectLine(nextOpenAfter(L)) }, "Next"));
-  } else if (L.status !== "unmapped") {
-    foot.push(h("span", { class: "edok" }, L.status === "out" ? "Left out and sent to the fix list" : L.status === "prov" ? "Billed as provisional" : L.expected ? "Quantity entered" : "Confirmed"),
-      h("button", { type: "button", class: "btn", onclick: () => undoLine(L) }, "Undo"));
-  }
-  return [head, h("div", { class: "edbody" }, ...body), foot.length ? h("div", { class: "edfoot" }, ...foot) : null];
+  // Why a built-in rule chose this item (said above when the line is his to confirm)
+  if (ruleWhy.length && L.status !== "confirm") chg.push(h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Why this item"), ...ruleWhy.map((t) => h("p", { class: "edtext" }, t))));
+  body.push(h("div", { class: "edchange", id: "edChange" }, h("span", { class: "edtitle sm" }, "Change it"), ...chg));
+  // His own measure, and why it differs: a note SolvBoQ learns from (notes.js); notes on its heading and section
+  if (!L.unmapped) body.push(lnEditorBox(L), lnHeadBox(L));
+  return [head, h("div", { class: "edbody" }, ...body)];
 }
+// Change: to the item, quantity and assumptions below the decisions
+function edChange() { setTimeout(() => { const c = $("edChange"); if (!c) return; c.scrollIntoView({ block: "start", behavior: "smooth" }); (c.querySelector("#edqty") || c.querySelector(".edselect"))?.focus({ preventScroll: true }); }, 0); }
 const fmtN = (v, d) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d);
 
 // Nothing selected: progress, how lines were mapped, and the quick ways through
@@ -10541,9 +10636,10 @@ function editorOverview(lines, groups) {
   for (const g of groups.filter((g) => needsDecision(g) && g.item && !g.inferred)) { const k = batchKey(g); if (!by.has(k)) by.set(k, []); by.get(k).push(g); }
   const batches = [...by.values()].filter((l) => l.length > 1).sort((a, b) => b.length - a.length).slice(0, 4);
   return [h("div", { class: "edbody ov" },
-    h("span", { class: "edtitle" }, "Mapping progress"),
+    h("span", { class: "edtitle" }, "What’s left on this bill"),
     h("div", { class: "stats" }, ...stats.map(([l, n, k]) => h("div", { class: "stat " + k }, h("b", {}, String(n)), h("span", {}, l)))),
-    firstFlag || firstOpen ? h("button", { type: "button", class: "btn dark", onclick: () => selectLine(firstFlag || firstOpen) }, firstFlag ? "Start with the model problems" : "Start with what needs you") : h("p", { class: "edtext" }, "Every line is decided. Download the bill, or go back to readiness."),
+    firstFlag || firstOpen ? h("button", { type: "button", class: "btn dark", onclick: () => { state.mFilter2 = "need"; selectLine(firstFlag || firstOpen); } }, firstFlag ? "Start with the model problems" : "Start with what needs you") : h("p", { class: "edtext" }, "Every line is decided. Go to sign-off, or download the bill."),
+    checksOverview(lines),
     inferred.length || batches.length ? h("span", { class: "edtitle sm" }, "Confirm in bulk") : null,
     inferred.length ? bulkRow(`${plural(inferred.length, "inferred line")}`, "Earthworks, formwork, reinforcement, finishes, joints and sundries, with their assumptions.", () => confirmBatch(inferred)) : null,
     ...batches.map((l) => bulkRow(`${plural(l.length, "group")} of ${(TRADE[l[0].trade]?.label || "other items").toLowerCase()}`, l[0].reason || "Matched by a rule.", () => confirmBatch(l))),
@@ -10643,17 +10739,29 @@ function revView(R) {
       h("span", { class: "r" }, `${q(L.was, L.unit)} → ${q(L.now, L.unit)}`)))) : null,
     d.lines.length > 40 ? h("p", { class: "sub" }, `And ${d.lines.length - 40} more.`) : null);
 }
+// The model's checks that can change a quantity (Readiness tiers 1 and 2), on the bill: each with the lines it touches (they
+// carry it in their panel, and model problems are among Needs you), or, where it touches no line, the check itself. The full
+// list of checks, the fix list and the reference tabs stay one click away (“All the model checks”), with a way back to the bill.
+function checksOverview(lines) {
+  if (!state.result || typeof actionable !== "function") return null;
+  const open = actionable().filter((i) => i.tier <= 2), on = (i) => { const ids = new Set(i.elements.map((e) => String(e.Id))); return lines.filter((L) => L.status !== "out" && L.groups.some((g) => g.elements.some((e) => ids.has(String(e.Id))))); };
+  const fix = state.fix.size + state.aiAsk.size;
+  return h("div", { class: "edfield", id: "checksBox" },
+    h("span", { class: "edtitle sm" }, open.length ? `${plural(open.length, "check")} on the model that can change a quantity` : "No check on the model changes a quantity"),
+    ...open.slice(0, 8).map((i) => { const ls = on(i);
+      return h("div", { class: "bulk" }, h("div", {}, h("b", {}, i.title), h("span", {}, `${plural(i.elements.length, "element")}${ls.length ? ` · on ${plural(ls.length, "line")}` : " · on no line of the bill"}`)),
+        ls.length ? h("button", { type: "button", class: "btn sm", onclick: () => { state.mFilter2 = "all"; selectLine(ls[0]); } }, ls.length > 1 ? "Open its first line" : "Open its line")
+          : h("button", { type: "button", class: "btn sm", onclick: () => openDetail(i.key) }, "Open the check")); }),
+    open.length > 8 ? h("p", { class: "edtext" }, `And ${open.length - 8} more.`) : null,
+    h("div", { class: "tools" }, h("button", { type: "button", class: "link accent", id: "btnAllChecks", onclick: () => { state.view = "overview"; render(); window.scrollTo(0, 0); } }, "All the model checks"),
+      h("button", { type: "button", class: "link accent", onclick: () => { state.view = "overview"; render(); openTab("fix"); } }, fix ? `The fix list (${fix})` : "The fix list")));
+}
 function bulkRow(title, sub, fn) {
   return h("div", { class: "bulk" }, h("div", {}, h("b", {}, title), h("span", {}, sub)), h("button", { type: "button", class: "btn sm dark", onclick: fn }, "Confirm all"));
 }
 
 // ----- Search, expand, export -----
 $("mSearch").addEventListener("input", (e) => { state.mQ = e.target.value; renderMap(); });
-$("btnExpand").addEventListener("click", () => {
-  const secs = [...new Set((state.mapLines || []).map((L) => L.section))];
-  const anyOpen = secs.some((s) => !state.coll.has(s));
-  state.coll = anyOpen ? new Set(secs) : new Set(); renderMap();
-});
 function boqRows() {
   const out = []; let n = 0;
   for (const L of state.mapLines || []) {
@@ -11013,7 +11121,7 @@ function renderSign() {
   const val = signValue(rows, master?.lines || null), st = signStructure(), last = signLatest(), n = (last?.n || 0) + 1, me = signer();
   const cloud = typeof decOnCloud === "function" && decOnCloud(), accepted = !!state.signAccept, pass = checks.ok(accepted), changes = last ? signChanges(last.lines, rows) : null;
   const tick = (ok, text, go) => h("div", { class: "scheck " + (ok ? "ok" : "no") }, h("span", { "aria-hidden": "true" }, ok ? "✓" : "✕"), h("span", {}, text), !ok && go ? h("button", { type: "button", class: "link accent", onclick: go }, "Show them") : null);
-  const goMap = (f) => () => { state.view = "map"; state.mFilter = f; render(); };
+  const goMap = () => () => { state.view = "map"; state.mFilter2 = "need"; state.sel = null; render(); };   // the bill's Needs you (model problems are among them)
   const sign = async () => {
     const name = $("signName").value.trim(), reg = $("signReg").value.trim();
     if (!name) return toast("Type your name as it should appear on the bill.");
@@ -13329,8 +13437,10 @@ function navMark() {
   const sec = hvSection(), home = sec === "home";
   document.body.dataset.section = sec;
   for (const [id, s] of [["tabOverview", "ov"], ["tabBills", "bills"], ["tabClaims", "claims"], ["tabSettings", "settings"]]) $(id).setAttribute("aria-current", sec === s ? "page" : "false");
-  for (const [id, vs] of [["navMap", ["map"]], ["navReady", ["overview", "detail"]], ["navParts", ["parts"]], ["navSign", ["sign"]], ["navMaster", ["master"]], ["navProj", ["proj"]], ["btnConv", ["conv"]], ["navStd", ["std"]]])
+  for (const [id, vs] of [["navMap", ["map"]], ["navReady", ["overview", "detail"]], ["navMaster", ["master"]], ["navProj", ["proj"]], ["btnConv", ["conv"]], ["navStd", ["std"]]])
     $(id).setAttribute("aria-current", vs.includes(state.view) ? "page" : "false");
+  $("billSteps").hidden = sec !== "bills"; $("btnGoSign").hidden = sec !== "bills" || state.view === "sign" || !state.records;
+  if (sec === "bills" && state.view !== "map") billSteps();   // the bill draws them itself, with its lines (renderTree › billHeadNow)
   if (sec === "bills") HV.billView = state.view === "detail" ? "overview" : state.view;
   if (sec === "settings") HV.setView = state.view;
   $("subBills").hidden = sec !== "bills"; $("subSettings").hidden = sec !== "settings";
@@ -13343,6 +13453,7 @@ function navMark() {
     : sec === "settings" ? ["Settings", p ? `${p.name}: the project’s inputs, your conventions and the modelling standard` : "Your conventions and the modelling standard"]
     : sec === "bills" ? hvBillHead() : ["", ""];
   $("pageTitle").textContent = head[0]; $("pageSub").textContent = head[1];
+  if (sec === "bills" && state.view === "map" && state.mapLines?.length) billHeadNow(state.mapLines);   // (navMark alone, after the bill drew: keep its count)
   document.querySelector("main").classList.toggle("opening", !!HV.opening && sec === "bills");
   stTouch();
 }
@@ -13354,6 +13465,55 @@ function hvBillHead() {
   const st = stOf(state.name), inProject = !!state.pmid && PV.models.some((x) => x.id === state.pmid);
   return [st.name, [`Model of ${state.checked}`, plural(state.records.length, "element"), inProject ? "" : "not saved to a project"].filter(Boolean).join(" · ")];
 }
+// ----- One screen per structure (the canvas's “Web 3: The bill”) -----
+// The six steps with the current one and what is left, from the open bill: set up (the structure in the project's inputs), the
+// model, the structure (parts SolvBoQ isn't sure of), the questions (model problems, lines with no item, figures to measure),
+// review (lines to confirm, Claude's suggestions, changes since the signed bill) and sign off.
+function billSteps(given) {
+  if (!state.records) return;
+  const lines = (given || mapLines(currentGroups())).filter((L) => L.status !== "out"), n = (f) => lines.filter(f).length;
+  const asks = n((L) => ["flag", "unmapped", "measure"].includes(L.status)), review = n((L) => ["confirm", "claude", "moved"].includes(L.status));
+  const unsure = (typeof partsNow === "function" ? partsNow()?.rows.filter((x) => !x.sure).length : 0) || 0;
+  const linked = !!(typeof piEngine === "function" && piEngine()?.structure), last = SIGN.list.length && SIGN.key ? SIGN.list[SIGN.list.length - 1] : null;
+  const signed = !!(last && last.extract?.print && last.extract.print === signPrint());
+  const steps = [
+    ["stepSetup", "1 Set up", linked ? "done" : state.fromSample ? "a sample" : "assumed", linked || state.fromSample ? "done" : "warn"],
+    ["stepModel", "2 Model", state.fromSample ? "a sample" : "done", "done"],
+    ["navParts", "3 Structure", unsure ? `${unsure} to place` : "done", unsure ? "open" : "done"],
+    ["stepAsks", "4 Questions", asks ? `${asks} left` : "done", asks ? "open" : "done"],
+    ["stepReview", "5 Review the bill", review ? `${review} left` : "done", review ? "open" : "done"],
+    ["navSign", "6 Sign off", signed ? `version ${last.n}` : "", signed ? "done" : "open"]];
+  const cur = steps.findIndex((s, i) => i >= 2 && s[3] === "open");
+  steps.forEach(([id, label, left, tone], i) => {
+    const b = $(id); b.textContent = left ? `${label} · ${left}` : label;
+    b.className = "bstep " + (i === cur ? "cur" : tone === "done" ? "done" : tone === "warn" ? "warn" : "todo");
+    if (i === cur) b.setAttribute("aria-current", "step"); else b.removeAttribute("aria-current");
+    b.toggleAttribute("data-here", (id === "navParts" && state.view === "parts") || (id === "navSign" && state.view === "sign"));
+  });
+}
+// Under the structure's name: its run and how many lines are confirmed (the bill calls this with its lines)
+function billHeadNow(lines) {
+  if (hvSection() !== "bills" || HV.opening || !state.records) return;
+  const live = lines.filter((L) => L.status !== "out"), done = live.filter((L) => !OPEN.has(L.status)).length;
+  const head = hvBillHead();
+  $("pageSub").textContent = state.fromSample ? head[1] : [`Model of ${state.checked}`, `${done} of ${plural(live.length, "line")} confirmed`, state.pmid && PV.models.some((x) => x.id === state.pmid) ? "" : "not saved to a project"].filter(Boolean).join(" · ");
+  billSteps(lines);
+}
+// A step: where it is done
+function stepGo(where) {
+  const lines = state.mapLines || [], first = (sts) => lines.find((L) => sts.includes(L.status));
+  if (where === "setup") { goProj(); setTimeout(() => $("piStructs")?.scrollIntoView({ block: "start" }), 50); return; }
+  if (where === "model") { const m = $("modelMenu"); m.hidden = false; $("modelBtn").setAttribute("aria-expanded", "true"); $("modelBtn").focus(); return; }
+  state.view = "map"; state.mFilter2 = "need"; render();
+  const L = first(where === "asks" ? ["flag", "unmapped", "measure"] : ["moved", "claude", "confirm"]);
+  if (L) selectLine(L); else toast(where === "asks" ? "No question left on this bill" : "Nothing left to review");
+}
+$("stepSetup").addEventListener("click", () => stepGo("setup"));
+$("stepModel").addEventListener("click", (e) => { e.stopPropagation(); stepGo("model"); });
+$("stepAsks").addEventListener("click", () => stepGo("asks"));
+$("stepReview").addEventListener("click", () => stepGo("review"));
+$("btnGoSign").addEventListener("click", () => { state.view = "sign"; render(); window.scrollTo(0, 0); });
+
 function goHome() { HV.sum = {}; state.view = "home"; render(); window.scrollTo(0, 0); }
 function goOv() { state.view = "ov"; render(); window.scrollTo(0, 0); }
 function goBills() { state.view = HV.billView || "map"; render(); window.scrollTo(0, 0); }
@@ -13617,7 +13777,8 @@ function homeAfter() {
 }
 Store.onUser(() => { HV.sum = {}; HV.ov = null; HV.ovFor = ""; HV.stSaved = {}; if (state.view === "home" || state.view === "ov") render(); else navMark(); });
 // In a browser with the cloud, SolvBoQ opens on your projects; opened from Revit, on the model it was handed
-if (!FROM_REVIT && Store.available) state.view = "home";
+// (the model checks are no longer where Revit opens: the bill is, with the checks on its lines)
+state.view = !FROM_REVIT && Store.available ? "home" : "map";
 
 // ===== Conventions profiles and corrections =====
 // Shared mode (inside Claude, with the db capability): profiles/<id> documents and a corrections collection that
