@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-18T09:35:31Z">
+<meta name="solvboq-build" content="2026-11-18T10:23:35Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1137,6 +1137,18 @@ body.docked #viewMap .mrow>*{padding:8px 4px}
 body.docked #viewMap .lstate{font-size:12.5px}
 body.docked .toast{bottom:76px}
 body.docked .toast{top:12px;bottom:auto}
+/* Project documents (docsview.js): each document, and the answers read from it */
+.docrow{border-top:1px solid var(--rule);padding:14px 0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.dochead{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
+.dochead b{overflow-wrap:anywhere}
+.docans{border:1px solid var(--line);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:var(--card);min-width:0}
+.docans.da-accepted{border-color:var(--green-t,var(--line))}
+.docans.da-rejected{opacity:.7}
+.docanstop{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px 12px;align-items:baseline}
+.docbig{font-weight:700;font-variant-numeric:tabular-nums}
+.docans .stdtable{font-size:12px}
+.calc.docsrc{display:flex;flex-direction:column;gap:4px}
+.docfor{min-width:min(240px,100%);max-width:100%}
 </style>
 </head>
 <body>
@@ -4147,6 +4159,17 @@ function normInputs(doc) {
         })),
       },
       src: Object.fromEntries(Object.entries(s?.src && typeof s.src === "object" ? s.src : {}).slice(0, 40).map(([k, v]) => [inStr(k, 40), src(v)]).filter(([, v]) => v)),
+      // From the project's documents, once he accepted them (documents.js): the bending schedule's tonnes by steel type and
+      // diameter, which the engine bills in place of the estimate; and drawing notes (cover, finishes, joints) shown on the lines
+      ...(s?.rebarDoc && Array.isArray(s.rebarDoc.rows) && s.rebarDoc.rows.length ? { rebarDoc: {
+        docId: inStr(s.rebarDoc.docId, 60), doc: inStr(s.rebarDoc.doc, 200), pages: inStr(s.rebarDoc.pages, 120), quote: inStr(s.rebarDoc.quote, 200), check: inStr(s.rebarDoc.check, 600),
+        refs: (Array.isArray(s.rebarDoc.refs) ? s.rebarDoc.refs : []).map((x) => inStr(x, 80)).filter(Boolean).slice(0, 60), n: inNum(s.rebarDoc.n, 0, 1e5), worked: inNum(s.rebarDoc.worked, 0, 1e5),
+        agree: !!s.rebarDoc.agree, shared: !!s.rebarDoc.shared, by: inStr(s.rebarDoc.by, 120), at: inStr(s.rebarDoc.at, 40),
+        rows: s.rebarDoc.rows.slice(0, 40).map((x) => ({ type: ["mild", "ht", "fabric"].includes(x?.type) ? x.type : null, dia: inNum(x?.dia, 1, 60), kg: inNum(x?.kg, 0, 1e8) }))
+          .filter((x) => x.type && x.kg > 0 && (x.type === "fabric" || x.dia != null)) } } : {}),
+      ...(Array.isArray(s?.docNotes) && s.docNotes.length ? { docNotes: s.docNotes.slice(0, 60).map((n) => ({ id: inStr(n?.id, 120), docId: inStr(n?.docId, 60), doc: inStr(n?.doc, 200),
+        what: ["cover", "finish", "joint"].includes(n?.what) ? n.what : "finish", text: inStr(n?.text, 200), applies: inStr(n?.applies, 160), mm: inNum(n?.mm, 5, 200), page: inStr(n?.page, 40),
+        quote: inStr(n?.quote, 200), by: inStr(n?.by, 120), at: inStr(n?.at, 40) })).filter((n) => n.text || n.quote) } : {}),
       by: inStr(s?.by, 120), at: inStr(s?.at, 40),
     };
   }).filter((s) => s.name || s.kind);
@@ -4191,7 +4214,7 @@ function engineInputs(inputs, modelTitle) {
     const k = KIND_BY_ID.get(s.kind);
     const src = (f) => s.src?.[f] || null;
     return { id: s.id, name: s.name, kind: s.kind, kindTitle: k ? k.title : "", module: k ? k.module : "", grade: s.grade || (k ? k.grade : ""), gradeSet: !!s.grade,
-      rebarKg: s.rebarKg, earthworks: Object.fromEntries(Object.entries(s.earthworks).filter(([, v]) => v != null)), src: s.src || {}, srcOf: src,
+      rebarKg: s.rebarKg, rebarDoc: s.rebarDoc || null, docNotes: s.docNotes || [], earthworks: Object.fromEntries(Object.entries(s.earthworks).filter(([, v]) => v != null)), src: s.src || {}, srcOf: src,
       geotech: s.geotech, report: s.geotech.report, by: s.by, at: s.at, raw: s };
   };
   const structure = resolve(structureFor(inputs, modelTitle));
@@ -4224,7 +4247,7 @@ function inputsMissing(inputs, stage) {
     if (!k) { out.push({ level: lvl, need: need("kind", "What kind of structure it is", "alphanumeric", "engineer", "design", "Project › the structure", "assumed", "Its kind decides its earthworks rule, standard grade and what else it needs.") }); continue; }
     const holes = s.geotech.holes.filter((h) => h.strata.length), classed = holes.some((h) => h.strata.some((t) => t.cls));
     const have = { depth: s.earthworks.replacementDepth != null || s.earthworks.buildingDepth != null, classes: classed, geotech: !!(s.geotech.report.title || holes.length), log: holes.length > 0,
-      rebarrate: s.rebarKg != null, pours: true, pd: !!p.spec };
+      rebarrate: s.rebarKg != null || !!s.rebarDoc, pours: true, pd: !!p.spec };
     for (const id of k.needs) { const n = wn[id]; if (n && !have[id] && due(n)) out.push({ level: lvl, need: n }); }
   }
   return out;
@@ -4266,6 +4289,279 @@ function applyReport(s, read, keep, who, at) {
 }
 // A repeated structure (the second thickener): everything but its name and models
 function copyStructure(s, id, who, at) { const c = JSON.parse(JSON.stringify(s)); return { ...c, id, name: `${s.name || "Structure"} (copy)`, models: [], by: who, at }; }
+
+
+// ===== Project documents and the document reader (the architecture board's “document reader”) =====
+// A project keeps its documents (projects/{pid}/documents/{id}): a ground report, a bending schedule, a drawing or a
+// specification, each with the structures it covers. A reader per kind has Claude extract values from the text, every one
+// with its page and the words quoted; Claude never adds anything up. The arithmetic and the checks are here, in fixed rules:
+// a bar's mass from its count and length (SANS 920), the totals by steel type and diameter, and a check of those totals
+// against the schedule's own printed totals. A value is a pre-filled answer: nothing is used until he accepts it, and then
+// it goes into the project's inputs (inputs.js) like a figure he typed, with the document and page as its source.
+// Pure: storage and the page are in docsview.js. In release 1 he can type every answer; this is the deepening.
+// One shared page scope: the top-level names here are doc*, DOC_*.
+
+const DOC_KINDS = [
+  { id: "ground", title: "Ground report", hint: /geotech|ground|soil|site investigation|borehole|trial pit/i, gives: "the excavation depth, the water table and the borehole logs" },
+  { id: "bending", title: "Bending schedule", hint: /bending|\bbbs\b|bar schedule|rebar|reinforcement schedule|steel deliver/i, gives: "the reinforcement in tonnes by diameter and steel type" },
+  { id: "drawing", title: "Drawing", hint: /drawing|\bdwg\b|general arrangement|\bga\b|layout|section|detail/i, gives: "concrete grades, finishes, joint types and cover from the notes" },
+  { id: "spec", title: "Specification", hint: /specification|\bspec\b|particular|\bpsg?\b|\bpsd\b/i, gives: "concrete grades, finishes, joint types and cover" },
+];
+const DOC_KIND = new Map(DOC_KINDS.map((k) => [k.id, k]));
+const docStr = (v, n = 200) => String(v ?? "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, n);
+const docNum = (v, lo = -1e9, hi = 1e9) => { const x = typeof v === "number" ? v : parseFloat(String(v ?? "").replace(/,/g, "")); return Number.isFinite(x) && x >= lo && x <= hi ? x : null; };
+const docKey = (s) => docStr(s, 120).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// The kind a file most likely is, from its name, then its first pages' words
+function docGuessKind(name, text) {
+  for (const k of [DOC_KINDS[1], DOC_KINDS[0], DOC_KINDS[3], DOC_KINDS[2]]) if (k.hint.test(name || "")) return k.id;
+  const t = String(text || "").slice(0, 20000);
+  if ((t.match(/\b[RY]\d{1,2}\b/g) || []).length > 20 || /bending schedule|bar mark|shape code/i.test(t)) return "bending";
+  if (/borehole|trial pit|test pit|geotechnical/i.test(t)) return "ground";
+  if (/specification/i.test(t)) return "spec";
+  return "drawing";
+}
+
+// ----- Bars: SANS 920 masses, SANS 282 marks -----
+// R mild steel (plain), Y high tensile (deformed; T and H are written for it too). The nominal mass of a bar is its area × 7850 kg/m³.
+const DOC_BAR_TYPES = { R: "mild", Y: "ht", T: "ht", H: "ht" };
+const DOC_DIAS = [6, 8, 10, 12, 16, 20, 25, 32, 40, 50];
+const docBarMass = (d) => (Math.PI * d * d / 4) * 7850 / 1e6;   // kg/m
+const DOC_STEEL = { mild: "mild steel", ht: "high tensile steel", fabric: "steel fabric" };
+const docBarName = (type, dia) => (type === "fabric" ? "fabric" : `${type === "mild" ? "R" : "Y"}${dia}`);
+
+// ----- The text Claude reads: rows as printed, and each figure in a table of bar sizes labelled with its column -----
+// pages: [{ n, items: [{ str, x, y, w }] }] (y from the top, as claims.js and tests/pdf-pages.mjs read them). A summary of
+// schedules prints a column per bar size (R8 … Y40) with figures right-aligned under each: flattened, a row reads
+// “3 | 3,073.00 | 20,357.00” and nobody can tell which size a figure is. So a figure whose right edge falls under a bar-size
+// heading (from that heading to the next one) is written “Y12=20,357.00”. Fixed rules; Claude still does the reading.
+const DOC_BAR_HEAD = /^[RYTH]\d{1,2}$/;
+function docRows(page) {
+  const items = (page.items || []).filter((i) => String(i.str).trim()).slice().sort((a, b) => a.y - b.y || a.x - b.x);
+  const rows = [];
+  for (const it of items) { const r = rows[rows.length - 1]; if (r && Math.abs(it.y - r.y) <= 0.8) r.items.push(it); else rows.push({ y: it.y, items: [it] }); }
+  for (const r of rows) r.items.sort((a, b) => a.x - b.x);
+  return rows;
+}
+function docPageText(page) {
+  const rows = docRows(page), out = [];
+  let cols = null;
+  for (const r of rows) {
+    const heads = r.items.filter((i) => DOC_BAR_HEAD.test(String(i.str).trim()));
+    if (heads.length >= 4) { cols = r.items.map((i) => ({ x: i.x, name: String(i.str).trim() })); out.push(r.items.map((i) => String(i.str).trim()).join(" | ")); continue; }
+    out.push(r.items.map((i) => {
+      const s = String(i.str).trim();
+      if (!cols || !/^-?[\d,. ]*\d$/.test(s)) return s;
+      const right = i.x + (i.w || 0), k = cols.findIndex((c, j) => right >= c.x - 0.5 && right < (cols[j + 1] ? cols[j + 1].x - 0.5 : c.x + 30));
+      return k >= 0 && DOC_BAR_HEAD.test(cols[k].name) ? `${cols[k].name}=${s}` : s;
+    }).join(" | "));
+  }
+  return out.join("\n");
+}
+// The pages in batches Claude can answer in one go (a schedule's every figure is a row of the answer, so its answer is long):
+// whole pages, up to about 12,000 characters of text and 150 figures in bar-size columns each (each figure is about 70 tokens
+// of answer, and the page's request stops at 21,000); one page bigger than that goes on its own
+function docChunks(pages, size = 12000, figures = 150) {
+  const out = []; let cur = null;
+  for (const p of pages) {
+    const t = `\n--- page ${p.n} ---\n` + docPageText(p), f = (t.match(/[RYTH]\d{1,2}=/g) || []).length;
+    if (!cur || cur.text.length + t.length > size || cur.figures + f > figures) { cur = { pages: [], text: "", figures: 0 }; out.push(cur); }
+    cur.pages.push(p.n); cur.text += t; cur.figures += f;
+  }
+  return out;
+}
+// Answers from batches, as one
+function docMerge(outs, key) { return outs.reduce((m, o) => { for (const k of key) m[k] = [...(m[k] || []), ...((o && o[k]) || [])]; return m; }, {}); }
+function docText(pages, max = 300000) {
+  let t = "";
+  for (const p of pages) { if (t.length >= max) break; t += `\n--- page ${p.n} ---\n` + docPageText(p); }
+  return t.slice(0, max);
+}
+
+// ----- What Claude returns, per kind -----
+const DOC_BENDING_SCHEMA = { type: "object", additionalProperties: false, required: ["rows", "totals"], properties: {
+  rows: { type: "array", items: { type: "object", additionalProperties: false, required: ["group", "near", "ref", "member", "page", "type", "dia", "kg", "count", "lengthM", "quote"], properties: {
+    group: { type: "string" }, near: { type: "string" }, ref: { type: "string" }, member: { type: "string" }, page: { type: "string" },
+    type: { type: "string", enum: ["mild", "ht", "fabric", "other"] }, dia: { type: ["number", "null"] }, kg: { type: ["number", "null"] },
+    count: { type: ["number", "null"] }, lengthM: { type: ["number", "null"] }, quote: { type: "string" } } } },
+  totals: { type: "array", items: { type: "object", additionalProperties: false, required: ["group", "type", "dia", "kg", "page", "quote"], properties: {
+    group: { type: "string" }, type: { type: "string", enum: ["mild", "ht", "fabric", "all"] }, dia: { type: ["number", "null"] }, kg: { type: "number" }, page: { type: "string" }, quote: { type: "string" } } } } } };
+const DOC_NOTES_SCHEMA = { type: "object", additionalProperties: false, required: ["values"], properties: {
+  values: { type: "array", items: { type: "object", additionalProperties: false, required: ["what", "applies", "near", "text", "mpa", "mm", "page", "quote"], properties: {
+    what: { type: "string", enum: ["grade", "cover", "finish", "joint"] }, applies: { type: "string" }, near: { type: "string" }, text: { type: "string" },
+    mpa: { type: ["number", "null"] }, mm: { type: ["number", "null"] }, page: { type: "string" }, quote: { type: "string" } } } } } };
+
+const docNames = (names) => (names.length ? `this project's structures are: ${names.join(", ")}` : "as the document names it");
+function docBendingPrompt(text, names) {
+  return "Below is the text of a reinforcement bending schedule, or a summary of bending schedules, for a South African project. Bars are marked as SANS 282 does: R is mild steel, Y is high tensile (T or H also mean high tensile), and the number is the diameter in mm. " +
+    "Where a page has a table with a column per bar size, each figure in it is already labelled with its column, as Y12=20,357.00: use that label for the bar size.\n" +
+    "Return:\n" +
+    "- rows: one item per bar size on each schedule row (a row with figures under three bar sizes gives three items). For each: group, the table it is in, written as its page and table (\"p2\", or \"p2 table 2\"); near, the structure it is for if the page, title or drawing says so (" + docNames(names) + "), else an empty string; ref, the drawing or schedule number and the bar mark if there is one; member, the title or member as written; page (\"p. 2\"); type (mild, ht, fabric for mesh, other); dia in mm (null for fabric); kg, the mass printed for that bar size on that row, else null; count, the total number of bars, and lengthM, the length of each bar in metres, if printed, else null; quote, the row as printed, up to 160 characters.\n" +
+    "- totals: every total the document prints for a table, per bar size (type and dia) and overall (type all, dia null), in kg (convert tonnes), with its group, page and the words quoted.\n" +
+    "List the rows exactly as printed: don't drop, merge or correct any, even ones that look repeated or are marked as a revision, and don't add anything up. Leave a value null when the document doesn't print it. Don't invent anything.\n\n" + text;
+}
+function docNotesPrompt(text, names, kind) {
+  return `Below is the text of a ${kind === "spec" ? "specification" : "drawing (its notes)"} for a South African civil or building project measured under SANS 1200.\n` +
+    "Return each statement a bill of quantities needs, as values:\n" +
+    "- grade: a concrete grade, with mpa (\"35 MPa/19 mm\": 35) and what it applies to (\"all structural concrete\", \"blinding\", \"walls of water-retaining structures\").\n" +
+    "- cover: cover to reinforcement, mm and what it applies to.\n" +
+    "- finish: a surface finish (wood-floated, steel-floated, off-shutter class), and what it applies to.\n" +
+    "- joint: a joint type or material (PVC water bar 230 mm, sealant, construction joint detail), and what it applies to.\n" +
+    "For each: near, the structure it is for if the document says (" + docNames(names) + "), else an empty string; text, the statement in a few words; page (\"p. 3\"); quote, the sentence as written, up to 200 characters. mpa and mm null where they don't apply.\n" +
+    "Only what the document says: don't invent anything, and leave out general notes that change no quantity or description.\n\n" + text;
+}
+
+// ----- Checking what Claude returned, and the arithmetic -----
+// Rows are kept as printed. A row's mass: the printed mass if there is one, else count × length × the bar's mass per metre.
+// Rows with neither are listed, never guessed. Then each table's totals by bar size are compared with the totals it prints.
+function docBendingCheck(out) {
+  const rows = [], problems = [];
+  for (const x of out?.rows || []) {
+    const type = ["mild", "ht", "fabric"].includes(x?.type) ? x.type : null, dia = docNum(x?.dia, 1, 60);
+    const base = { group: docStr(x?.group, 40) || docStr(x?.page, 40), near: docStr(x?.near, 80), ref: docStr(x?.ref, 80), member: docStr(x?.member, 120), page: docStr(x?.page, 40), quote: docStr(x?.quote, 200) };
+    if (!type) { problems.push(`${base.ref || "A row"} (${base.page}): a bar of a kind that isn't mild, high tensile or fabric, left out`); continue; }
+    if (type !== "fabric" && !DOC_DIAS.includes(dia)) { problems.push(`${base.ref || "A row"} (${base.page}): ${dia ?? "no"} mm isn't a bar size, left out`); continue; }
+    const kg = docNum(x?.kg, 0, 1e7), count = docNum(x?.count, 0, 1e6), len = docNum(x?.lengthM, 0, 100);
+    const worked = kg == null && count != null && len != null && type !== "fabric" ? count * len * docBarMass(dia) : null;
+    if (kg == null && worked == null) { problems.push(`${base.ref || "A row"} (${base.page}): no mass, and no count and length to work it out, for ${docBarName(type, dia)}`); continue; }
+    if (!((kg ?? worked) > 0)) continue;
+    rows.push({ ...base, type, dia: type === "fabric" ? null : dia, kg: kg ?? worked, how: kg != null ? "printed" : `${count} × ${len} m × ${docBarMass(dia).toFixed(3)} kg/m` });
+  }
+  // The self-check: per table, rows added up by bar size against the totals it prints (within 1 kg or 0.5%)
+  const groups = [...new Set(rows.map((r) => r.group))], checks = [];
+  const near = (a, b) => Math.abs(a - b) <= Math.max(1, 0.005 * Math.abs(b));
+  for (const g of groups) {
+    const mine = rows.filter((r) => r.group === g), printed = (out?.totals || []).filter((t) => docStr(t?.group, 40) === g && docNum(t?.kg, 0, 1e8) != null);
+    for (const t of printed) {
+      const type = t.type === "all" ? null : t.type, dia = docNum(t.dia, 1, 60), kg = docNum(t.kg, 0, 1e8);
+      const sum = mine.filter((r) => (!type || r.type === type) && (type == null || type === "fabric" || r.dia === dia)).reduce((s, r) => s + r.kg, 0);
+      if (!type && kg === 0) continue;
+      if (type && kg === 0 && sum === 0) continue;
+      checks.push({ group: g, what: type ? docBarName(type, dia) : "all sizes", printed: kg, sum, ok: near(sum, kg), page: docStr(t.page, 40), quote: docStr(t.quote, 200) });
+    }
+  }
+  return { rows, problems, checks, agree: checks.length > 0 && checks.every((c) => c.ok) };
+}
+
+// The reinforcement for one structure: the rows placed at it (by name), added up by steel type and diameter
+function docRebarFor(read, nearName) {
+  const k = docKey(nearName), rows = read.rows.filter((r) => docKey(r.near) === k);
+  const by = new Map();
+  for (const r of rows) { const key = `${r.type}|${r.dia ?? ""}`; if (!by.has(key)) by.set(key, { type: r.type, dia: r.dia, kg: 0, n: 0 }); const b = by.get(key); b.kg += r.kg; b.n++; }
+  const groups = new Set(rows.map((r) => r.group)), checks = read.checks.filter((c) => groups.has(c.group));
+  // A table that also holds rows for another structure can't be checked as a whole against this structure's figure: said, not hidden
+  const shared = [...groups].filter((g) => read.rows.some((r) => r.group === g && docKey(r.near) !== k));
+  return { near: nearName, rows: [...by.values()].sort((a, b) => (a.type === b.type ? (a.dia || 0) - (b.dia || 0) : a.type === "mild" ? -1 : 1)),
+    kg: rows.reduce((s, r) => s + r.kg, 0), n: rows.length, pages: [...new Set(rows.map((r) => r.page).filter(Boolean))], refs: [...new Set(rows.map((r) => r.ref).filter(Boolean))],
+    checks, agree: checks.length > 0 && checks.every((c) => c.ok), shared, worked: rows.filter((r) => r.how !== "printed").length };
+}
+
+function docNotesCheck(out) {
+  const values = [], problems = [];
+  for (const x of out?.values || []) {
+    const what = ["grade", "cover", "finish", "joint"].includes(x?.what) ? x.what : null;
+    if (!what) continue;
+    const v = { what, applies: docStr(x.applies, 160), near: docStr(x.near, 80), text: docStr(x.text, 200), mpa: docNum(x.mpa, 5, 100), mm: docNum(x.mm, 5, 200), page: docStr(x.page, 40), quote: docStr(x.quote, 300) };
+    if (what === "grade" && v.mpa == null) { problems.push(`A grade with no MPa (${v.page}): “${v.quote}”, left out`); continue; }
+    if (!v.quote) { problems.push(`${v.text || what} has no words quoted, left out`); continue; }
+    values.push(v);
+  }
+  return { values, problems };
+}
+
+// ----- The answers a document gives: what he is asked, pre-filled -----
+// One answer per structure for a schedule (its tonnes by size), one per value for notes. The structure is proposed from what
+// Claude placed it at (by name), else the document's only structure; he can change it.
+function docStructureFor(structures, near, docStructs) {
+  // Placed at a structure by name: that one, or none (never another structure's steel offered as this one's). Placed nowhere:
+  // the document's only structure, else the project's only one.
+  const k = docKey(near), list = structures || [];
+  if (k) return list.find((s) => docKey(s.name) === k) || list.find((s) => docKey(s.name) && (k.includes(docKey(s.name)) || docKey(s.name).includes(k))) || null;
+  return (docStructs?.length === 1 ? list.find((s) => s.id === docStructs[0]) : null) || (list.length === 1 ? list[0] : null) || null;
+}
+function docAnswers(doc, structures) {
+  const out = [], r = doc?.read;
+  if (!r) return out;
+  const decided = doc.decided || {};
+  if (doc.kind === "bending" && r.bending) {
+    const nears = [...new Set(r.bending.rows.map((x) => x.near))];
+    for (const n of nears) {
+      const rb = docRebarFor(r.bending, n), id = `rebar|${docKey(n) || "-"}`, d = decided[id] || {};
+      // Rows Claude couldn't place are proposed for the document's structure only when nothing in it is placed: in a schedule
+      // that names its structures, the unnamed rest is someone else's steel as likely as this one's (he chooses)
+      const st = d.structure ? (structures || []).find((s) => s.id === d.structure) : !n && nears.some(Boolean) ? null : docStructureFor(structures, n, doc.structures);
+      out.push({ id, kind: "rebar", near: n, rebar: rb, structure: st?.id || "", status: d.status || "open", by: d.by || "", at: d.at || "",
+        label: `Reinforcement${st ? ` for ${st.name}` : n ? ` at “${n}”` : " not placed at a structure"}`, answer: `${(rb.kg / 1000).toFixed(2)} t`,
+        detail: rb.rows.map((x) => `${docBarName(x.type, x.dia)} ${(x.kg / 1000).toFixed(2)} t`).join(", "), page: rb.pages.join(", ") });
+    }
+  }
+  if ((doc.kind === "drawing" || doc.kind === "spec") && r.notes) {
+    r.notes.values.forEach((v, i) => {
+      const id = `${v.what}|${i}`, d = decided[id] || {};
+      const st = d.structure ? (structures || []).find((s) => s.id === d.structure) : docStructureFor(structures, v.near, doc.structures);
+      out.push({ id, kind: v.what, value: v, structure: st?.id || "", status: d.status || "open", by: d.by || "", at: d.at || "",
+        label: { grade: "Concrete grade", cover: "Cover to reinforcement", finish: "Finish", joint: "Joints" }[v.what] + (st ? ` for ${st.name}` : ""),
+        answer: v.what === "grade" ? `${v.mpa} MPa` : v.what === "cover" && v.mm ? `${v.mm} mm` : v.text, detail: v.applies, page: v.page, quote: v.quote });
+    });
+  }
+  return out;
+}
+
+// He accepts an answer: it goes into the structure's inputs with the document and page as its source (pure: returns the new
+// inputs). A schedule's tonnes become rebarDoc, which the engine bills by size in place of the estimate; a grade becomes the
+// structure's grade; cover, finishes and joints are kept as notes the bill shows on the lines they concern.
+function docApply(inputs, doc, ans, who, at) {
+  const out = JSON.parse(JSON.stringify(inputs)), s = out.structures.find((x) => x.id === ans.structure);
+  if (!s) return out;
+  s.src ||= {};
+  const quote = ans.kind === "rebar" ? (ans.rebar.checks.find((c) => !c.what.includes("all"))?.quote || ans.rebar.checks[0]?.quote || "") : ans.quote || "";
+  const why = `read by Claude from ${doc.name}, checked by ${who || "the engineer"}${quote ? `: “${docStr(quote, 200)}”` : ""}`;
+  if (ans.kind === "rebar") {
+    const rb = ans.rebar;
+    s.rebarDoc = { docId: doc.id, doc: doc.name, pages: rb.pages.join(", "), rows: rb.rows.map((x) => ({ type: x.type, dia: x.dia, kg: Math.round(x.kg * 10) / 10 })),
+      refs: rb.refs.slice(0, 60), n: rb.n, worked: rb.worked, agree: rb.agree, shared: rb.shared.length > 0,
+      check: rb.checks.length ? (rb.agree ? `agrees with the schedule’s own totals (${rb.checks.length} checked)` : `${rb.checks.filter((c) => !c.ok).length} of the schedule’s own totals don’t agree: ${rb.checks.filter((c) => !c.ok).map((c) => `${c.what} ${Math.round(c.sum)} kg against ${Math.round(c.printed)} printed`).join("; ")}`) : "the schedule prints no totals to check against",
+      quote: docStr(quote, 200), by: who, at };
+    s.src.rebarDoc = { from: "design", ref: `${doc.name}${s.rebarDoc.pages ? `, ${s.rebarDoc.pages}` : ""}`, why, by: who, at };
+  } else if (ans.kind === "grade") {
+    s.grade = `${Math.round(ans.value.mpa)} MPa`;
+    s.src.grade = { from: "design", ref: `${doc.name}${ans.page ? `, ${ans.page}` : ""}`, why, by: who, at };
+  } else {
+    s.docNotes = (s.docNotes || []).filter((n) => !(n.docId === doc.id && n.id === ans.id));
+    s.docNotes.push({ id: ans.id, docId: doc.id, doc: doc.name, what: ans.kind, text: ans.value.text, applies: ans.value.applies, mm: ans.value.mm, page: ans.page, quote: docStr(ans.quote, 200), by: who, at });
+  }
+  s.by = who; s.at = at;
+  return out;
+}
+// Undoing it takes the value back out (a grade goes back to the kind's standard)
+function docUnapply(inputs, doc, ans) {
+  const out = JSON.parse(JSON.stringify(inputs)), s = out.structures.find((x) => x.id === ans.structure);
+  if (!s) return out;
+  if (ans.kind === "rebar" && s.rebarDoc?.docId === doc.id) { delete s.rebarDoc; if (s.src) delete s.src.rebarDoc; }
+  else if (ans.kind === "grade" && s.src?.grade?.ref?.startsWith(doc.name)) { s.grade = ""; delete s.src.grade; }
+  else s.docNotes = (s.docNotes || []).filter((n) => !(n.docId === doc.id && n.id === ans.id));
+  return out;
+}
+
+// A document as it is kept (shared data is untrusted: cleaned on load and on save). The PDF itself isn't kept, only what
+// was read from it, each value with its page and words.
+function docNorm(d) {
+  const x = d && typeof d === "object" ? d : {}, r = x.read && typeof x.read === "object" ? x.read : null;
+  const dec = x.decided && typeof x.decided === "object" ? x.decided : {};
+  return {
+    id: docStr(x.id, 60), name: docStr(x.name, 200), kind: DOC_KIND.has(x.kind) ? x.kind : "drawing",
+    structures: (Array.isArray(x.structures) ? x.structures : []).map((s) => docStr(s, 60)).filter(Boolean).slice(0, 50),
+    pages: docNum(x.pages, 0, 5000), by: docStr(x.by, 120), at: docStr(x.at, 40),
+    read: r ? { at: docStr(r.at, 40), by: docStr(r.by, 120), problems: (Array.isArray(r.problems) ? r.problems : []).map((p) => docStr(p, 300)).slice(0, 100),
+      bending: r.bending ? { rows: (r.bending.rows || []).slice(0, 4000).map((y) => ({ group: docStr(y.group, 40), near: docStr(y.near, 80), ref: docStr(y.ref, 80), member: docStr(y.member, 120), page: docStr(y.page, 40), quote: docStr(y.quote, 200),
+          type: ["mild", "ht", "fabric"].includes(y.type) ? y.type : "ht", dia: docNum(y.dia, 1, 60), kg: docNum(y.kg, 0, 1e7) || 0, how: docStr(y.how, 80) })),
+        checks: (r.bending.checks || []).slice(0, 400).map((c) => ({ group: docStr(c.group, 40), what: docStr(c.what, 40), printed: docNum(c.printed) || 0, sum: docNum(c.sum) || 0, ok: !!c.ok, page: docStr(c.page, 40), quote: docStr(c.quote, 200) })),
+        problems: (r.bending.problems || []).map((p) => docStr(p, 300)).slice(0, 100), agree: !!r.bending.agree } : null,
+      notes: r.notes ? { values: (r.notes.values || []).slice(0, 200).map((v) => ({ what: ["grade", "cover", "finish", "joint"].includes(v.what) ? v.what : "finish", applies: docStr(v.applies, 160), near: docStr(v.near, 80),
+          text: docStr(v.text, 200), mpa: docNum(v.mpa, 5, 100), mm: docNum(v.mm, 5, 200), page: docStr(v.page, 40), quote: docStr(v.quote, 300) })), problems: (r.notes.problems || []).map((p) => docStr(p, 300)).slice(0, 100) } : null,
+      ground: r.ground ? { depth: docNum(r.ground.depth, 0, 50), water: docNum(r.ground.water, 0, 200), logs: docNum(r.ground.logs, 0, 500), page: docStr(r.ground.page, 40) } : null } : null,
+    decided: Object.fromEntries(Object.entries(dec).slice(0, 400).map(([k, v]) => [docStr(k, 120), { status: ["accepted", "rejected"].includes(v?.status) ? v.status : "open", structure: docStr(v?.structure, 60), by: docStr(v?.by, 120), at: docStr(v?.at, 40) }])),
+  };
+}
 
 
 // ===== Readiness checks: a line-for-line mirror of Core/ReadinessChecks.cs, working on ElementRecords =====
@@ -4921,6 +5217,7 @@ function manholeModel(r, live, opts = {}) {
 // (the depth from the report, rock from his reading of the logs, a figure set for this model) is not an estimate.
 function lineEstimate(l, all, ea) {
   const k = l.key, d = l.item?.description || "";
+  if (l.doc) return "";   // from a document he accepted (the bending schedule): a figure with a source, not an estimate
   if (k.startsWith("rebar|")) return "It comes from a rate of reinforcement per m³ of concrete, not from bars: the bending schedules give the measured weight.";
   if (k.startsWith("earth|") && ea && !ea.manhole) {
     const part = k.slice(6), dk = ea.civil ? "replacementDepth" : "buildingDepth", given = (x) => x === "project" || x === "model";
@@ -5077,7 +5374,10 @@ function deriveItems(r, opts = {}) {
   if (inferred.notMeasured.length) item({ key: "fwother", label: "Formwork to stairs and in-place concrete", ref: "1200 G 8.2", unit: "m²", qty: null, status: "none",
     note: `${plural2(inferred.notMeasured.length, "stair or in-place element")} (${fmt1(inferred.notMeasured.reduce((s, e) => s + (e.Volume || 0), 0))} m³) can’t be measured for formwork from the model. Measure it from the drawings.` });
   const rebarT = total("rebar");
-  if (rebarT > 0) item({ key: "rebar", label: "Reinforcement (estimate)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: "partly",
+  const rbDoc = inferred.lines.some((l) => l.key.startsWith("rebar|") && l.doc) ? opts.inputs?.structure?.rebarDoc : null;
+  if (rebarT > 0 && rbDoc) item({ key: "rebar", label: "Reinforcement (from the bending schedule)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: rbDoc.agree ? "ready" : "partly",
+    note: `By diameter from ${rbDoc.doc}${rbDoc.pages ? ` (${rbDoc.pages})` : ""}, accepted${rbDoc.by ? ` by ${rbDoc.by}` : ""}; SolvBoQ’s adding up ${rbDoc.check || "had no totals to check against"}.` });
+  else if (rebarT > 0) item({ key: "rebar", label: "Reinforcement (estimate)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: "partly",
     note: `${Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(opts.inputs?.structure?.rebarKg) ? opts.inputs.structure.rebarKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
 
   const masonry = T("masonry");
@@ -5130,7 +5430,7 @@ function deriveItems(r, opts = {}) {
   void inferred;
   fromDrawings.push({ label: "Preliminaries and general, dayworks and contingencies", ref: "", unit: "Sum", why: "Priced in the contract’s general bills, not from the model." });
   if (slabs.length || T("concrete").length) {
-    if (!T("rebar").length) fromDrawings.push({ label: "Reinforcement by bar diameter", ref: "1200 G 8.3", unit: "t", why: "Estimated above from kg/m³. The split by diameter comes from the bar schedules." });
+    if (!T("rebar").length && !rbDoc) fromDrawings.push({ label: "Reinforcement by bar diameter", ref: "1200 G 8.3", unit: "t", why: "Estimated above from kg/m³. The split by diameter comes from the bar schedules." });
     if (slabs.length) fromDrawings.push({ label: "Joint types and the full joint layout", ref: "1200 G 8.5", unit: "m", why: "Joints are estimated from wall lengths and floor areas. The types (water bars, sealants, isolation joints) and exact runs are on the joint drawings." });
   }
   if (steel.length) fromDrawings.push({ label: "Erection bolts", ref: "1200 H 8.3.4", unit: "t", why: "An allowance based on the connection details." });
@@ -5160,7 +5460,19 @@ function deriveItems(r, opts = {}) {
   // Reinforcement: the volume it was worked out from, the rate and the split, with their numbers
   { const rb = all.filter((l) => l.key.startsWith("rebar|")), tons = rb.reduce((t, l) => t + l.qty, 0), ids = new Set(rb.flatMap((l) => l.elements.map((e) => e.Id)));
     const V = sumVol(r.elements.filter((e) => ids.has(e.Id)));
-    for (const l of rb) if (V > 0 && tons > 0) l.calc = `reinforced concrete ${fmt2(V)} m³ × ${Math.round((tons * 1000) / V)} kg/m³ = ${fmt2(tons)} t\n${Math.round((100 * l.qty) / tons)}% of it ${l.key === "rebar|mild" ? "mild steel" : "high tensile"} = ${fmt2(l.qty)} t`; }
+    for (const l of rb) if (V > 0 && tons > 0 && !l.doc) l.calc = `reinforced concrete ${fmt2(V)} m³ × ${Math.round((tons * 1000) / V)} kg/m³ = ${fmt2(tons)} t\n${Math.round((100 * l.qty) / tons)}% of it ${l.key === "rebar|mild" ? "mild steel" : "high tensile"} = ${fmt2(l.qty)} t`;
+    // From the bending schedule: the document and page, the figure, and, as a check on both, what it comes to per m³ of the model's
+    // reinforced concrete beside the rate the estimate would have used
+    const S = opts.inputs?.structure, est = Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(S?.rebarKg) ? S.rebarKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"];
+    for (const l of rb) if (l.doc) l.calc = `${l.doc.name}${l.doc.pages ? `, ${l.doc.pages}` : ""}: ${l.item.heading.replace(/^Reinforcement: /, "")}, ${l.item.description} = ${fmt2(l.qty)} t`
+      + (V > 0 && tons > 0 ? `\nall sizes ${fmt2(tons)} t over the model’s ${fmt2(V)} m³ of reinforced concrete = ${Math.round((tons * 1000) / V)} kg/m³ (the estimate would use ${est} kg/m³)` : "")
+      + (l.doc.shared ? "\nthe schedule’s table also lists steel for another structure: its own total can’t be checked against this one" : ""); }
+  // Notes from the drawings and specification he accepted (cover, finishes, joints): said on the lines they concern, with the page.
+  // They change no quantity; they are the evidence behind a description.
+  for (const n of opts.inputs?.structure?.docNotes || []) {
+    const fits = (l) => (n.what === "cover" ? l.key.startsWith("rebar|") : n.what === "finish" ? l.item?.clause === "8.4.4" : n.what === "joint" ? l.item?.clause?.startsWith("8.5") : false);
+    for (const l of all) if (fits(l)) l.reason = `${l.reason} The ${/spec/i.test(n.doc) ? "specification" : "drawings"} say: “${n.quote || n.text}” (${n.doc}${n.page ? `, ${n.page}` : ""}).`;
+  }
   return { items, fromDrawings, lines: all, earthworks: earth.assumptions };
 }
 function plural2(n, w) { return `${n} ${w}${n === 1 ? "" : "s"}`; }
@@ -5714,6 +6026,23 @@ function inferLines(r, ctx) {
     const mild = Number.isFinite(ctx.rebar?.mild) ? ctx.rebar.mild : CONV.rebar.mildShare;
     const kgFrom = Number.isFinite(ctx.rebar?.kg) ? " (set for this model)" : sKg != null ? ` (the rate for ${St.name || "this structure"} in the project, ${srcWords(St.srcOf("rebarKg"))})` : "";
     const why = `Estimated at ${kg} kg of steel per m³ of reinforced concrete${kgFrom} (${Math.round(mild * 100)}% mild steel). Replace it with the bar schedule quantities, split by diameter, when they’re available.`;
+    // The bending schedule, once he accepted it for this structure (documents.js): its tonnes by steel type and diameter, billed as
+    // his bills set them out (“(b) High tensile steel bars: 12 mm dia”, 8.3.1), in place of the estimate. Claude read the figures
+    // from the document; the adding up is SolvBoQ's, and checked against the schedule's own totals. The model's reinforced concrete
+    // stays behind the lines (shared by volume), so the line still selects its elements in Revit.
+    const D = St?.rebarDoc, V = rc.reduce((s, e) => s + e.Volume, 0);
+    if (D?.rows?.length && V > 0) {
+      const when = D.at ? new Date(D.at) : null, d = when && !isNaN(when) ? when.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+      for (const row of D.rows) {
+        const it = row.type === "fabric" ? { section: "SANS 1200 G", clause: "", heading: "Reinforcement: steel fabric", description: "Steel fabric, as scheduled", unit: "t" }
+          : { section: "SANS 1200 G", clause: "8.3.1", heading: `Reinforcement: ${row.type === "mild" ? "mild steel bars" : "high tensile steel bars"}`, description: `${row.dia} mm dia`, unit: "t" };
+        const key = `rebar|${row.type}|${row.dia ?? "fabric"}`;
+        const reason = `From the bending schedule ${D.doc}${D.pages ? ` (${D.pages})` : ""}: ${fmt2(row.kg / 1000)} t of ${row.type === "fabric" ? "fabric" : `${row.type === "mild" ? "R" : "Y"}${row.dia}`} for ${St.name || "this structure"}, read by Claude and accepted${D.by ? ` by ${D.by}` : ""}${d ? ` on ${d}` : ""}; added up by SolvBoQ, which ${D.check || "had no totals to check against"}.`;
+        for (const e of rc) add(key, it, reason, e, (row.kg / 1000) * (e.Volume / V), D.agree ? "" : "Check it against the schedule: SolvBoQ’s total and the schedule’s own don’t all agree (see the document under Project).");
+        const L = lines.get(key);
+        if (L) L.doc = { id: D.docId, name: D.doc, pages: D.pages, quote: D.quote, by: D.by, at: D.at, check: D.check, shared: D.shared };
+      }
+    } else
     for (const e of rc) {
       add("rebar|mild", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: mild steel bars", description: "Mild steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * mild) / 1000);
       add("rebar|ht", { section: "SANS 1200 G", clause: "8.3.1", heading: "Reinforcement: high tensile steel bars", description: "High tensile steel bars, all diameters (estimate)", unit: "t" }, why, e, (e.Volume * kg * (1 - mild)) / 1000);
@@ -6666,7 +6995,7 @@ function buildGroups(result, decisions, learned, held = null) {
     else if (learned[key]) { item = learned[key].item || learned[key]; method = "learned"; confirmed = true; reason = "Matches a mapping in your conventions profile."; }
     const trade = { rebar: "rebar", steel: "steel", building: "masonry", earth: "other" }[L.kind] || "concrete";
     out.push({ key, elements: L.elements, trade, sample: L.elements[0], item, method, confirmed, reason, ruleId: "INFER-" + L.kind,
-      confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, est: L.est || "", calc: L.calc || "", label: L.item.description, parts: L.parts });
+      confidence: null, qty: L.qty, issues: [], excluded: false, inferred: true, est: L.est || "", calc: L.calc || "", doc: L.doc || null, label: L.item.description, parts: L.parts });
   }
   const order = { none: 0, claude: 1, check: 2, inferred: 2, edited: 3, learned: 4, rule: 5, excluded: 6 };
   return out.sort((a, b) => (order[a.method] - order[b.method]) || (a.item && b.item ? sectionRank(a.item.section) - sectionRank(b.item.section) : 0) || b.elements.length - a.elements.length);
@@ -6699,7 +7028,7 @@ function boqLines(groups, { full = false } = {}) {
     if (!g.item || g.excluded || (!full && !g.confirmed)) continue;
     const it = presentItem(g.item), k = [it.section, it.clause, it.heading, it.description, it.unit].join("|");
     if (!lines.has(k)) lines.set(k, { ...it, qty: 0, groups: [], elements: 0, inferred: true, pending: 0 });
-    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++; if (g.est && !L.est) L.est = g.est; if (g.calc && !L.calc) L.calc = g.calc;
+    const L = lines.get(k); L.qty += g.qty; L.groups.push(g); L.elements += g.elements.length; if (!g.inferred) L.inferred = false; if (!g.confirmed) L.pending++; if (g.est && !L.est) L.est = g.est; if (g.calc && !L.calc) L.calc = g.calc; if (g.doc && !L.doc) L.doc = g.doc;
   }
   return [...lines.values()].sort((a, b) => sectionRank(a.section) - sectionRank(b.section) || String(a.clause).localeCompare(String(b.clause), undefined, { numeric: true }) || headingRank(a.heading).localeCompare(headingRank(b.heading)) || a.description.localeCompare(b.description));
 }
@@ -8375,7 +8704,7 @@ function rateFor(L, hisLines) {
 // basis measured | worked | estimated (others are left out). Returns the rands and line counts per basis, what couldn't be priced,
 // and each line's value, so the estimates can be listed largest first.
 function valueByBasis(lines, hisLines) {
-  const out = { measured: { value: 0, n: 0 }, worked: { value: 0, n: 0 }, estimated: { value: 0, n: 0 }, unpriced: 0, approx: 0, total: 0, per: new Map() };
+  const out = { measured: { value: 0, n: 0 }, worked: { value: 0, n: 0 }, document: { value: 0, n: 0 }, estimated: { value: 0, n: 0 }, unpriced: 0, approx: 0, total: 0, per: new Map() };
   for (const L of lines) {
     if (!out[L.basis] || !(L.qty > 0)) continue;
     const r = rateFor(L, hisLines);
@@ -8522,13 +8851,13 @@ function interpExamples(corrections) {
 const SIGN_FORMAT = 1;   // the signed version's own layout
 const SIGN_OPEN = ["confirm", "claude", "measure", "unmapped"];
 // How a line's quantity was arrived at, as the bill's basis column says it
-const signBasis = (L) => (L.unmapped ? "not mapped" : L.expected ? (Number.isFinite(L.shownQty) ? "entered" : "not in the model") : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "worked out" : "measured");
+const signBasis = (L) => (L.unmapped ? "not mapped" : L.expected ? (Number.isFinite(L.shownQty) ? "entered" : "not in the model") : L.edited ? "edited" : L.doc ? "from a document" : L.est ? "estimated" : L.inferred ? "worked out" : "measured");
 // The lines to sign, from the bill as he sees it (billLines): everything but what he left out
 function signRows(lines, r) {
   return lines.filter((L) => L.status !== "out").map((L, i) => ({
     n: i + 1, key: L.key, section: L.section || "", clause: L.clause || "", heading: L.heading || "", description: L.description || "", unit: L.unit || "",
     qty: L.status === "prov" || !Number.isFinite(L.shownQty) ? null : Math.round(L.shownQty * 1000) / 1000, prov: L.status === "prov", status: L.status, basis: signBasis(L),
-    est: L.est || "", calc: L.calc || "", lessOverlap: !!L.lessOn,
+    est: L.est || "", calc: L.calc || "", lessOverlap: !!L.lessOn, ...(L.doc ? { doc: { name: L.doc.name || "", pages: L.doc.pages || "", by: L.doc.by || "", at: L.doc.at || "" } } : {}),
     ids: [...new Set((L.groups || []).flatMap((g) => g.elements.filter((e) => r.status?.[e.Id] !== "excluded").map((e) => String(e.Id))))] }));
 }
 // The three checks before signing: every line confirmed, no model problem open, the estimates listed (and accepted by him)
@@ -8539,9 +8868,9 @@ function signChecks(rows) {
 // The bill by basis: line counts, and the value at his rates where the project has a bill of his (valueByBasis, master.js)
 function signValue(rows, hisLines) {
   const by = {}; for (const x of rows) by[x.basis] = (by[x.basis] || 0) + 1;
-  const priced = hisLines && typeof valueByBasis === "function" ? valueByBasis(rows.filter((x) => ["measured", "worked out", "estimated"].includes(x.basis) && x.qty > 0)
-    .map((x) => ({ key: x.key, basis: x.basis === "worked out" ? "worked" : x.basis, qty: x.qty, unit: x.unit, section: x.section, heading: x.heading, description: x.description })), hisLines) : null;
-  return { lines: by, value: priced ? { measured: priced.measured.value, worked: priced.worked.value, estimated: priced.estimated.value, unpriced: priced.unpriced, total: priced.total } : null };
+  const priced = hisLines && typeof valueByBasis === "function" ? valueByBasis(rows.filter((x) => ["measured", "worked out", "from a document", "estimated"].includes(x.basis) && x.qty > 0)
+    .map((x) => ({ key: x.key, basis: x.basis === "worked out" ? "worked" : x.basis === "from a document" ? "document" : x.basis, qty: x.qty, unit: x.unit, section: x.section, heading: x.heading, description: x.description })), hisLines) : null;
+  return { lines: by, value: priced ? { measured: priced.measured.value, worked: priced.worked.value, document: priced.document.value, estimated: priced.estimated.value, unpriced: priced.unpriced, total: priced.total } : null };
 }
 // What moved between two versions (or a signed version and a new run), line by line: new, gone, or a quantity that changed
 // by more than 5 mm³ or 0.05%; with the elements that came and went on it
@@ -9183,6 +9512,10 @@ const Store = (() => {
     // The project's inputs (inputs.js): method of measurement, stage, policy, and each structure's kind, defaults and geotech
     loadInputs: (pid) => wrap(async () => { need(); const d = await F.getDoc(F.doc(db, "projects", pid, "inputs", "main")); return d.exists() ? d.data() : null; }),
     saveInputs: (pid, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "inputs", "main"), JSON.parse(JSON.stringify(doc))); }),
+    // The project's documents (docsview.js): what was read from each, and his decisions on it; the PDF itself isn't kept
+    listDocuments: (pid) => wrap(async () => { need(); const snap = await F.getDocs(F.collection(db, "projects", pid, "documents")); return snap.docs.map((d) => ({ ...d.data(), id: d.id })); }),
+    saveDocument: (pid, id, doc) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "documents", id), JSON.parse(JSON.stringify(doc))); }),
+    deleteDocument: (pid, id) => wrap(async () => { need(); await F.deleteDoc(F.doc(db, "projects", pid, "documents", id)); }),
 
     // His notes on generated bill lines (notes.js): one document each
     // His decisions on a model's bill (decisions.js): one document per model
@@ -9270,7 +9603,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", linkModel: "model’s project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", linkModel: "model’s project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -10050,7 +10383,7 @@ async function lnSave(L, his, reason, kind) {
   const n = {
     id: lnId(state.name, L.key), model: state.name, modelId: state.pmid || "", structure: state.result.structure || "",
     line: { key: L.key, n: L.n, section: L.section || "", clause: L.clause || "", heading: L.heading || "", description: L.description, unit: L.unit || "",
-      basis: L.expected ? "not in model" : L.inferred || L.groups.some((g) => g.inferred) ? "inferred" : "modelled", rule: [...new Set(L.groups.map((g) => g.ruleId || g.method || "").filter(Boolean))].join(", ") },
+      basis: L.expected ? "not in model" : L.doc ? "from a document" : L.inferred || L.groups.some((g) => g.inferred) ? "inferred" : "modelled", rule: [...new Set(L.groups.map((g) => g.ruleId || g.method || "").filter(Boolean))].join(", ") },
     ours: Number.isFinite(L.modelQty) ? Math.round(L.modelQty * 1000) / 1000 : null, his: x, reason, kind: kind || "unsure",
     elements: ids.slice(0, 400), elementCount: ids.length,
     status: old?.status && old.his === x && old.reason === reason ? old.status : "open", reply: old?.reply || "",
@@ -10470,7 +10803,7 @@ function renderMap() {
 // statuses for him, Confirmed or Needs you. Why a line needs him (a model problem, a rule to confirm, Claude's suggestion, a
 // figure to measure) is said in its panel. His layout stays: a row per section, then the clause and its heading, then a
 // sub-heading (“Vertical formwork to:”), then the items (8 Nov 2026).
-const BASIS_WORD = { measured: ["Measured", "b-meas"], worked: ["Worked out", "b-work"], estimated: ["Estimated", "b-est"], edited: ["From a document", "b-doc"], none: ["Not measured yet", "b-none"], prov: ["Provisional", "b-none"], unmapped: ["No item yet", "b-none"] };
+const BASIS_WORD = { measured: ["Measured", "b-meas"], worked: ["Worked out", "b-work"], estimated: ["Estimated", "b-est"], document: ["From a document", "b-doc"], edited: ["Your figure", "b-doc"], none: ["Not measured yet", "b-none"], prov: ["Provisional", "b-none"], unmapped: ["No item yet", "b-none"] };
 // How we got the line's figure, in the table's words (a figure he typed comes from his drawings or schedules)
 function lineBasis(L) {
   if (L.status === "out") return null;
@@ -10480,7 +10813,7 @@ function lineBasis(L) {
   return basisOf(L);
 }
 const lineState = (L) => (L.status === "out" ? ["Left out", "s-out"] : OPEN.has(L.status) ? ["Needs you", "s-need"] : ["Confirmed", "s-ok"]);
-function basisChip(L) { const b = lineBasis(L); if (!b) return h("span", { class: "bchip b-none" }, "—"); const [t, c] = BASIS_WORD[b]; return h("span", { class: "bchip " + c, title: b === "edited" ? "Typed in by you" : b === "estimated" ? L.est || "" : "" }, t); }
+function basisChip(L) { const b = lineBasis(L); if (!b) return h("span", { class: "bchip b-none" }, "—"); const [t, c] = BASIS_WORD[b]; return h("span", { class: "bchip " + c, title: b === "edited" ? "Typed in by you" : b === "document" ? docLineSource(L) : b === "estimated" ? L.est || "" : "" }, t); }
 function renderTree(lines, groups) {
   const live = lines.filter((L) => L.status !== "out"), need = live.filter((L) => OPEN.has(L.status)).length, out = lines.length - live.length;
   const est = live.filter((L) => lineBasis(L) === "estimated").length, noted = lines.filter((L) => lnFor(L)).length;
@@ -10676,15 +11009,19 @@ function editorFor(L, lines) {
       L.overlapLess > 0 ? h("button", { type: "button", class: "btn sm", id: "btnLess", onclick: () => billLess(L) }, `Bill less the overlap (${fmt2(L.overlapLess)} m³)`) : null,
       h("button", { type: "button", class: "btn sm", onclick: () => leaveOut(L) }, "Leave out, send to modeller"))));
   else if (L.status === "claude") { const ai = L.groups.find((g) => g.method === "claude"); body.push(h("div", { class: "edai edwhy" }, h("b", {}, `It needs you: Claude suggested the item${ai.confidence != null ? ` (${Math.round(ai.confidence * 100)}% sure)` : ""}. `), ai.reason || "", " Accept it, or change it below.")); }
+  else if (L.status === "confirm" && L.doc) body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: the figure comes from a document. "), "Check it’s this structure’s steel and that the size is billed as you bill it."));
   else if (L.status === "confirm") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: a rule chose the item, and it’s yours to confirm. "), ruleWhy.length ? ruleWhy.join(" ") : L.inferred ? "It is worked out from the model by SolvBoQ’s rule." : "Check the item is the one you would bill."));
   else if (L.status === "measure") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: it isn’t in the model. "), `${L.why || ""} Enter the quantity from the drawings below, or bill it as provisional.`));
   else if (L.status === "unmapped") body.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: no item fits it yet. "), "Choose its item below", sampleFn ? ", or ask Claude." : "."));
+  // A document's answer for this line, waiting for him (the bending schedule for the reinforcement): asked here, pre-filled
+  { const ask = typeof docsLineAsk === "function" ? docsLineAsk(L) : null; if (ask) body.push(ask); }
   // A check on the model that touches this line's elements (Readiness), said on the line it affects
   if (issues.length && L.status !== "flag") body.push(h("p", { class: "edtext warn", id: "edChecks" }, "A check on the model: " + issues.slice(0, 3).join("; ") + ". ",
     h("button", { type: "button", class: "link accent", onclick: () => { state.view = "overview"; render(); } }, "See the model checks")));
   // How the figure is worked out, and the elements behind it
   // (on a model problem the check is said above, in its words)
-  const reasons = [...new Set(L.groups.map((g) => (g.reason || "").replace(/^Inferred: /, "")).filter((r) => r && !(L.status === "flag" && /^Readiness: /.test(r))))];
+  // (a line from a document says where it comes from in its working, above: not again here)
+  const reasons = L.doc ? [] : [...new Set(L.groups.map((g) => (g.reason || "").replace(/^Inferred: /, "")).filter((r) => r && !(L.status === "flag" && /^Readiness: /.test(r))))];
   const els = L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => ({ e, g })));
   const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
   const cb = calcBox(L);
@@ -10710,7 +11047,8 @@ function editorFor(L, lines) {
   // What would turn an estimate into a measurement
   if (L.est && !L.edited) body.push(h("div", { class: "edmeasure" }, h("span", { class: "edmtitle" }, "To measure this, not estimate it"),
     h("p", { class: "edtext", id: "estNote" }, "An estimate, not a measurement. " + L.est),
-    h("button", { type: "button", class: "btn sm outline-accent", onclick: () => edChange() }, kind === "rebar" ? "Change the rate" : kind === "earth" ? "Change the assumptions" : "Enter the measured figure")));
+    h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm outline-accent", onclick: () => edChange() }, kind === "rebar" ? "Change the rate" : kind === "earth" ? "Change the assumptions" : "Enter the measured figure"),
+      kind === "rebar" ? h("button", { type: "button", class: "btn sm", id: "btnAddBbs", onclick: () => { state.view = "proj"; render(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "Add the bending schedule") : null)));
   // The decisions: Accept, Change, Leave out (or, once decided, Undo)
   const foot = [], by = L.groups.length && L.groups.every((g) => g.method === "rule");
   const leave = L.status !== "out" ? h("button", { type: "button", class: "btn", id: "btnLeaveOut", onclick: () => leaveOut(L) }, "Leave out") : null;
@@ -10841,7 +11179,7 @@ function editorOverview(lines, groups) {
 // it by a rule (formwork from faces, finishes, joints on a drawn layout), estimated (a rate, a share or a depth that isn't in the
 // model), or not in the model at all. The estimates are listed with what would make each a measurement. Counted by line: SolvBoQ
 // holds no rates, so it can't say what share of the bill's value each is, and says so.
-function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
+function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.doc ? "document" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
 // How often he kept each rule's suggestion, over every model of the project (decisions.js): the rules he changed, and the ones
 // that no longer confirm by themselves because of it
 function rulesOverview() {
@@ -10865,9 +11203,9 @@ function basisOverview(lines) {
   const n = (b) => lines.filter((L) => basisOf(L) === b).length, est = lines.filter((L) => basisOf(L) === "estimated");
   const master = rateMaster(), others = typeof MB === "undefined" ? [] : [MB.master, ...(MB.saved || [])].filter((m, i, a) => m && (m.lines || []).some((x) => x.rate > 0) && a.findIndex((y) => y && y.id === m.id) === i);
   // By value, at his own rates, where the project has a bill of his: a count of lines hides how much of the bill is estimated
-  const val = master && typeof valueByBasis === "function" ? valueByBasis(lines.filter((L) => ["measured", "worked", "estimated"].includes(basisOf(L)) && L.shownQty > 0).map((L) => ({ key: L.key, basis: basisOf(L), qty: L.shownQty, unit: L.unit, section: L.section, heading: L.heading, description: L.description })), master.lines) : null;
+  const val = master && typeof valueByBasis === "function" ? valueByBasis(lines.filter((L) => ["measured", "worked", "document", "estimated"].includes(basisOf(L)) && L.shownQty > 0).map((L) => ({ key: L.key, basis: basisOf(L), qty: L.shownQty, unit: L.unit, section: L.section, heading: L.heading, description: L.description })), master.lines) : null;
   const priced = val && val.total > 0, pc = (b) => (priced ? `${Math.round((100 * val[b].value) / val.total)}%` : ""), R = (v) => (typeof rands === "function" ? rands(v) : "R " + Math.round(v).toLocaleString("en-GB"));
-  const rows = [["Measured from the model", n("measured"), "measured"], ["Worked out from the model", n("worked"), "worked"], ["Estimated", n("estimated"), "estimated"], ["Not in the model: to measure", n("none"), ""], ["Quantity typed by you", n("edited"), ""]].filter(([, c], i) => c || i < 3);
+  const rows = [["Measured from the model", n("measured"), "measured"], ["Worked out from the model", n("worked"), "worked"], ["From a document you accepted", n("document"), "document"], ["Estimated", n("estimated"), "estimated"], ["Not in the model: to measure", n("none"), ""], ["Quantity typed by you", n("edited"), ""]].filter(([, c], i, a) => c || (i < 2 || a[i][2] === "estimated"));
   const value = (L) => (priced ? val.per.get(L.key) : null);
   const list = [...est].sort((a, b) => (value(b)?.value || 0) - (value(a)?.value || 0));
   return h("div", { class: "edfield", id: "basisBox" },
@@ -10952,7 +11290,7 @@ function boqRows() {
     out.push({ item: n, section: L.unmapped ? "" : L.section, clause: L.clause, heading: L.unmapped ? "" : L.heading, description: L.description, unit: L.unit || "",
       quantity: L.status === "prov" ? "Prov." : L.shownQty == null ? "" : mapQty(L.shownQty, L.unit),
       status: { done: "confirmed", confirm: "to confirm", claude: "to confirm", flag: "model problem", measure: "to measure", prov: "provisional", unmapped: "not mapped" }[L.status],
-      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.est ? "estimated" : L.inferred ? "inferred" : L.lessOn ? "modelled, less overlap" : "modelled",
+      basis: L.expected ? (L.shownQty == null ? "" : "entered") : L.edited ? "edited" : L.doc ? "from a document" : L.est ? "estimated" : L.inferred ? "inferred" : L.lessOn ? "modelled, less overlap" : "modelled",
       element_ids: L.groups.flatMap((g) => g.elements.filter((e) => state.result.status[e.Id] !== "excluded").map((e) => e.Id)).join(";") });
   }
   return out;
@@ -11033,8 +11371,26 @@ function calcRows(L) {
   }
   return [...by.values()].sort((a, b) => b.q - a.q);
 }
+// Where a line from a document comes from, in words: the document, its pages, who accepted it and when
+function docLineSource(L) {
+  const d = L.doc; if (!d) return "";
+  const when = d.at ? new Date(d.at) : null, day = when && !isNaN(when) ? when.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "";
+  return `From ${d.name}${d.pages ? `, ${d.pages}` : ""}: read by Claude, accepted${d.by ? ` by ${d.by}` : ""}${day ? ` on ${day}` : ""}`;
+}
+function docSourceBox(L) {
+  const d = L.doc; if (!d) return null;
+  return h("div", { class: "calc docsrc", id: "docSrc" },
+    h("span", { class: "edsub" }, docLineSource(L) + "."),
+    d.quote ? h("p", { class: "edtext" }, `The schedule says: “${d.quote}”`) : null,
+    d.check ? h("p", { class: "edtext" + (/don’t agree/.test(d.check) ? " warn" : "") }, `The figures were added up by SolvBoQ, not by Claude: the total ${d.check}.`) : null,
+    h("button", { type: "button", class: "link accent", onclick: () => { state.view = "proj"; render(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "See the document under Project"));
+}
 function calcBox(L) {
   if (L.expected || L.unmapped) return null;
+  // From a document: the document's figure and where it is, not a share per element (the schedule doesn't say which element)
+  if (L.doc) return h("div", { class: "edfield", id: "calcBox" }, h("span", { class: "edlabel" }, "How this figure is worked out"),
+    L.calc ? h("div", { class: "calc" }, h("div", { class: "cformula" }, L.calc)) : null, docSourceBox(L),
+    L.edited ? h("div", { class: "ctotal" }, h("span", {}, "You typed your own quantity"), h("span", {}, `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`)) : null);
   const rows = calcRows(L), total = rows.reduce((t, r) => t + r.q, 0), all = !!state.calcAll, show = all ? rows : rows.slice(0, 6), rest = rows.slice(show.length);
   if (!rows.length && !L.calc) return null;
   const u = L.unit || "", q = (v) => `${mapQty(v, L.unit)} ${u}`;
@@ -11328,7 +11684,7 @@ function renderSign() {
     // The bill by basis and value
     h("div", { class: "edfield", id: "signValue" }, h("span", { class: "edtitle sm" }, "The bill by how it was arrived at"),
       h("p", { class: "edtext" }, Object.entries(val.lines).map(([k, c]) => `${plural(c, "line")} ${k}`).join(", ") + "."),
-      val.value ? h("p", { class: "edtext" + (val.value.estimated > 0 ? " warn" : "") }, `At your rates: measured ${signMoney(val.value.measured)}, worked out ${signMoney(val.value.worked)}, estimated ${signMoney(val.value.estimated)}${val.value.total > 0 ? ` (${Math.round(100 * val.value.estimated / val.value.total)}% of the priced value)` : ""}${val.value.unpriced ? `; ${plural(val.value.unpriced, "line")} unpriced` : ""}.`)
+      val.value ? h("p", { class: "edtext" + (val.value.estimated > 0 ? " warn" : "") }, `At your rates: measured ${signMoney(val.value.measured)}, worked out ${signMoney(val.value.worked)}, ${val.value.document ? `from documents ${signMoney(val.value.document)}, ` : ""}estimated ${signMoney(val.value.estimated)}${val.value.total > 0 ? ` (${Math.round(100 * val.value.estimated / val.value.total)}% of the priced value)` : ""}${val.value.unpriced ? `; ${plural(val.value.unpriced, "line")} unpriced` : ""}.`)
         : h("p", { class: "edtext muted" }, "No bill of yours with rates is in this project, so the value by basis can’t be shown: line counts understate the estimates.")),
     // The estimates he accepts
     est.length ? h("div", { class: "edfield", id: "signEstimates" }, h("span", { class: "edtitle sm" }, `${plural(est.length, "estimate")} you’re accepting`),
@@ -12952,7 +13308,7 @@ $("projSel").addEventListener("change", async (e) => {
 });
 
 // Called when the project list loads or the project changes (claimsview.js)
-function pvAfterProjects() { if (typeof frCheck === "function" && frCheck()) return; renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
+function pvAfterProjects() { if (typeof frCheck === "function" && frCheck()) return; renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof docsLoad === "function") docsLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
 
 // ----- The project's models -----
 // The model last used in each project, so choosing a project (or reloading the page) opens it again
@@ -13401,6 +13757,7 @@ function renderProj() {
 
     piProposals(),
     piReportCard(),
+    typeof docsCard === "function" ? docsCard() : null,
 
     h("section", { class: "card stdbody stdmats", id: "piStructs" },
       h("div", { class: "stdintro" }, h("h2", null, "Structures"),
@@ -13591,6 +13948,7 @@ async function piReadReport(file) {
     const num = (v, lo, hi) => (typeof v === "number" && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null);
     PI.read = { file: file.name, depth: num(it.depth, 0.1, 30), depthKind: it.depthKind || "", depthPage: inStr(it.depthPage, 40), depthQuote: inStr(it.depthQuote, 300), water: num(it.water, 0, 100), waterPage: inStr(it.waterPage, 40), logs };
     PI.keep = new Set(logs.map((l, i) => i));
+    if (typeof docsNoteGround === "function") docsNoteGround(file, PI.read);
     PI.to = new Set(piDoc().structures.filter((s) => s.kind !== "linear").map((s) => s.id));
     renderProj();
   } catch (e) { PI.reading = ""; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
@@ -13612,6 +13970,7 @@ function piReportCard() {
   const use = () => {
     const keep = [...PI.keep], who = piWho(), at = new Date().toISOString();
     d.structures = d.structures.map((s) => (PI.to.has(s.id) ? applyReport(s, r, keep, who, at) : s));
+    if (typeof docsNoteGround === "function") docsNoteGround({ name: r.file }, null, [...PI.to]);
     const n = PI.to.size; PI.read = null; piChanged(); toast(`The report’s figures are in ${plural(n, "structure")}, with their pages`);
   };
   return h("section", { class: "card stdbody stdmats" }, head,
@@ -13637,6 +13996,222 @@ function piReportCard() {
 function goProj() { state.view = "proj"; render(); window.scrollTo(0, 0); }
 $("navProj").addEventListener("click", goProj);
 Store.onUser(() => piLoad());
+
+// ===== Project documents: the page (Project › Documents), and their answers wherever he is asked =====
+// He adds a PDF, says what it is (guessed from its name and words) and which structures it covers, and has Claude read it. What
+// Claude read comes back as pre-filled answers (documents.js docAnswers), each with its page and words: the reinforcement for a
+// structure from a bending schedule, a grade, cover, a finish or a joint type from a drawing or specification. He accepts each one;
+// only then does it go into the project's inputs (and so the bill). Until T-012 makes one queue, the answers are asked here, on the
+// line they feed (the reinforcement line's panel) and in the docked panel's Next.
+// Kept at projects/{pid}/documents/{id} (the projects rule covers it), else in this browser. The PDF isn't kept: only what was read.
+// One shared page scope: the top-level names here are docs*, DOCS*.
+const DOCS = { pid: undefined, list: [], loaded: false, busy: {}, files: {}, err: "", rows: new Set(), saving: "" };
+const DOCS_LOCAL = "solvboq-documents-v1";
+const docsLocal = (v) => { try { const all = JSON.parse(localStorage.getItem(DOCS_LOCAL) || "{}") || {}; if (v === undefined) return all.local || []; all.local = v; localStorage.setItem(DOCS_LOCAL, JSON.stringify(all)); } catch (e) { return []; } };
+const docsOnCloud = () => !!(Store.user && CL.pid);
+
+async function docsLoad() {
+  const pid = CL.pid;
+  if (!docsOnCloud()) { DOCS.pid = null; DOCS.list = (docsLocal() || []).map(docNorm); DOCS.loaded = true; return docsAfter(); }
+  if (DOCS.pid === pid && DOCS.loaded) return;
+  try {
+    const list = await Store.listDocuments(pid);
+    if (CL.pid !== pid) return;
+    DOCS.pid = pid; DOCS.list = list.map(docNorm); DOCS.loaded = true; DOCS.err = "";
+    // Documents read in this browser before a project was open go into the project
+    const loc = (docsLocal() || []).map(docNorm).filter((d) => !DOCS.list.some((x) => x.id === d.id));
+    if (loc.length) { DOCS.list.push(...loc); for (const d of loc) await docsSave(d, true); docsLocal([]); }
+  } catch (e) { DOCS.err = e.message; }
+  docsAfter();
+}
+function docsAfter() { if (state.view === "proj" && typeof renderProj === "function") renderProj(); }
+async function docsSave(d, quiet) {
+  const doc = docNorm(d);
+  const i = DOCS.list.findIndex((x) => x.id === doc.id); if (i >= 0) DOCS.list[i] = doc; else DOCS.list.push(doc);
+  if (docsOnCloud()) {
+    try { await Store.saveDocument(CL.pid, doc.id, doc); DOCS.err = ""; DOCS.saving = `Kept with ${CL.projects.find((p) => p.id === CL.pid)?.name || "the project"}`; }
+    catch (e) { DOCS.err = `Not saved to the project: ${e.message}`; docsLocal(DOCS.list); }
+  } else { docsLocal(DOCS.list); DOCS.saving = "Kept in this browser until a project is open."; }
+  if (!quiet) docsAfter();
+  return doc;
+}
+const docsWho = () => (typeof piWho === "function" ? piWho() : "") || Store.user?.displayName || "";
+const docsStructures = () => (typeof piDoc === "function" ? piDoc().structures : []);
+// Every answer of every document, with its document
+function docsAnswers() { return DOCS.list.flatMap((d) => docAnswers(d, docsStructures()).map((a) => ({ doc: d, ans: a }))); }
+// The answers still open for the model's structure (the one the bill is for), or all open ones
+function docsOpen(sid) { return docsAnswers().filter((x) => x.ans.status === "open" && (!sid || x.ans.structure === sid)); }
+const docsModelStructure = () => (typeof piEngine === "function" ? piEngine()?.structure?.id || "" : "");
+
+// ----- His decisions on an answer -----
+function docsDecide(d, a, status) { d.decided ||= {}; d.decided[a.id] = { status, structure: a.structure, by: docsWho(), at: new Date().toISOString() }; }
+function docsAccept(d, a) {
+  if (!a.structure) return toast("Choose the structure it’s for first.");
+  if (a.kind === "rebar" && !a.rebar.rows.length) return toast("Nothing to use: no figures were read for it.");
+  PI.doc = normInputs(docApply(piDoc(), d, a, docsWho(), new Date().toISOString()));
+  // Another schedule accepted for the same structure before is replaced: say so on that one
+  if (a.kind === "rebar") for (const x of docsAnswers()) if (x.ans.kind === "rebar" && x.ans.structure === a.structure && x.ans.status === "accepted" && !(x.doc.id === d.id && x.ans.id === a.id)) { docsDecide(x.doc, x.ans, "open"); docsSave(x.doc, true); }
+  docsDecide(d, a, "accepted"); docsSave(d, true);
+  piChanged(false);
+  toast(a.kind === "rebar" ? `The reinforcement is now billed from ${d.name}, by diameter` : `${a.label}: ${a.answer}, from ${d.name}${a.page ? `, ${a.page}` : ""}`);
+  docsRefresh();
+}
+function docsReject(d, a) { docsDecide(d, a, "rejected"); docsSave(d, true); toast("Left out: it isn’t used"); docsRefresh(); }
+function docsUndo(d, a) {
+  if (a.status === "accepted") { PI.doc = normInputs(docUnapply(piDoc(), d, a)); piChanged(false); }
+  docsDecide(d, a, "open"); docsSave(d, true); toast("Back to waiting for you"); docsRefresh();
+}
+function docsSetStructure(d, a, sid) { d.decided ||= {}; d.decided[a.id] = { ...(d.decided[a.id] || {}), status: d.decided[a.id]?.status || "open", structure: sid }; docsSave(d); }
+function docsRefresh() { if (state.view === "proj") renderProj(); else if (state.view === "next" && typeof renderNext === "function") renderNext(); else if (typeof render === "function") render(); }
+
+// ----- Adding and reading a document -----
+async function docsPdfPages(file) {
+  if (!globalThis.pdfjsLib) throw new Error("The PDF reader isn’t in this copy of the page.");
+  const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), verbosity: 0, isEvalSupported: false }).promise;
+  const pages = [];
+  for (let n = 1; n <= doc.numPages; n++) {
+    const pg = await doc.getPage(n), vp = pg.getViewport({ scale: 1 }), tc = await pg.getTextContent();
+    pages.push({ n, width: vp.width, height: vp.height, items: tc.items.filter((i) => i.str).map((i) => ({ str: i.str, x: i.transform[4], y: vp.height - i.transform[5], w: i.width })) });
+  }
+  return pages;
+}
+async function docsAdd(file) {
+  const id = "d" + Date.now().toString(36);
+  DOCS.busy[id] = "Reading the PDF…"; renderProj();
+  try {
+    const pages = await docsPdfPages(file), text = docText(pages);
+    const structs = docsStructures(), model = docsModelStructure();
+    const d = { id, name: file.name, kind: docGuessKind(file.name, text), structures: model ? [model] : structs.length === 1 ? [structs[0].id] : [], pages: pages.length, by: docsWho(), at: new Date().toISOString() };
+    DOCS.files[id] = { file, pages };
+    delete DOCS.busy[id];
+    await docsSave(d);
+    if (text.replace(/--- page \d+ ---/g, "").trim().length < 100) toast("This PDF has no readable text (a scan?): Claude can’t read it. Type its figures under the structure instead.");
+  } catch (e) { delete DOCS.busy[id]; toast(e.message); renderProj(); }
+}
+async function docsRead(d) {
+  const f = DOCS.files[d.id];
+  if (!f) return toast("Add the PDF again to read it: the file itself isn’t kept, only what was read from it.");
+  if (!sampleFn) return toast("Add a Claude API key under Conventions › Claude first.");
+  if (d.kind === "ground") { DOCS.groundDoc = d.id; return piReadReport(f.file); }
+  const names = docsStructures().map((s) => s.name).filter(Boolean), chunks = docChunks(f.pages);
+  const say = (m) => { DOCS.busy[d.id] = m; renderProj(); };
+  try {
+    const outs = [];
+    for (let i = 0; i < chunks.length; i++) {
+      const c = chunks[i];
+      say(`Claude is reading ${c.pages.length === 1 ? `page ${c.pages[0]}` : `pages ${c.pages[0]} to ${c.pages[c.pages.length - 1]}`}${chunks.length > 1 ? ` (part ${i + 1} of ${chunks.length})` : ""}…`);
+      const out = d.kind === "bending"
+        ? await sampleFn.json(docBendingPrompt(c.text, names), { schema: DOC_BENDING_SCHEMA, effort: "high", maxTokens: 21000 })
+        : await sampleFn.json(docNotesPrompt(c.text, names, d.kind), { schema: DOC_NOTES_SCHEMA, effort: "high", maxTokens: 12000 });
+      outs.push(out?.items?.[0] || null);
+    }
+    delete DOCS.busy[d.id];
+    if (!outs.some(Boolean)) { toast("Claude couldn’t read it. Type its figures under the structure instead."); return renderProj(); }
+    const read = { at: new Date().toISOString(), by: docsWho() };
+    if (d.kind === "bending") read.bending = docBendingCheck(docMerge(outs, ["rows", "totals"]));
+    else read.notes = docNotesCheck(docMerge(outs, ["values"]));
+    d.read = read; d.decided = {};
+    await docsSave(d);
+    const n = docAnswers(docNorm(d), docsStructures()).length;
+    toast(n ? `${plural(n, "answer")} read from ${d.name}: check each one` : `Nothing the bill needs was found in ${d.name}`);
+  } catch (e) { delete DOCS.busy[d.id]; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
+}
+// The ground report is read by the report card above (inputsview.js): kept as a document too, so the project lists it
+function docsNoteGround(file, read, used) {
+  const old = DOCS.list.find((x) => x.id === DOCS.groundDoc) || DOCS.list.find((x) => x.kind === "ground" && x.name === file?.name);
+  const d = old || { id: "d" + Date.now().toString(36), name: file?.name || read?.file || "Ground report", kind: "ground", structures: [], by: docsWho(), at: new Date().toISOString() };
+  if (read) d.read = { at: new Date().toISOString(), by: docsWho(), ground: { depth: read.depth, water: read.water, logs: (read.logs || []).length, page: read.depthPage || "" } };
+  if (used) { d.decided = { ground: { status: "accepted", structure: "", by: docsWho(), at: new Date().toISOString() } }; d.structures = used; }
+  docsSave(d, true);
+}
+
+// ----- The card on the Project page -----
+function docsCard() {
+  const docs = DOCS.list.slice().sort((a, b) => String(b.at).localeCompare(String(a.at))), structs = docsStructures();
+  const open = docsAnswers().filter((x) => x.ans.status === "open").length;
+  return h("section", { class: "card stdbody stdmats", id: "docsCard" },
+    h("div", { class: "stdintro" }, h("h2", null, "3. The project’s documents"),
+      h("p", { class: "sub" }, "Bending schedules, drawings and specifications. Claude reads what the bill needs from them, each figure with its page and the words it comes from; SolvBoQ does the adding up and checks it against the document’s own totals. Nothing is used until you accept it, and you can type any of it yourself instead."),
+      open ? h("p", { class: "edtext", id: "docsOpenCount" }, h("b", null, `${plural(open, "answer")} waiting for you.`)) : null,
+      DOCS.err ? h("p", { class: "edtext warn" }, DOCS.err) : null),
+    h("div", { class: "tools" },
+      h("label", { class: "btn dark", tabindex: "0", for: "docsPdf" }, "Add a document (PDF)"),
+      h("input", { class: "sr", type: "file", id: "docsPdf", accept: ".pdf,application/pdf", multiple: true, onchange: async (e) => { const fs = [...(e.target.files || [])]; e.target.value = ""; for (const f of fs) await docsAdd(f); } }),
+      sampleFn ? null : h("span", { class: "edsub" }, "Reading needs a Claude API key (Conventions › Claude)."),
+      ...Object.entries(DOCS.busy).filter(([id]) => !DOCS.list.some((d) => d.id === id)).map(([, m]) => h("span", { class: "edsub" }, m))),
+    docs.length ? null : h("p", { class: "sub" }, "None yet."),
+    ...docs.map((d) => docsRow(d, structs)));
+}
+function docsRow(d, structs) {
+  const k = DOC_KINDS.find((x) => x.id === d.kind), ans = docAnswers(d, structs), busy = DOCS.busy[d.id], have = !!DOCS.files[d.id];
+  const when = d.read?.at ? new Date(d.read.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "";
+  return h("div", { class: "docrow", "data-doc": d.id },
+    h("div", { class: "dochead" },
+      h("b", null, d.name), h("span", { class: "sub" }, [d.pages ? plural(d.pages, "page") : "", d.read ? `read ${when}${d.read.by ? ` by ${d.read.by}` : ""}` : "not read yet"].filter(Boolean).join(" · ")),
+      h("select", { class: "piinput sm", "aria-label": "What it is", id: `docKind_${d.id}`, onchange: (e) => { d.kind = e.target.value; d.read = null; d.decided = {}; docsSave(d); } },
+        ...DOC_KINDS.map((x) => h("option", { value: x.id, selected: x.id === d.kind ? true : null }, x.title))),
+      h("button", { type: "button", class: "btn sm" + (d.read ? "" : " dark"), id: `docRead_${d.id}`, disabled: busy || !sampleFn ? true : null, title: have ? "" : "Add the PDF again to read it", onclick: () => docsRead(d) }, d.read ? "Read it again" : "Read it with Claude"),
+      h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${d.name}? What was accepted from it stays in the structures until you undo it there.`)) { DOCS.list = DOCS.list.filter((x) => x.id !== d.id); if (docsOnCloud()) Store.deleteDocument(CL.pid, d.id).catch((e) => toast(e.message)); else docsLocal(DOCS.list); renderProj(); } } }, "Remove")),
+    h("p", { class: "edsub" }, `${k?.title || "Document"}: gives ${k?.gives || "values for the bill"}.`,
+      structs.length ? h("span", { class: "pichecks" }, " For: ", ...structs.map((s) => h("label", { class: "edcheck" }, h("input", { type: "checkbox", checked: d.structures.includes(s.id) ? true : null,
+        onchange: (e) => { d.structures = e.target.checked ? [...new Set([...d.structures, s.id])] : d.structures.filter((x) => x !== s.id); docsSave(d); } }), s.name))) : null),
+    busy ? h("p", { class: "edsub" }, busy) : null,
+    !have && !d.read ? h("p", { class: "edsub" }, "Add the PDF again to read it: only what was read from a document is kept, not the file.") : null,
+    d.kind === "ground" && d.read?.ground ? h("p", { class: "edtext" }, `Read: excavation depth ${d.read.ground.depth != null ? `${fmt2(d.read.ground.depth)} m` : "not given"}, water ${d.read.ground.water != null ? `${fmt2(d.read.ground.water)} m` : "not given"}, ${plural(d.read.ground.logs || 0, "log")}. ${d.decided?.ground?.status === "accepted" ? "Used." : "Check it and use it in card 2 above."}`) : null,
+    ...(d.read?.bending?.problems || d.read?.notes?.problems || []).slice(0, 8).map((p) => h("p", { class: "edtext warn" }, p)),
+    ...ans.map((a) => docsAnswerRow(d, a, structs)),
+    d.read && !ans.length && d.kind !== "ground" ? h("p", { class: "edtext" }, "Nothing the bill needs was found in it.") : null);
+}
+function docsAnswerRow(d, a, structs) {
+  const rb = a.rebar, key = `${d.id}|${a.id}`, showRows = DOCS.rows.has(key);
+  const state0 = a.status === "accepted" ? `Used${a.by ? ` (${a.by}${a.at ? `, ${a.at.slice(0, 10)}` : ""})` : ""}` : a.status === "rejected" ? "Not used" : "Waiting for you";
+  return h("div", { class: "docans da-" + a.status, "data-ans": a.id },
+    h("div", { class: "docanstop" },
+      h("span", null, h("b", null, a.label), ": ", h("span", { class: "docbig" }, a.answer), a.detail ? h("span", { class: "sub" }, ` · ${a.detail}`) : null),
+      h("span", { class: "lstate " + (a.status === "accepted" ? "s-ok" : a.status === "rejected" ? "s-out" : "s-need") }, state0)),
+    h("p", { class: "edsub" }, [a.page ? `${d.name}, ${a.page}` : d.name, a.quote ? `“${a.quote}”` : ""].filter(Boolean).join(": ")),
+    rb ? h("p", { class: "edtext" + (rb.agree ? "" : " warn") }, rb.checks.length ? (rb.agree ? `SolvBoQ added up ${plural(rb.n, "figure")} and they agree with the schedule’s own totals (${rb.checks.length} checked).`
+      : `SolvBoQ’s adding up doesn’t agree with the schedule’s own totals: ${rb.checks.filter((c) => !c.ok).map((c) => `${c.what} ${Math.round(c.sum).toLocaleString("en-GB")} kg read, ${Math.round(c.printed).toLocaleString("en-GB")} kg printed (${c.page})`).join("; ")}. Check those rows before using it.`)
+      : "The schedule prints no totals, so SolvBoQ’s adding up can’t be checked against it.", rb.worked ? ` ${plural(rb.worked, "row")} worked out from the number and length of bars (SANS 920 masses).` : "", rb.shared.length ? " The same table lists steel for another structure, so its overall total isn’t a check on this one." : "") : null,
+    rb ? h("button", { type: "button", class: "link accent", "aria-expanded": String(showRows), onclick: () => { showRows ? DOCS.rows.delete(key) : DOCS.rows.add(key); renderProj(); } }, showRows ? "Hide the rows" : `Show the ${plural(rb.n, "row")} it was read from`) : null,
+    rb && showRows ? h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Schedule"), h("th", null, "Member"), h("th", null, "Size"), h("th", null, "kg"), h("th", null, "Page"))),
+      h("tbody", null, d.read.bending.rows.filter((r) => docKey(r.near) === docKey(a.near)).map((r) => h("tr", null, h("td", null, r.ref), h("td", null, r.member), h("td", null, r.type === "fabric" ? "Fabric" : `${r.type === "mild" ? "R" : "Y"}${r.dia}`),
+        h("td", { title: r.how === "printed" ? "As printed" : r.how }, Math.round(r.kg).toLocaleString("en-GB")), h("td", null, r.page))))) : null,
+    h("div", { class: "tools" },
+      h("select", { class: "piinput sm docfor", "aria-label": "For which structure", id: `docFor_${d.id}_${a.id.replace(/[^a-z0-9]/gi, "_")}`, disabled: a.status === "accepted" ? true : null, onchange: (e) => docsSetStructure(d, a, e.target.value) },
+        h("option", { value: "" }, structs.length ? "For which structure?" : "Add the structures first"), ...structs.map((s) => h("option", { value: s.id, selected: s.id === a.structure ? true : null }, s.name))),
+      a.status === "open" ? h("button", { type: "button", class: "btn sm dark", disabled: a.structure ? null : true, onclick: () => docsAccept(d, a) }, a.kind === "rebar" ? "Use it for the reinforcement" : "Use it") : null,
+      a.status === "open" ? h("button", { type: "button", class: "btn sm", onclick: () => docsReject(d, a) }, "Not this") : h("button", { type: "button", class: "btn sm", onclick: () => docsUndo(d, a) }, "Undo")));
+}
+
+// ----- Asked on the line it feeds: the reinforcement line, when a schedule for its structure is waiting -----
+function docsLineAsk(L) {
+  if (!L.groups?.some((g) => g.ruleId === "INFER-rebar") || L.doc) return null;
+  const sid = docsModelStructure(), x = sid ? docsOpen(sid).find((y) => y.ans.kind === "rebar") : null;
+  if (!x) return null;
+  const { doc: d, ans: a } = x;
+  return h("div", { class: "edai edwhy", id: "docAsk" },
+    h("b", null, "Your bending schedule gives this: "), `${a.answer} for ${docsStructures().find((s) => s.id === sid)?.name || "this structure"} (${a.detail}), from ${d.name}${a.page ? `, ${a.page}` : ""}. `,
+    a.rebar.agree ? "SolvBoQ added up its figures and they agree with the schedule’s own totals." : "Check it: SolvBoQ’s adding up and the schedule’s own totals don’t all agree (see the document under Project).",
+    h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn sm dark", id: "btnDocUse", onclick: () => { docsAccept(d, a); const first = mapLines(currentGroups()).find((y) => y.doc && OPEN.has(y.status)); if (first) selectLine(first); } }, "Use the schedule’s figures"),
+      h("button", { type: "button", class: "btn sm", onclick: () => docsReject(d, a) }, "Not this one"),
+      h("button", { type: "button", class: "link accent", onclick: () => { state.view = "proj"; render(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "See the document")));
+}
+// For the docked panel's Next: the answers waiting for the model's structure
+function docsQueueItem() {
+  const sid = docsModelStructure(), open = sid ? docsOpen(sid) : [];
+  if (!open.length) return null;
+  const rb = open.find((x) => x.ans.kind === "rebar"), first = rb || open[0];
+  return { kind: "docs", tone: "violet", order: 2.5, value: 0, title: `${plural(open.length, "answer")} from your documents`,
+    sub: `${first.ans.label}: ${first.ans.answer}, from ${first.doc.name}${first.ans.page ? `, ${first.ans.page}` : ""}`,
+    main: [rb ? "Check it on the line" : "Check them", () => {
+      const L = rb ? mapLines(currentGroups()).find((y) => y.groups?.some((g) => g.ruleId === "INFER-rebar")) : null;
+      if (L && typeof dockOpen === "function") dockOpen(L); else { state.view = "proj"; render(); }
+    }] };
+}
+
+Store.onUser(() => docsLoad());
 
 // ===== Projects, the project overview and the top bar (the canvas's “Web 1: Projects” and “Web 2: Project overview”) =====
 // Built 17 Nov 2026. The rail of seven destinations and the model picker gave way to a top bar: the logo goes to all projects,
@@ -14086,6 +14661,8 @@ function dockQueue() {
   const unsure = (typeof partsNow === "function" ? partsNow()?.rows.filter((x) => !x.sure) : null) || [];
   if (unsure.length) { const ready = unsure.filter((x) => typeof partsProposal === "function" && partsProposal(x).kind).length;
     items.push({ kind: "parts", tone: "violet", order: 2, value: 0, title: `${plural(unsure.length, "element")} ${unsure.length === 1 ? "has" : "have"} no part yet`, sub: ready === unsure.length ? "There’s a suggestion ready for each one" : ready ? `There’s a suggestion for ${ready} of them` : "SolvBoQ wasn’t sure which part they are", main: ["Check the suggestions", () => dockGo("parts")] }); }
+  const fromDocs = typeof docsQueueItem === "function" ? docsQueueItem() : null;
+  if (fromDocs) items.push(fromDocs);
   const asks = lines.filter((L) => ["unmapped", "measure"].includes(L.status));
   if (asks.length) { const nm = asks.filter((L) => L.unmapped).length, ms = asks.length - nm;
     items.push({ kind: "asks", tone: "amber", order: 3, value: sum(asks), title: `${plural(asks.length, "question")} on the bill`, sub: [nm ? `${plural(nm, "line")} with no item` : "", ms ? `${plural(ms, "figure")} to measure from the drawings` : ""].filter(Boolean).join(", "), main: ["Answer them", () => dockOpen(first(asks))] }); }
