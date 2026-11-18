@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-17T18:02:57Z">
+<meta name="solvboq-build" content="2026-11-18T09:35:31Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -916,6 +916,20 @@ body.docked .dockbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
 .gaterow select{flex:0 1 auto}
 .gatesent{padding:12px 14px;border-radius:12px;background:var(--green-s);color:var(--ink-2);font-size:14px}
 .gatecard .link{align-self:flex-start}
+#sgPanel{display:flex;flex-direction:column;gap:10px}
+.gatecode{font:600 28px/1.2 ui-monospace,SFMono-Regular,Consolas,monospace;letter-spacing:.12em;text-align:center;padding:12px;border-radius:12px;background:var(--card);border:1px solid var(--line);color:var(--ink)}
+body.docked .gate{padding:16px 8px}
+body.docked .gatecard{padding:18px;border-radius:16px}
+body.docked .gatecard h1{font-size:20px}
+/* The first time a Revit model is seen: which project it is for (firstrun.js) */
+.frlist{display:flex;flex-direction:column;gap:6px;max-height:44vh;overflow:auto}
+.fropt{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--rule);border-radius:12px;cursor:pointer;background:var(--card)}
+.fropt:has(input:checked){border-color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+.fropt input[type=radio]{margin-top:3px;flex:none}
+.fropt span{display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.fropt small{color:var(--muted);font-size:12.5px}
+.frfield{display:flex;flex-direction:column;gap:4px}
+.frfield input{min-height:40px;padding:0 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:inherit;font-size:14px;min-width:0}
 .verifybar{margin-bottom:16px}
 /* People on the project (peopleview.js) */
 /* People card, as on the design's Web 2: chips, then an email box and Invite */
@@ -998,7 +1012,7 @@ body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #view
 #viewHome,#viewOv{display:flex;flex-direction:column;gap:20px;min-width:0}
 #viewOv #pplCard .pplinvite input{flex:1 1 100px}
 
-/* ===== The bill, one screen per structure (the canvas's “Web 3: The bill”, 18 Nov 2026): the steps, the table, the line's panel ===== */
+/* ===== The bill, one screen per structure (the canvas's “Web 3: The bill”, 17 Nov 2026): the steps, the table, the line's panel ===== */
 #phead #btnGoSign{align-self:flex-end}
 .billsteps{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}
 .bstep{padding:8px 16px;border-radius:20px;border:0;font-weight:600;cursor:pointer;background:var(--card);color:var(--ink-2)}
@@ -1068,11 +1082,78 @@ body.docked #viewMap .mrow .nlabel{padding-left:6px!important}
 body.docked .edbig{font-size:26px}
 @media (max-width:760px){#viewMap .mapcard{padding:16px}#viewMap .mrow{grid-template-columns:minmax(0,1fr) 72px 84px;min-width:0}#viewMap .mrow>*{padding:10px 6px}#viewMap .mrow>:nth-child(2),#viewMap .mrow>:nth-child(4){display:none}}
 .lstate{white-space:nowrap}
+
+/* ===== Docked in Revit, about 440 px wide (the canvas's “Revit panel” boards, 17 Nov 2026): a header, three tabs at the bottom ===== */
+.dockhead,.docknav{display:none}
+.edpos{color:var(--ink-2);font-size:13px}
+body.docked{padding-bottom:72px}
+body.docked .topbar,body.docked #phead,body.docked #billSteps,body.docked .subbar{display:none!important}
+body.docked .page{gap:12px}
+body.docked main{gap:12px}
+body.docked .dockhead{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:20px;padding:10px 14px}
+.docklogo{width:36px;height:36px;flex:none;border-radius:12px;background:var(--night);color:var(--lime);display:flex;align-items:center;justify-content:center;font-weight:700}
+.dockwho{flex:1 1 0%;min-width:0;display:flex;flex-direction:column}
+.dockwho b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
+.dockwho span{color:var(--ink-2);font-size:13px}
+.dockhead .hvbtn{flex:none;padding:0 16px}
+body.docked .docknav{display:flex;gap:4px;position:fixed;left:8px;right:8px;bottom:8px;z-index:50;background:var(--card);border-radius:26px;padding:4px;box-shadow:0 4px 16px rgba(16,24,40,.12)}
+.docknav button{flex:1 1 0%;min-height:44px;border-radius:22px;border:0;background:transparent;color:var(--ink-2);font-weight:600;cursor:pointer}
+.docknav button[aria-current="page"]{background:var(--lime);color:var(--night);font-weight:700}
+/* Next */
+#viewNext{display:flex;flex-direction:column;gap:12px}
+#viewNext[hidden]{display:none}
+.docksum{background:var(--night);color:#fff;border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.docksum>span,.docksumtop span:last-child{color:var(--night-sub)}
+.docksumtop{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.docksumbig{font-size:32px;line-height:1.1;font-weight:700;letter-spacing:-.03em;color:#fff}
+.dockbar2{height:8px;border-radius:4px;background:var(--night-rule);display:flex}
+.dockbar2>div{border-radius:4px;background:var(--lime)}
+.dockcard{background:var(--card);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.dockcard h1{margin:0;font-size:18px;line-height:1.3;font-weight:700;letter-spacing:0}
+.dockcard p{margin:0}
+.dockitem{padding:14px;border-radius:16px;display:flex;flex-direction:column;gap:8px;background:var(--chip)}
+.dockitem.red{background:var(--red-s)}.dockitem.violet{background:var(--indigo-s)}.dockitem.amber{background:var(--amber-s)}.dockitem.green{background:var(--green-s)}
+.dockitemtext{display:flex;flex-direction:column}
+.dockitemtext span{color:var(--ink-2)}
+.dockitembtns{display:flex;gap:8px}
+.dockmain,.docksecond{flex:1 1 0%;min-height:44px;border-radius:22px;font-weight:600;cursor:pointer;padding:0 12px}
+.dockmain{border:0;background:var(--night);color:#fff}
+.docksecond{border:1px solid var(--grey);background:var(--card);color:var(--ink)}
+/* A line, full size over the bill, with the tabs still below it */
+body.docked.ed-open .editor{bottom:64px;border-radius:0 0 20px 20px}
+body.docked #viewMap .edhead{padding:14px 16px 0}
+body.docked #viewMap .edhead h2{font-size:18px}
+body.docked #viewMap .edbody{padding:14px 16px 16px;gap:16px}
+body.docked .edbig{font-size:36px;letter-spacing:-.03em}
+body.docked #viewMap .edbody .edfoot{display:flex;flex-wrap:wrap}
+body.docked #viewMap .edbody .edfoot #btnAccept,body.docked #viewMap .edbody .edfoot .btn.dark{flex:1 1 100%;min-height:52px;border-radius:26px;font-size:16px;font-weight:700}
+body.docked #viewMap .edbody .edfoot .btn{min-height:44px;border-radius:22px;flex:1 1 120px}
+body.docked #viewMap .edwhy,body.docked #viewMap .edprob,body.docked #viewMap .edmeasure{border-radius:16px;padding:14px}
+/* Docked: the decisions stay in reach at the bottom of a line, above the tabs; the list has three columns; the toast clears the tabs */
+body.docked #viewMap .edbody .edfoot{position:sticky;bottom:-16px;z-index:2;background:var(--card);margin:0 -16px -16px;padding:10px 16px 12px;box-shadow:0 -8px 16px -12px rgba(16,24,40,.25)}
+body.docked #viewMap .mrow{grid-template-columns:minmax(0,1fr) 76px 84px;min-width:0}
+body.docked #viewMap .mrow>:nth-child(2),body.docked #viewMap .mrow>:nth-child(4){display:none}
+body.docked #viewMap .mrow>*{padding:8px 4px}
+body.docked #viewMap .lstate{font-size:12.5px}
+body.docked .toast{bottom:76px}
+body.docked .toast{top:12px;bottom:auto}
 </style>
 </head>
 <body>
 <div class="shell">
 <div class="page">
+<!-- Docked in Revit (body.docked; the canvas's “Revit panel” boards, about 440 px wide): the structure and Read again on top,
+     three tabs along the bottom (Next, Bill, Parts). The same page as the browser's, not a second app (dockview.js) -->
+<header class="dockhead" id="dockHead">
+  <div class="docklogo" aria-hidden="true">S</div>
+  <div class="dockwho"><b id="dockName">SolvBoQ</b><span id="dockSub"></span></div>
+  <button type="button" class="hvbtn outline" id="dockReread">Read again</button>
+</header>
+<nav class="docknav" id="dockNav" aria-label="Panel">
+  <button type="button" id="dockTabNext">Next</button>
+  <button type="button" id="dockTabBill">Bill</button>
+  <button type="button" id="dockTabParts">Parts</button>
+</nav>
 <!-- The top bar (the canvas's Web 1 and Web 2): the logo goes to all projects; the project switcher, three tabs and Settings;
      the account. On the Projects page only the logo, the firm and the account. (homeview.js) -->
 <header class="topbar" id="topbar">
@@ -1169,6 +1250,7 @@ body.docked .edbig{font-size:26px}
   <div id="loadErr"></div>
 
   <!-- ===== Projects (Web 1) and the project overview (Web 2): homeview.js ===== -->
+  <div id="viewNext" hidden></div>
   <div id="viewHome" hidden></div>
   <div id="viewOv" hidden></div>
 
@@ -8686,6 +8768,8 @@ const MISSING_SCHEMA = { type: "object", additionalProperties: false, required: 
 //   projects/{pid}/masters/{mid}                    a master BoQ: his lines, quantity columns and links to the model
 //   projects/{pid}/notes/{id}                      his note on a generated bill line: his figure, SolvBoQ's, why (notes.js)
 //   projects/{pid}/inputs/main                     the project's inputs: method, stage, policy, structures and geotech (inputs.js)
+//   projects/{pid}.revitModels.{guid}               a Revit model (its document GUID) belongs to this project: { structure, name, title }
+//   panelSignIns/{id}                               a session handed from his browser to the panel in Revit, encrypted to the panel's key
 //   projects/{pid}/structures/{sid}                 a structure: name, kind, its runs (models) by date, where its bill stands,
 //                                                   its signed versions; bills/{n} under it are the signed bills (create-only)
 //   projects/{pid}/models/{mid}                     a model extract: title, date, element count, and parts/{n} with the
@@ -8813,6 +8897,31 @@ const Store = (() => {
     }
     return out;
   }
+  // ----- Signing in to the panel in Revit through his own browser (T-022, 18 Nov 2026) -----
+  // The page Revit opens can't open Google's or Microsoft's sign-in window (a file:// page, and Google refuses web views
+  // inside apps). So, like a TV's device code: the panel makes a key pair and a short code, and opens the published page in
+  // his browser with the request (#panel=…&k=…). There, signed in as usual (usually already), he checks the code matches and
+  // clicks once; the browser encrypts its session to the panel's public key and leaves it at panelSignIns/{id} (anyone may
+  // read it by its id, but only the panel holds the key that opens it). The panel picks it up, signs in with it, and keeps
+  // it in its own storage (the web view's data folder), so the next time Revit opens SolvBoQ he is still signed in.
+  const b64u = (u8) => btoa(String.fromCharCode(...new Uint8Array(u8))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  const unb64u = (s) => Uint8Array.from(atob(String(s).replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+  const ALPHA = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const PANEL_TTL = 15 * 60 * 1000, PANEL_REQ = "solvboq-panel-request-v1";
+  // The code both sides show: from the request's id and the panel's key, so a link made by someone else shows another code
+  const panelCode = async (id, k) => { const d = new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(id + "|" + k))); const c = [...d.slice(0, 6)].map((b) => ALPHA[b % 32]).join(""); return c.slice(0, 3) + "-" + c.slice(3); };
+  const ecdh = { name: "ECDH", namedCurve: "P-256" };
+  let panelWait = null;
+  // The browser side: a request from a panel, in this page's address or kept from before he signed in (an email link's
+  // round trip loses the address); dropped after 15 minutes
+  const panelRequest = () => {
+    const m = /[#&]panel=([A-Za-z0-9]{20,64})&k=([A-Za-z0-9_-]{60,120})/.exec(location.hash || "");
+    if (m) { const r = { id: m[1], k: m[2], at: Date.now() }; try { localStorage.setItem(PANEL_REQ, JSON.stringify(r)); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); return r; }
+    try { const r = JSON.parse(localStorage.getItem(PANEL_REQ) || "null"); if (r && Date.now() - r.at < PANEL_TTL) return r; localStorage.removeItem(PANEL_REQ); } catch (e) {}
+    return null;
+  };
+  let panelReq = null;
+  try { panelReq = web ? panelRequest() : null; } catch (e) { panelReq = null; }
   const gzip = async (text) => new Uint8Array(await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
   const gunzip = async (u8) => new Response(new Blob([u8]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
   const PIECE = 900 * 1024;
@@ -8865,6 +8974,66 @@ const Store = (() => {
     // After confirming the email: read the account again, and do what sign-in does with a verified email
     recheck: () => wrap(async () => { await A.reload(user); await user.getIdToken(true); settled = await settle(user); tellUser(); }),
     signOut: () => wrap(() => A.signOut(auth)),
+
+    // The panel: start a sign-in through the browser. Returns { code, url }; signed in when done() resolves (or it throws)
+    startPanelSignIn: () => wrap(async () => {
+      api.cancelPanelSignIn();
+      const kp = await crypto.subtle.generateKey(ecdh, false, ["deriveKey"]);
+      const k = b64u(await crypto.subtle.exportKey("raw", kp.publicKey));
+      const id = [...crypto.getRandomValues(new Uint8Array(28))].map((b) => ALPHA[b % 32]).join("");
+      const code = await panelCode(id, k), home = (typeof window !== "undefined" && window.SOLVBOQ_HOME) || HOME;
+      const me = { id, cancelled: false };
+      panelWait = me;
+      const done = (async () => {
+        const ref = F.doc(db, "panelSignIns", id), until = Date.now() + PANEL_TTL;
+        let d = null;
+        while (!me.cancelled && Date.now() < until) {
+          try { const s = await F.getDoc(ref); if (s.exists()) { d = s.data(); break; } } catch (e) { if (!/unavailable|network/.test(e.code || "")) throw e; }
+          await new Promise((r) => setTimeout(r, 1500));
+        }
+        if (me.cancelled) return null;
+        if (!d) throw new Error("The browser didn’t answer in 15 minutes. Start again.");
+        const theirs = await crypto.subtle.importKey("raw", unb64u(d.pub), ecdh, false, []);
+        const key = await crypto.subtle.deriveKey({ name: "ECDH", public: theirs }, kp.privateKey, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+        const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64u(d.iv), additionalData: new TextEncoder().encode(id) }, key, unb64u(d.data));
+        const u = JSON.parse(new TextDecoder().decode(plain));
+        if (!u || u.uid !== d.uid || u.apiKey !== FIREBASE_CONFIG.apiKey) throw new Error("That sign-in didn’t come from SolvBoQ. Start again.");
+        // Restored on a temporary app, exactly as a page reload restores a saved sign-in, then made this page's account
+        const name = "panel-" + id.slice(0, 8), slot = `firebase:authUser:${FIREBASE_CONFIG.apiKey}:${name}`;
+        localStorage.setItem(slot, JSON.stringify({ ...u, appName: name }));
+        const tmp = sdk.initializeApp(FIREBASE_CONFIG, name);
+        try {
+          const tAuth = A.initializeAuth(tmp, { persistence: A.browserLocalPersistence });
+          const tu = await new Promise((res) => { const off = A.onAuthStateChanged(tAuth, (x) => { off(); res(x); }); });
+          if (!tu || tu.uid !== d.uid) throw new Error("That sign-in has expired. Start again.");
+          await A.updateCurrentUser(auth, tu);
+        } finally { await sdk.deleteApp(tmp).catch(() => {}); try { localStorage.removeItem(slot); } catch (e) {} }
+        await F.deleteDoc(ref).catch(() => {});
+        if (panelWait === me) panelWait = null;
+        return user || auth.currentUser;
+      })();
+      done.catch(() => {});
+      return { code, url: `${home}#panel=${id}&k=${k}`, done: () => wrap(() => done) };
+    }),
+    cancelPanelSignIn: () => { if (panelWait) panelWait.cancelled = true; panelWait = null; },
+    // The browser: a panel waiting to be signed in, with the code it shows ({ id, k, code }), or null
+    panelRequest: async () => (panelReq ? { ...panelReq, code: await panelCode(panelReq.id, panelReq.k) } : null),
+    dropPanelRequest: () => { panelReq = null; try { localStorage.removeItem(PANEL_REQ); } catch (e) {} },
+    // The browser, signed in: send this session to the panel, encrypted to its key
+    approvePanel: () => wrap(async () => {
+      need();
+      const r = panelReq; if (!r) throw new Error("There’s no request from Revit any more. Click Sign in in Revit again.");
+      if (Date.now() - r.at > PANEL_TTL) { api.dropPanelRequest(); throw new Error("That request from Revit is over 15 minutes old. Click Sign in in Revit again."); }
+      const theirs = await crypto.subtle.importKey("raw", unb64u(r.k), ecdh, false, []);
+      const mine = await crypto.subtle.generateKey(ecdh, false, ["deriveKey"]);
+      const key = await crypto.subtle.deriveKey({ name: "ECDH", public: theirs }, mine.privateKey, { name: "AES-GCM", length: 256 }, false, ["encrypt"]);
+      await user.getIdToken(true);   // a fresh token, so the panel starts with an hour on it
+      const iv = crypto.getRandomValues(new Uint8Array(12));
+      const data = await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: new TextEncoder().encode(r.id) }, key, new TextEncoder().encode(JSON.stringify(user.toJSON())));
+      await F.setDoc(F.doc(db, "panelSignIns", r.id), { uid: user.uid, pub: b64u(await crypto.subtle.exportKey("raw", mine.publicKey)), iv: b64u(iv), data: b64u(data), at: new Date().toISOString() });
+      api.dropPanelRequest();
+      return user.email || "";
+    }),
 
     // My projects: the ones I'm on, and every project of my firm
     myProjects: () => wrap(async () => {
@@ -9055,6 +9224,13 @@ const Store = (() => {
       await F.setDoc(ref, JSON.parse(JSON.stringify({ ...fields, at: new Date().toISOString() })), { merge: true });
       if (whole) await F.updateDoc(ref, JSON.parse(JSON.stringify(whole)));
     }),
+    // A Revit model's project (T-022): projects/{pid}.revitModels.{document GUID} = { structure, name, title, by, at }. On the
+    // project itself, so the project list every colleague loads already says where a model belongs (no extra reads)
+    linkModel: (pid, guid, entry) => wrap(async () => {
+      need();
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(guid || "")) throw new Error("This model has no id from Revit to link it by.");
+      await F.updateDoc(F.doc(db, "projects", pid), { [`revitModels.${guid.toLowerCase()}`]: JSON.parse(JSON.stringify({ ...entry, by: user.email || user.uid, at: new Date().toISOString() })) });
+    }),
     // A signed version, noted on its structure so the Projects page counts bills signed without reading every bill
     noteSigned: (pid, sid, b) => wrap(async () => { need(); await F.setDoc(F.doc(db, "projects", pid, "structures", sid), { signed: { [String(b.n)]: JSON.parse(JSON.stringify({ at: b.at || "", name: b.name || "", kind: b.kind || "signed", print: b.extract?.print || "" })) } }, { merge: true }); }),
     // What an open certificate came to (claimsview.js clKeepCheck), kept on the certificate
@@ -9094,7 +9270,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", linkModel: "model’s project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -9202,12 +9378,12 @@ const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decid
 function load(records, name, meta = {}) {
   if (typeof decFlush === "function") decFlush();   // the model being left: its decisions saved, none carried into the next
   if (typeof ovFlush === "function") ovFlush();     // and its corrections kept in SolvBoQ: never laid on the next model
-  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "map", "conv"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "map", "conv", "next"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   state.result = runChecks(typeof ovRecords === "function" ? ovRecords(records) : records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles();
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
   if (meta.ptype) $("fType").value = meta.ptype;
-  const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checkedIso = isNaN(d) ? "" : d.toISOString(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   $("loadErr").replaceChildren(); $("aiStatus").textContent = "";
   const sm = state.result.summary;
   state.prev = recordHistory($("fProject").value.trim(), $("fRev").value.trim(), Math.round(sm.quantities * 100), Math.round(sm.overall * 100));
@@ -9300,10 +9476,12 @@ function render() {
   $("viewSign").hidden = state.view !== "sign";
   $("viewHome").hidden = state.view !== "home";
   $("viewOv").hidden = state.view !== "ov";
+  $("viewNext").hidden = state.view !== "next";
   // The top bar's tab, the sub-bar under Bills or Settings, and the page heading (homeview.js)
   navMark();
   if (state.view === "home") return renderHome();
   if (state.view === "ov") return renderOv();
+  if (state.view === "next") return renderNext();
   // The master BoQ needs the model; the fix list is the model's
   $("btnGoFix").hidden = state.view === "master";
   if (state.view === "proj") { $("modelName").textContent = (state.fromSample && $("fProject").value.trim()) || cleanName(state.name) || "Model"; return renderProj(); }
@@ -9654,8 +9832,7 @@ function hostCodesDone(m) {
 if (HOST && typeof document !== "undefined") {
   document.body.classList.add("docked");
   const bar = h("div", { class: "dockbar" },
-    h("button", { type: "button", class: "btn sm", id: "btnOverview", onclick: () => { state.sel = null; state.ovOpen = true; if (state.view !== "map") { state.view = "map"; render(); } else renderMap(); } }, "Overview and fixes"),
-    h("button", { type: "button", class: "btn sm", id: "btnReread", title: "Read the model in Revit again and show the new bill", onclick: () => hostReread() }, "Read the model again"));
+    h("button", { type: "button", class: "btn sm", id: "btnOverview", onclick: () => { state.sel = null; state.ovOpen = true; if (state.view !== "map") { state.view = "map"; render(); } else renderMap(); } }, "Overview and fixes"));   // (Read again is in the panel's header: dockview.js)
   const at = document.getElementById("btnBoqCopy"); if (at) at.before(bar);
 }
 // He selected elements in the model: open the bill line they are on (the modelled line, where their volume, area or count
@@ -10289,7 +10466,7 @@ function renderMap() {
   renderEditor(lines, groups);
 }
 
-// The bill as one table (the canvas's “Web 3: The bill”, 18 Nov 2026): description, unit, quantity, how we got it and one of two
+// The bill as one table (the canvas's “Web 3: The bill”, 17 Nov 2026): description, unit, quantity, how we got it and one of two
 // statuses for him, Confirmed or Needs you. Why a line needs him (a model problem, a rule to confirm, Claude's suggestion, a
 // figure to measure) is said in its panel. His layout stays: a row per section, then the clause and its heading, then a
 // sub-heading (“Vertical formwork to:”), then the items (8 Nov 2026).
@@ -10464,7 +10641,7 @@ function renderEditor(lines, groups) {
   const back = docked ? h("div", { class: "edhead" }, h("button", { type: "button", class: "btn sm", id: "btnBackBill", style: "align-self:flex-start", onclick: () => { state.ovOpen = false; renderMap(); } }, "‹ Back to the bill")) : null;
   $("mEditor").replaceChildren(...(L ? editorFor(L, lines) : docked && !state.ovOpen ? [] : [back, ...editorOverview(lines, groups)].filter(Boolean)));
 }
-// A line's panel, in the order of the canvas's “Web 3: The bill” (18 Nov 2026): why it needs him (one sentence: a model problem,
+// A line's panel, in the order of the canvas's “Web 3: The bill” (17 Nov 2026): why it needs him (one sentence: a model problem,
 // a rule to confirm, Claude's suggestion, a figure to measure, a change since the signed bill), the figure and how it was got,
 // how it is worked out and the elements behind it, what would make an estimate a measurement, then Accept, Change, Leave out.
 // Below them, the changes themselves (the item, the quantity, the assumptions) and his notes. Every action Map to SANS had is here.
@@ -10476,7 +10653,10 @@ function editorFor(L, lines) {
   const head = h("div", { class: "edhead" },
     h("div", { class: "edpath" }, h("span", {}, `Item ${L.n} · ${L.unmapped ? "Not mapped" : `${SECTION_LABEL(L.section)}${L.clause ? " " + L.clause : ""} · ${L.heading}`}`),
       iconBtn("M15 6l-6 6 6 6", "Previous item", () => go(-1)), iconBtn("M9 6l6 6-6 6", "Next item", () => go(1)), iconBtn("M6 6l12 12M18 6L6 18", "Close", () => selectLine(null))),
-    h("h2", {}, L.description));
+    h("h2", {}, L.description),
+    // Docked: where this line is among those that need him (the canvas's “Revit panel 4: A line”)
+    HOST ? h("span", { class: "edpos", id: "edPos" }, (() => { const need = lines.filter((x) => OPEN.has(x.status)), k = need.indexOf(L);
+      return k >= 0 ? `Line ${k + 1} of the ${need.length} that need${need.length === 1 ? "s" : ""} you` : `Item ${L.n} of ${lines.filter((x) => x.status !== "out").length}`; })()) : null);
   const body = [];
   // The figure, how it was got, and where it stands
   const b = lineBasis(L);
@@ -10538,7 +10718,9 @@ function editorFor(L, lines) {
   if (open && L.status !== "unmapped") {
     if (L.status === "measure") foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { const v = $("edqty")?.value.trim(); if (!v) { edChange(); return toast("Enter the quantity first."); } setQty(L, v); advance(L); renderMap(); } }, "Save quantity and next"),
       h("button", { type: "button", class: "btn", onclick: () => { state.prov.add(L.key); advance(L); toast("Billed as provisional"); renderMap(); } }, "Bill as provisional"), leave);
-    else foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => confirmLine(L) }, L.status === "flag" ? (L.lessOn ? "Bill less the overlap and next" : "Bill as is and next") : L.status === "claude" ? "Accept and next" : L.status === "moved" ? "Accept the new quantity and next" : L.est && !L.edited ? "Accept the estimate and next" : "Accept and next"), change, leave);
+    else foot.push(h("button", { type: "button", class: "btn dark grow", id: "btnAccept", onclick: () => confirmLine(L) }, L.status === "flag" ? (L.lessOn ? "Bill less the overlap and next" : "Bill as is and next") : L.status === "claude" ? "Accept and next" : L.status === "moved" ? "Accept the new quantity and next" : L.est && !L.edited ? "Accept the estimate and next" : HOST ? "Accept and go to the next line" : "Accept and next"), change, leave);
+    // Docked: on to the next line that needs him without deciding this one
+    if (HOST) foot.push(h("button", { type: "button", class: "btn", id: "btnSkip", onclick: () => { const n = nextOpenAfter(L); if (n) selectLine(n); else toast("No other line needs you"); } }, "Skip for now"));
   } else if (L.status === "unmapped") foot.push(h("button", { type: "button", class: "btn dark grow", onclick: () => { state.itemMenu = true; renderMap(); edChange(); } }, "Choose its item"), leave);
   else if (L.status === "done" && by && !L.edited) foot.push(h("span", { class: "edok" }, "Matched by a rule"), h("button", { type: "button", class: "btn", onclick: () => selectLine(nextOpenAfter(L)) }, "Next"), change, leave);
   else foot.push(h("span", { class: "edok" }, L.status === "out" ? "Left out and sent to the fix list" : L.status === "prov" ? "Billed as provisional" : L.expected ? "Quantity entered" : "Confirmed"),
@@ -11058,7 +11240,7 @@ const SIGN = { key: "", sid: "", list: [], since: null, busy: false, err: "", op
 const SIGNER = "solvboq-signer-v1";
 const signSlug = (s) => String(s || "model").toLowerCase().replace(/\.[a-z0-9]+$/, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || "model";
 // The structure the open model belongs to (the project's, else one named after the model)
-function signStructure() { const s = typeof piEngine === "function" ? piEngine()?.structure : null; return s?.id ? { id: String(s.id), name: s.name || "" } : { id: "m-" + signSlug(cleanName(state.name)), name: cleanName(state.name) }; }
+function signStructure() { const s = typeof piEngine === "function" ? piEngine()?.structure : null; return s?.id ? { id: String(s.id), name: s.name || "" } : (typeof stOf === "function" ? stOf(state.name) : { id: "m-" + signSlug(cleanName(state.name)), name: cleanName(state.name) }); }
 const signPrint = () => modelPrint([{ key: "m", elements: state.records || [] }]);
 const signLatest = () => SIGN.list[SIGN.list.length - 1] || null;
 // After a model opens, and when the project changes: its structure's signed versions, and whether this run is a new one
@@ -12770,7 +12952,7 @@ $("projSel").addEventListener("change", async (e) => {
 });
 
 // Called when the project list loads or the project changes (claimsview.js)
-function pvAfterProjects() { renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
+function pvAfterProjects() { if (typeof frCheck === "function" && frCheck()) return; renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
 
 // ----- The project's models -----
 // The model last used in each project, so choosing a project (or reloading the page) opens it again
@@ -12826,13 +13008,15 @@ function pvModelUploaded(data, fileName) {
   const title = (m.title || String(fileName || "Model").replace(/_\d{8}_\d{6}/, "").replace(/\.(json|csv|rvt)$/i, "")).trim();
   const dated = m.checkedAt ? new Date(m.checkedAt).toISOString() : new Date().toISOString();
   const elements = Array.isArray(data) ? data.length : (data?.elements || []).length;
-  PV.pending = { data, info: { title, fileName: fileName || title, dated, elements, project: m.project || "", revision: m.revision || "", checkedBy: m.checkedBy || "", revitVersion: m.revitVersion || "" },
+  PV.pending = { data, info: { title, fileName: fileName || title, dated, elements, project: m.project || "", revision: m.revision || "", checkedBy: m.checkedBy || "", revitVersion: m.revitVersion || "", documentId: m.documentId || "" },
     mid: pvSlug(title) + "-" + dated.replace(/[^0-9]/g, "").slice(0, 12) };
   pvTrySave();
 }
 async function pvTrySave() {
   const p = PV.pending;
   if (!p || !Store.user || !CL.loaded) return;
+  // A Revit model seen for the first time waits until he says which project it is for (firstrun.js)
+  if (typeof frWaiting === "function" && frWaiting()) return;
   if (!CL.pid) {
     // No project yet: offer one named after the model
     if (!confirm(`Save ${p.info.title} to a new project? Projects keep your models (with their dates), master BoQs and certificates.`)) { PV.pending = null; return; }
@@ -12921,15 +13105,17 @@ renderSaveState();
 
 // ===== Sign in (decided 17 Nov 2026: sign-in is required; Microsoft, Google or an email link; no guests) =====
 // The page is covered by the sign-in card until there's an account. With a work email the firm's projects are there at once;
-// someone outside the firm sees only what they were invited to. In the page Revit opens (file://) there are no pop-ups, so
-// it's the email link, pasted in from the email. A browser still signed in as a guest from before hands its projects to
-// the account (store.js), and says so once signed in.
-const SG = { sent: "", err: "", busy: "", paste: false, email: "" };
+// someone outside the firm sees only what they were invited to. A browser still signed in as a guest from before hands its
+// projects to the account (store.js), and says so once signed in.
+// In the page Revit opens (file://, in the panel or a browser) there are no sign-in windows, so (T-022, 18 Nov 2026) it signs
+// in through his own browser: the panel shows a code and opens SolvBoQ in the browser, he checks the code there and clicks
+// once (store.js startPanelSignIn). The email link, pasted in from the email, stays as the other way.
+const SG = { sent: "", err: "", busy: "", paste: false, email: "", panel: null, mail: false };
 const sgFile = () => location.protocol === "file:";
 function renderSignIn() {
   let gate = $("signinGate");
   const show = Store.available && Store.ready && !Store.user;
-  if (!show) { if (gate) gate.remove(); renderVerifyBar(); return; }
+  if (!show) { if (gate) gate.remove(); renderVerifyBar(); renderPanelAsk(); return; }
   if (!gate) { gate = h("div", { id: "signinGate", class: "gate" }); document.body.append(gate); }
   const go = async (what, fn) => { SG.err = ""; SG.busy = what; renderSignIn(); try { await fn(); } catch (e) { SG.err = e.message; } SG.busy = ""; renderSignIn(); };
   // Opened from the link on another computer (no email kept here) or a link that failed: finish with the email typed in
@@ -12938,14 +13124,14 @@ function renderSignIn() {
   if (landed || linkErr) SG.paste = true;
   const email = h("input", { id: "sgEmail", type: "email", autocomplete: "email", placeholder: "you@yourfirm.co.za", value: SG.email || Store.linkEmail(location.href) || "", oninput: (e) => { SG.email = e.target.value; } });
   const link = h("input", { id: "sgLink", type: "url", placeholder: "Paste the sign-in link from the email", value: SG.link || (landed ? location.href : ""), oninput: (e) => { SG.link = e.target.value; } });
-  const busy = !!SG.busy;
+  const busy = !!SG.busy, file = sgFile(), mailOpen = !file || SG.mail || SG.sent || landed || linkErr;
   gate.replaceChildren(h("div", { class: "gatecard", role: "dialog", "aria-modal": "true", "aria-labelledby": "sgH" },
     h("div", { class: "gatebrand" }, svg('<svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14V8h3v6M6.5 14V3h3v11M11 14v-4h3v4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>'), h("b", null, "SolvBoQ")),
     h("h1", { id: "sgH" }, "Sign in to SolvBoQ"),
     h("p", { class: "sub" }, "Sign in with your work email and your firm’s projects are there. If someone outside your firm invited you, use the email they invited."),
     Store.hasGuest ? h("div", { class: "banner" }, h("span", null, h("b", null, "Projects on this computer move with you. "), "This browser has projects from before sign-in was needed. They move to your account (and into your firm) when you sign in.")) : null,
-    sgFile() ? h("p", { class: "sub" }, "In Revit, sign in with the email link: Microsoft and Google sign-in open a window this page can’t.")
-      : h("div", { class: "gatebtns" },
+    !file && SG.ask ? h("div", { class: "banner", id: "sgRevitWaiting" }, h("span", null, h("b", null, "Revit is waiting. "), `Sign in here, then check the code ${SG.ask.code} and send the sign-in to Revit.`)) : null,
+    file ? sgPanelBox(busy) : h("div", { class: "gatebtns" },
         h("button", { type: "button", class: "btn gatebtn", disabled: busy || null, onclick: () => go("microsoft", Store.signInMicrosoft) },
           svg('<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="#F25022" d="M1 1h6.5v6.5H1z"/><path fill="#7FBA00" d="M8.5 1H15v6.5H8.5z"/><path fill="#00A4EF" d="M1 8.5h6.5V15H1z"/><path fill="#FFB900" d="M8.5 8.5H15V15H8.5z"/></svg>'),
           SG.busy === "microsoft" ? "Signing in…" : "Continue with Microsoft"),
@@ -12953,19 +13139,68 @@ function renderSignIn() {
           svg('<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>'),
           SG.busy === "google" ? "Signing in…" : "Continue with Google"),
         h("div", { class: "gateor" }, h("span", null, "or"))),
-    h("form", { class: "gateform", onsubmit: (e) => { e.preventDefault(); go("link", async () => { SG.sent = await Store.sendLink(email.value); SG.email = SG.sent; }); } },
-      h("label", { class: "edlabel", for: "sgEmail" }, "Email"),
-      h("div", { class: "gaterow" }, email, h("button", { type: "submit", class: "btn dark", disabled: busy || null }, SG.busy === "link" ? "Sending…" : SG.sent ? "Send again" : "Email me a sign-in link"))),
+    !mailOpen ? h("button", { type: "button", class: "link", id: "sgUseMail", onclick: () => { SG.mail = true; renderSignIn(); } }, "Sign in with an email link instead")
+      : h("form", { class: "gateform", onsubmit: (e) => { e.preventDefault(); go("link", async () => { SG.sent = await Store.sendLink(email.value); SG.email = SG.sent; }); } },
+        h("label", { class: "edlabel", for: "sgEmail" }, "Email"),
+        h("div", { class: "gaterow" }, email, h("button", { type: "submit", class: "btn dark", disabled: busy || null }, SG.busy === "link" ? "Sending…" : SG.sent ? "Send again" : "Email me a sign-in link"))),
     SG.sent ? h("div", { class: "gatesent", role: "status" }, h("b", null, `Sent to ${SG.sent}. `),
-      sgFile() ? "Open the email, right-click the sign-in link, choose Copy link, and paste it below." : "Open the link in the email on this computer, in this browser. It works once, for an hour.") : null,
-    SG.paste || SG.sent || sgFile()
+      file ? "Open the email, right-click the sign-in link, choose Copy link, and paste it below." : "Open the link in the email on this computer, in this browser. It works once, for an hour.") : null,
+    SG.paste || SG.sent || (file && mailOpen)
       ? h("form", { class: "gateform", onsubmit: (e) => { e.preventDefault(); go("paste", () => Store.finishLink(link.value, email.value)); } },
         h("label", { class: "edlabel", for: "sgLink" }, landed ? "Signing in with the link from your email" : "The sign-in link from the email"),
         h("div", { class: "gaterow" }, link, h("button", { type: "submit", class: "btn dark", disabled: busy || null }, SG.busy === "paste" ? "Signing in…" : "Sign in")),
         landed ? h("span", { class: "sub" }, "Check the email above is the one the link was sent to.") : null)
-      : h("button", { type: "button", class: "link", onclick: () => { SG.paste = true; renderSignIn(); } }, "I have a sign-in link"),
+      : file ? null : h("button", { type: "button", class: "link", onclick: () => { SG.paste = true; renderSignIn(); } }, "I have a sign-in link"),
     SG.err || linkErr ? h("div", { class: "err", role: "alert" }, SG.err || linkErr) : null));
 }
+// The page Revit opens: sign in through the browser, with a code to check there
+function sgPanelBox(busy) {
+  const p = SG.panel;
+  const open = () => { try { window.open(p.url, "_blank", "noopener"); } catch (e) {} };
+  if (!p) return h("div", { class: "gatebtns", id: "sgPanel" },
+    h("button", { type: "button", class: "btn dark gatebtn", id: "sgBrowser", disabled: busy || null, onclick: sgPanelStart }, SG.busy === "panel" ? "Opening your browser…" : "Sign in with your browser"),
+    h("span", { class: "sub" }, "SolvBoQ opens in your browser, where you sign in as usual (Microsoft, Google or an email link). You stay signed in here afterwards."));
+  return h("div", { class: "gatesent", id: "sgPanel", role: "status" },
+    h("span", null, "Your browser opened SolvBoQ. Check it shows this code, then click ", h("b", null, "Sign in to Revit"), " there:"),
+    h("div", { class: "gatecode", id: "sgCode" }, p.code),
+    h("span", { class: "sub" }, "Waiting for your browser…"),
+    h("div", { class: "gaterow" },
+      h("button", { type: "button", class: "btn sm", onclick: open }, "Open the browser again"),
+      h("button", { type: "button", class: "btn sm", onclick: () => { Store.cancelPanelSignIn(); SG.panel = null; renderSignIn(); } }, "Cancel")));
+}
+async function sgPanelStart() {
+  SG.err = ""; SG.busy = "panel"; renderSignIn();
+  let p = null;
+  try {
+    p = await Store.startPanelSignIn();
+    SG.panel = p; SG.busy = ""; renderSignIn();
+    try { window.open(p.url, "_blank", "noopener"); } catch (e) {}
+    await p.done();
+  } catch (e) { SG.err = e.message; }
+  if (SG.panel === p) SG.panel = null;
+  SG.busy = ""; renderSignIn();
+}
+
+// The browser, asked by a panel in Revit to sign it in: once signed in here, check the code and send it
+async function renderPanelAsk() {
+  if (sgFile() || !Store.available) return;
+  if (SG.ask === undefined) { SG.ask = (await Store.panelRequest()) || null; if (SG.ask && !Store.user) return renderSignIn(); }
+  let box = $("panelAsk");
+  if (!SG.ask || !Store.user) { if (box && !SG.askDone) box.remove(); return; }
+  if (!box) { box = h("div", { id: "panelAsk", class: "gate" }); document.body.append(box); }
+  const r = SG.ask, close = () => { box.remove(); SG.ask = null; SG.askDone = ""; };
+  const send = async () => { SG.askErr = ""; SG.askBusy = true; renderPanelAsk(); try { await Store.approvePanel(); SG.askDone = Store.user.email; } catch (e) { SG.askErr = e.message; } SG.askBusy = false; renderPanelAsk(); };
+  box.replaceChildren(h("div", { class: "gatecard", role: "dialog", "aria-modal": "true", "aria-labelledby": "paH" },
+    h("h1", { id: "paH" }, SG.askDone ? "Revit is signed in" : "Sign in to SolvBoQ in Revit"),
+    SG.askDone ? [h("p", { class: "sub" }, `Go back to Revit: the panel is signed in as ${SG.askDone}, and stays signed in.`), h("button", { type: "button", class: "btn dark", id: "paClose", onclick: close }, "Close")]
+      : [h("p", { class: "sub" }, "The SolvBoQ panel in Revit asked to sign in as you. Only go on if you just clicked Sign in there, and it shows this code:"),
+        h("div", { class: "gatecode", id: "paCode" }, r.code),
+        h("div", { class: "gaterow" },
+          h("button", { type: "button", class: "btn dark", id: "paSend", disabled: SG.askBusy || null, onclick: send }, SG.askBusy ? "Signing in…" : `Sign in to Revit as ${Store.user.email || "you"}`),
+          h("button", { type: "button", class: "btn", onclick: () => { Store.dropPanelRequest(); close(); } }, "Not me")),
+        SG.askErr ? h("div", { class: "err", role: "alert" }, SG.askErr) : null]));
+}
+
 // Signed in with an email that isn't verified (Microsoft can sign in so): the firm and invitations wait until it is
 function renderVerifyBar() {
   let bar = $("verifyBar");
@@ -13419,7 +13654,7 @@ Store.onUser(() => piLoad());
 // Top-level names: HV, hv*, st*, navMark, renderHome, renderOv, goHome, goOv, goBills, goSettings, homeAfter.
 
 const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "proj", stTimer: null, stSaved: {} };
-const HV_SECTION = { home: "home", ov: "ov", claims: "claims", proj: "settings", conv: "settings", std: "settings" };
+const HV_SECTION = { home: "home", ov: "ov", claims: "claims", proj: "settings", conv: "settings", std: "settings", next: "bills" };
 const hvSection = () => HV_SECTION[state.view] || "bills";
 const hvDay = (iso) => { const d = new Date(iso); return iso && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""; };
 const hvRand = (v) => `R ${Math.round(v || 0).toLocaleString("en-GB")}`;
@@ -13456,6 +13691,7 @@ function navMark() {
   if (sec === "bills" && state.view === "map" && state.mapLines?.length) billHeadNow(state.mapLines);   // (navMark alone, after the bill drew: keep its count)
   document.querySelector("main").classList.toggle("opening", !!HV.opening && sec === "bills");
   stTouch();
+  if (typeof dockMark === "function") dockMark();
 }
 // Under Bills: the structure the open model is, and its run
 function hvBillHead() {
@@ -13533,7 +13769,11 @@ $("meBtn").addEventListener("click", (e) => {
 // The structure a model belongs to (the same as signStructure for the open model)
 function stOf(title) {
   const name = cleanName(title), s = typeof structureFor === "function" ? structureFor(piDoc(), name) : null;
-  return s && s.id ? { id: String(s.id), name: s.name || name, kind: s.kind || "" } : { id: "m-" + signSlug(name), name, kind: typeof guessKind === "function" ? guessKind(name, "") : "" };
+  if (s && s.id) return { id: String(s.id), name: s.name || name, kind: s.kind || "" };
+  // A Revit model linked to the project on its first run (firstrun.js): the structure he named
+  const L = typeof frLinkFor === "function" ? frLinkFor(name) : null;
+  const kind = typeof guessKind === "function" ? guessKind(name, "") : "";
+  return L && L.structure ? { id: String(L.structure), name: L.name || name, kind } : { id: "m-" + signSlug(name), name, kind };
 }
 // A model saved to the project joins its structure as a run (projectview.js pvTrySave). Only once the project's inputs are
 // read, or the run could be filed under the wrong structure; the overview files any it missed.
@@ -13778,7 +14018,218 @@ function homeAfter() {
 Store.onUser(() => { HV.sum = {}; HV.ov = null; HV.ovFor = ""; HV.stSaved = {}; if (state.view === "home" || state.view === "ov") render(); else navMark(); });
 // In a browser with the cloud, SolvBoQ opens on your projects; opened from Revit, on the model it was handed
 // (the model checks are no longer where Revit opens: the bill is, with the checks on its lines)
-state.view = !FROM_REVIT && Store.available ? "home" : "map";
+state.view = HOST ? "next" : !FROM_REVIT && Store.available ? "home" : "map";   // docked in Revit: Next (dockview.js)
+
+// ===== The bill docked in Revit (the canvas's four “Revit panel” boards; about 440 px wide) =====
+// Built 17 Nov 2026 after his first use (14 Nov: too large, the selected item small, no way to see how a figure was got). The
+// same page as in the browser with body.docked (set when the page has a host, app.js): a header with the structure, its project
+// and Read again; three tabs along the bottom. Next: lines confirmed out of all, when the model was last read, then what to do
+// first, biggest value first, each with one main button. Bill: the bill as a compact list; a line opens full size over it
+// with its figure, its working, Select and Isolate, then Accept and go to the next line. Parts: confirming the structure by
+// part (partsview.js). A selection in the model still opens its line (hostSelection, app.js).
+// Next is made from the open bill (the line-by-line queue is T-012): model problems, the elements whose part SolvBoQ isn't sure
+// of, lines changed since the signed bill, lines with no item or no figure, lines to confirm; ordered by value at his rates where
+// the project has a bill of his with rates, else model problems first. Top-level names: dock*, renderNext.
+
+const DOCK_TAB = (v) => (v === "next" ? "next" : v === "parts" ? "parts" : "bill");
+// How long ago the model was read, in words
+function dockAgo(iso) {
+  const t = Date.parse(iso || ""); if (!t) return "";
+  const m = Math.round((Date.now() - t) / 60000);
+  return m < 1 ? "just now" : m < 60 ? `${plural(m, "minute")} ago` : m < 60 * 24 ? `${plural(Math.round(m / 60), "hour")} ago` : `${plural(Math.round(m / 1440), "day")} ago`;
+}
+// The header and the tabs (navMark calls it, docked)
+function dockMark() {
+  if (!HOST) return;
+  const tab = DOCK_TAB(state.view);
+  for (const [id, t] of [["dockTabNext", "next"], ["dockTabBill", "bill"], ["dockTabParts", "parts"]]) $(id).setAttribute("aria-current", tab === t ? "page" : "false");
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  $("dockName").textContent = !state.records ? "SolvBoQ" : state.fromSample ? $("fProject").value.trim() || cleanName(state.name) : stOf(state.name).name;
+  // The structure a Revit model became on its first run can be renamed here (firstrun.js)
+  const canRename = typeof FR !== "undefined" && FR.entry && !FR.entry.local && FR.entry.pid === CL.pid && !state.fromSample;
+  $("dockName").title = canRename ? "Rename this structure" : ""; $("dockName").style.cursor = canRename ? "pointer" : "";
+  $("dockName").onclick = canRename ? frRename : null;
+  if (canRename) { $("dockName").setAttribute("role", "button"); $("dockName").tabIndex = 0; $("dockName").onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); frRename(); } }; }
+  else { $("dockName").removeAttribute("role"); $("dockName").removeAttribute("tabindex"); $("dockName").onkeydown = null; }
+  $("dockSub").textContent =p && state.pmid && PV.models.some((x) => x.id === state.pmid) ? p.name : Store.user ? "Not saved to a project yet" : "Not signed in: nothing is saved";
+}
+function dockGo(tab) {
+  state.view = tab === "next" ? "next" : tab === "parts" ? "parts" : "map";
+  if (tab === "bill") { state.sel = null; state.ovOpen = false; }
+  render(); window.scrollTo(0, 0);
+}
+$("dockTabNext").addEventListener("click", () => dockGo("next"));
+$("dockTabBill").addEventListener("click", () => dockGo("bill"));
+$("dockTabParts").addEventListener("click", () => dockGo("parts"));
+$("dockReread").addEventListener("click", () => hostReread());
+
+// A line from Next: open it full size, among the lines that need him
+function dockOpen(L, select) {
+  state.view = "map"; state.mFilter2 = "need"; render();
+  selectLine(L);
+  if (select && HOST) hostSelect(L.groups.flatMap((g) => g.elements.map((e) => e.Id)));
+}
+// What to do first, from the open bill
+function dockQueue() {
+  const lines = mapLines(currentGroups()).filter((L) => L.status !== "out");
+  const rate = (L) => (typeof signRate === "function" ? signRate(L) : null), val = (L) => { const r = rate(L); return r && L.shownQty > 0 ? L.shownQty * r : 0; };
+  const sum = (ls) => ls.reduce((t, L) => t + val(L), 0), first = (ls) => ls.slice().sort((a, b) => val(b) - val(a))[0];
+  const items = [], priced = lines.some((L) => rate(L));
+  for (const L of lines.filter((x) => x.status === "flag")) {
+    const p = L.problems[0] || {};
+    items.push({ kind: "flag", tone: "red", order: 0, value: val(L), title: p.title || "A model problem",
+      sub: L.overlapLess > 0 ? `${fmt2(L.overlapLess)} m³ of concrete is counted twice` : `${L.description}: ${L.shownQty == null ? "–" : `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`}`,
+      main: ["Show me", () => dockOpen(L, true)], second: L.overlapLess > 0 ? ["Bill less the overlap", () => { billLess(L); renderNext(); }] : null });
+  }
+  const moved = lines.filter((L) => L.status === "moved");
+  if (moved.length) items.push({ kind: "moved", tone: "amber", order: 1, value: sum(moved), title: `${plural(moved.length, "line")} changed since the signed bill`, sub: SIGN.since ? `Version ${SIGN.since.n} was signed on a different run of the model` : "", main: ["See what changed", () => dockOpen(first(moved))] });
+  const unsure = (typeof partsNow === "function" ? partsNow()?.rows.filter((x) => !x.sure) : null) || [];
+  if (unsure.length) { const ready = unsure.filter((x) => typeof partsProposal === "function" && partsProposal(x).kind).length;
+    items.push({ kind: "parts", tone: "violet", order: 2, value: 0, title: `${plural(unsure.length, "element")} ${unsure.length === 1 ? "has" : "have"} no part yet`, sub: ready === unsure.length ? "There’s a suggestion ready for each one" : ready ? `There’s a suggestion for ${ready} of them` : "SolvBoQ wasn’t sure which part they are", main: ["Check the suggestions", () => dockGo("parts")] }); }
+  const asks = lines.filter((L) => ["unmapped", "measure"].includes(L.status));
+  if (asks.length) { const nm = asks.filter((L) => L.unmapped).length, ms = asks.length - nm;
+    items.push({ kind: "asks", tone: "amber", order: 3, value: sum(asks), title: `${plural(asks.length, "question")} on the bill`, sub: [nm ? `${plural(nm, "line")} with no item` : "", ms ? `${plural(ms, "figure")} to measure from the drawings` : ""].filter(Boolean).join(", "), main: ["Answer them", () => dockOpen(first(asks))] }); }
+  const review = lines.filter((L) => ["confirm", "claude"].includes(L.status));
+  if (review.length) { const est = review.filter((L) => L.est && !L.edited), tot = sum(lines), ev = sum(lines.filter((L) => L.est && !L.edited));
+    items.push({ kind: "review", tone: "amber", order: 4, value: sum(review), title: `${plural(review.length, "line")} need${review.length === 1 ? "s" : ""} you`,
+      sub: priced && tot > 0 && ev > 0 ? `${Math.round((100 * ev) / tot)}% of the bill’s value is still estimated` : est.length === 1 ? "One of them is an estimate" : est.length ? `${est.length} of them are estimates` : "Rules chose their items: yours to confirm", main: ["Review them", () => dockOpen(first(review))] }); }
+  if (!items.length) items.push({ kind: "done", tone: "green", order: 9, value: 0, title: "Every line is confirmed", sub: "Sign it off, or read the model again after a change", main: ["Go to sign-off", () => { state.view = "sign"; render(); }] });
+  items.sort((a, b) => (priced ? b.value - a.value : 0) || a.order - b.order);
+  return { lines, items, priced };
+}
+function renderNext() {
+  const v = $("viewNext");
+  if (!state.result) { v.replaceChildren(h("section", { class: "dockcard" }, h("p", null, "Read the model with BoQ readiness in Revit, and its bill shows here."))); return; }
+  const { lines, items, priced } = dockQueue(), done = lines.filter((L) => !OPEN.has(L.status)).length, pct = lines.length ? (100 * done) / lines.length : 0;
+  const ago = dockAgo(state.checkedIso);
+  v.replaceChildren(
+    h("section", { class: "docksum", id: "dockSum" },
+      h("div", { class: "docksumtop" }, h("span", { class: "docksumbig" }, `${done} of ${lines.length}`), h("span", null, "lines confirmed")),
+      h("div", { class: "dockbar2", "aria-hidden": "true" }, pct > 0 ? h("div", { style: `width:${Math.round(pct)}%` }) : null),
+      h("span", null, ago ? `Model read ${ago}` : `Model read ${state.checked}`)),
+    h("section", { class: "dockcard", id: "dockQueue" },
+      h("h1", null, priced ? "Next, biggest value first" : "Next"),
+      ...items.slice(0, 5).map((it) => h("div", { class: "dockitem " + it.tone, "data-kind": it.kind },
+        h("div", { class: "dockitemtext" }, h("b", null, it.title), it.sub ? h("span", null, it.sub) : null),
+        h("div", { class: "dockitembtns" }, h("button", { type: "button", class: "dockmain", onclick: it.main[1] }, it.main[0]),
+          it.second ? h("button", { type: "button", class: "docksecond", onclick: it.second[1] }, it.second[0]) : null))),
+      items.length > 5 ? h("p", { class: "sub" }, `And ${items.length - 5} more: open the Bill tab.`) : null));
+}
+
+// ===== The first time a Revit model is opened: which project is it for? (T-022, 18 Nov 2026; the canvas's “Revit panel 1: First run”) =====
+// The add-in hands over the model's document GUID (model.documentId, Revit's CreationGUID: the same in every copy of the
+// model, detached or not). The first time SolvBoQ sees it, he is asked which of his projects it is for, or a new one, and
+// what to call the structure it becomes. The answer is kept on the project (projects/{pid}.revitModels.{guid}, store.js
+// linkModel), so the project list everyone loads already says where the model belongs: the next time he (or any colleague
+// who can open the project) opens the model, SolvBoQ goes straight to its bill with no question.
+// Until it's answered, the model isn't saved into any project (projectview.js pvTrySave waits on frWaiting).
+// Top-level names: FR, fr*.
+const frGuid = (g) => (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(g || "").trim()) ? String(g).trim().toLowerCase() : "");
+const FR = { guid: FROM_REVIT ? frGuid(window.SOLVBOQ_MODEL.model?.documentId) : "", state: "idle", entry: null, pick: "", newName: null, stName: null, busy: false, err: "" };
+const frModel = () => (FROM_REVIT ? window.SOLVBOQ_MODEL.model || {} : {});
+const frTitle = () => cleanName(frModel().title || "Revit model");
+const frLinkOf = (p) => (FR.guid && p && p.revitModels ? p.revitModels[FR.guid] || null : null);
+// The model's save waits for the answer
+const frWaiting = () => !!FR.guid && FR.state !== "linked";
+// The link of the project that's open, for a model of this name (stOf in homeview.js names the structure from it)
+function frLinkFor(name) {
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  if (!p || !p.revitModels) return null;
+  if (FR.guid && FR.state === "linked" && FR.entry?.pid === p.id && cleanName(name) === frTitle()) return FR.entry;
+  return Object.values(p.revitModels).find((e) => e && cleanName(e.title) === cleanName(name)) || null;
+}
+
+// After the project list loads (projectview.js pvAfterProjects). True when it switched project (which runs that again)
+function frCheck() {
+  if (!FR.guid || !Store.user || !CL.loaded) { frRender(); return false; }
+  if (FR.state === "linked") { frRender(); if (FR.entry && CL.pid !== FR.entry.pid && CL.projects.some((x) => x.id === FR.entry.pid)) { chooseProject(FR.entry.pid); return true; } return false; }
+  const p = CL.projects.find(frLinkOf);
+  if (p) {
+    FR.state = "linked"; FR.entry = { pid: p.id, ...frLinkOf(p) }; frRender();
+    if (CL.pid !== p.id) { chooseProject(p.id); return true; }
+    return false;
+  }
+  FR.state = "ask"; frRender();
+  return false;
+}
+Store.onUser(() => { FR.state = "idle"; FR.entry = null; frRender(); });
+
+function frRender() {
+  let box = $("firstRun");
+  const show = FR.state === "ask" && Store.user && CL.loaded;
+  if (!show) { if (box) box.remove(); return; }
+  if (!box) { box = h("div", { id: "firstRun", class: "gate" }); document.body.append(box); }
+  const m = frModel(), last = (() => { try { return localStorage.getItem("solvboq-claims-project-v1") || ""; } catch (e) { return ""; } })();
+  const list = CL.projects.slice().sort((a, b) => (b.id === last) - (a.id === last) || String(a.name).localeCompare(String(b.name)));
+  if (!FR.pick) FR.pick = list[0]?.id || "+new";
+  const revitProject = String(m.project || "").trim();
+  if (FR.newName == null) FR.newName = revitProject && !/^project name$/i.test(revitProject) ? revitProject : frTitle();
+  if (FR.stName == null) FR.stName = frTitle();
+  const opt = (value, title, sub, extra) => h("label", { class: "fropt" },
+    h("input", { type: "radio", name: "frPick", value, checked: FR.pick === value || null, onchange: () => { FR.pick = value; frRender(); } }),
+    h("span", null, h("b", null, title), sub ? h("small", null, sub) : null, extra || null));
+  const who = (p) => (p.members?.[Store.user.uid] === "viewer" ? "you can only view it" : p.firm && Store.firm && p.firm === Store.firm.id ? `${Store.firm.name || "your firm"}’s` : p.owner === Store.user.uid ? "yours" : "you were invited");
+  const n = (p) => Object.keys(p.revitModels || {}).length;
+  const newName = h("input", { id: "frNewName", type: "text", value: FR.newName, "aria-label": "Name of the new project", oninput: (e) => { FR.newName = e.target.value; } });
+  box.replaceChildren(h("form", { class: "gatecard", role: "dialog", "aria-modal": "true", "aria-labelledby": "frH", onsubmit: (e) => { e.preventDefault(); frSubmit(); } },
+    h("h1", { id: "frH" }, "Which project is this model for?"),
+    h("p", { class: "sub" }, h("b", null, frTitle()), ` · read ${m.checkedAt ? dockAgo(m.checkedAt) || "just now" : "just now"}`, m.checkedBy ? ` by ${m.checkedBy}` : ""),
+    h("p", { class: "sub" }, "SolvBoQ asks once. After this, everyone who opens this model goes straight to its bill."),
+    h("div", { class: "frlist", role: "radiogroup", "aria-labelledby": "frH" },
+      ...list.map((p) => opt(p.id, p.name, [p.contract, who(p), n(p) ? plural(n(p), "Revit model") : ""].filter(Boolean).join(" · "))),
+      opt("+new", "A new project", "", FR.pick === "+new" ? newName : null)),
+    h("div", { class: "frfield" }, h("label", { class: "edlabel", for: "frStName" }, "The structure it becomes"),
+      h("input", { id: "frStName", type: "text", value: FR.stName, oninput: (e) => { FR.stName = e.target.value; } }),
+      h("span", { class: "sub" }, "Named from the model. Rename it if you call it something else; you can change it later.")),
+    h("button", { type: "submit", class: "btn dark gatebtn", id: "frGo", disabled: FR.busy || null }, FR.busy ? "Saving…" : "Continue"),
+    FR.err ? h("div", { class: "err", role: "alert" }, FR.err) : null));
+}
+
+async function frSubmit() {
+  const title = frTitle(), stName = String(FR.stName || "").trim() || title;
+  FR.busy = true; FR.err = ""; frRender();
+  try {
+    let pid = FR.pick;
+    if (pid === "+new") {
+      const name = String(FR.newName || "").trim();
+      if (!name) throw new Error("Give the new project a name.");
+      const p = await Store.createProject({ name, contract: "" });
+      CL.projects.push(p); pid = p.id;
+    }
+    const p = CL.projects.find((x) => x.id === pid);
+    if (!p) throw new Error("Choose a project.");
+    // The structure's id: the project's own structure for this model where its inputs list one, else the id signed bills
+    // already use for a model of this name (signview.js signStructure), so earlier runs and signed bills stay with it
+    const inputs = CL.pid === pid && typeof hvInputsHere === "function" && hvInputsHere(pid) && typeof structureFor === "function" ? structureFor(piDoc(), title) : null;
+    const sid = inputs?.id ? String(inputs.id) : "m-" + signSlug(title);
+    const entry = { structure: sid, name: stName, title };
+    let kept = true;
+    try { await Store.linkModel(pid, FR.guid, entry); }
+    catch (e) { kept = false; toast(`This model wasn’t linked to ${p.name} (${e.message}). You’ll be asked again next time.`); }
+    if (kept) p.revitModels = { ...(p.revitModels || {}), [FR.guid]: entry };
+    FR.state = "linked"; FR.entry = { pid, ...entry, local: !kept };
+    if (kept) Store.saveStructure(pid, sid, { name: stName, revitModel: FR.guid, ...(typeof guessKind === "function" && guessKind(title, "") ? { kind: guessKind(title, "") } : {}) }).catch(() => {});
+    FR.busy = false; frRender();
+    state.view = HOST ? "next" : "map";
+    if (CL.pid !== pid) chooseProject(pid); else pvAfterProjects();
+    render(); window.scrollTo(0, 0);
+    if (kept) toast(`${title} is now ${stName} in ${p.name}`);
+  } catch (e) { FR.busy = false; FR.err = e.message; frRender(); }
+}
+
+// Renaming the structure later (the panel's header): the link and the structure both take the new name
+async function frRename() {
+  const e = FR.entry; if (!e || e.local || !Store.user) return;
+  const name = (prompt("Name of this structure", e.name || frTitle()) || "").trim();
+  if (!name || name === e.name) return;
+  try {
+    await Store.linkModel(e.pid, FR.guid, { structure: e.structure, name, title: e.title });
+    await Store.saveStructure(e.pid, e.structure, { name });
+    e.name = name;
+    const p = CL.projects.find((x) => x.id === e.pid); if (p?.revitModels?.[FR.guid]) p.revitModels[FR.guid] = { ...p.revitModels[FR.guid], name };
+    HV.ovFor = ""; render(); toast(`Renamed: ${name}`);
+  } catch (x) { toast(x.message); }
+}
 
 // ===== Conventions profiles and corrections =====
 // Shared mode (inside Claude, with the db capability): profiles/<id> documents and a corrections collection that
