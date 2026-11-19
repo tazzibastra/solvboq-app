@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-19T09:29:50Z">
+<meta name="solvboq-build" content="2026-11-19T09:56:32Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -3197,7 +3197,7 @@ const SAMPLE_JUNE = [{"Id":3094378,"Bic":"OST_StructuralColumns","Category":"Str
 // ===== Conventions: everything firm-specific lives here as data, not in the checks =====
 // A profile = { id, name, hints: {key: [words]}, materialGrades: [{key, value}], roles: [{key, value}],
 //               mapping: [{key, value}], suppress: [{key, value}] }.
-// The engine reads only the compiled CONV object, so a new firm means a new profile, not new code.
+// The engine reads only the compiled conventions passed to it (result.conv), so a new firm means a new profile, not new code.
 // Lists are stored as [{key, value}] (not objects keyed by name) because Revit names can contain
 // characters that aren't safe as database field names.
 
@@ -3337,7 +3337,7 @@ function compileConventions(profile) {
   return { hint, hintWords, grades: listToMap(p.materialGrades), structureGrades, rebar, earthworks, formwork, joints, sundries, roles: listToMap(p.roles), mapping: listToMap(p.mapping), suppress };
 }
 
-let CONV = compileConventions(null);
+
 
 // SolvBoQ modelling standard: one card per thing you model, and the BoQ code its Revit type carries.
 //
@@ -4589,7 +4589,7 @@ const MEASURED = new Set(["OST_Floors", "OST_Walls", "OST_StructuralFoundation",
   "OST_Topography", "OST_Toposolid", "OST_Site", "OST_Parking", "OST_Roads", "OST_Hardscape"]);
 // Older CSV rows without a category code are kept
 // Floors whose material is an analytical load placeholder (seen as "Electrical Analytical Loads") aren't built
-const isMeasured = (e) => (!e.Bic || MEASURED.has(e.Bic)) && !CONV.hint.notBuilt.test(e.Material || "") && CONV.roles[typeKey(e)] !== "notBuilt"
+const isMeasured = (e, C) => (!e.Bic || MEASURED.has(e.Bic)) && !C.hint.notBuilt.test(e.Material || "") && C.roles[typeKey(e)] !== "notBuilt"
   && !(typeof cardOf === "function" && cardOf(e)?.code === "X.NOTBUILT");
 const CONCRETE_CATS = new Set(["OST_Floors", "OST_Walls", "OST_StructuralFoundation", "OST_StructuralColumns", "OST_StructuralFraming", "OST_Stairs", "OST_GenericModel"]);
 const SUPPORT_CATS = new Set(["OST_Walls", "OST_StructuralColumns", "OST_StructuralFraming", "OST_StructuralFoundation"]);
@@ -4667,13 +4667,13 @@ function linearLength(e) {
   return 0;
 }
 const TRADE = Object.fromEntries(TRADES.map((t) => [t.key, t]));
-// Element roles for this run: Id -> { role, source: "profile" | "geometry" | "material" | "name", detail }
-let ROLE_OF = new Map();
-const H = () => CONV.hint;
-const isConcreteMat = (mat) => H().concreteMaterial.test(mat || "");
+// The engine holds no state between runs: the compiled conventions (C, from conventions.js) and the roles of this run
+// (roleOf: Id -> { role, source: "profile" | "geometry" | "material" | "name", detail }) are passed in.
+const isConcreteMat = (mat, C) => C.hint.concreteMaterial.test(mat || "");
 
-function tradeOf(e) {
-  const r = ROLE_OF.get(e.Id);
+function elementTrade(e, C, roleOf) {
+  const H = () => C.hint, isConcreteMat = (mat) => C.hint.concreteMaterial.test(mat || "");
+  const r = roleOf.get(e.Id);
   if (r && ROLES[r.role] && ROLES[r.role].trade) return ROLES[r.role].trade;
   const name = `${e.Family} ${e.Type}`, mat = e.Material || "";
   if (e.Bic === "OST_Gutter" || e.Bic === "OST_Fascia" || e.Bic === "OST_RoofSoffit") return "flashings";
@@ -4691,10 +4691,11 @@ function tradeOf(e) {
 }
 
 // Roles: the profile first, then geometry (position, size, what an element touches), then material, then names.
-function computeRoles(els) {
+function computeRoles(els, C) {
+  const H = () => C.hint, isConcreteMat = (mat) => C.hint.concreteMaterial.test(mat || "");
   const roles = new Map();
   const set = (e, role, source, detail) => { if (!roles.has(e.Id)) roles.set(e.Id, { role, source, detail: detail || "" }); };
-  for (const e of els) { const r = CONV.roles[typeKey(e)]; if (r && ROLES[r]) set(e, r, "profile", "Set in your conventions profile"); }
+  for (const e of els) { const r = C.roles[typeKey(e)]; if (r && ROLES[r]) set(e, r, "profile", "Set in your conventions profile"); }
   // The BoQ code on the type (Assembly Code, from the SolvBoQ standard): the modeller has said what it is
   if (typeof cardOf === "function") for (const e of els) { const c = cardOf(e); if (c && c.role && ROLES[c.role]) set(e, c.role, "code", `BoQ code ${c.code}${e.SetInSolvBoQ?.code && typeof overlayWhy === "function" ? `, ${overlayWhy(e, "code")}` : ""}: ${c.title.charAt(0).toLowerCase() + c.title.slice(1)}`); }
 
@@ -4747,19 +4748,19 @@ const RX_CONCRETE_ONLY = /concrete|blinding|screed|grout|cement|mpa/i;
 // opts.profile: a conventions profile (see conventions.js). opts.materialGrades is still accepted for older callers.
 function runChecks(input, opts = {}) {
   const profile = opts.profile || (opts.materialGrades ? { materialGrades: mapToList(opts.materialGrades) } : null);
-  CONV = compileConventions(profile);
-  const grades = CONV.grades;
-  const notBuilding = input.filter((e) => !NON_MEASURED.has(e.Bic) && !isMeasured(e));
-  const all = input.filter((e) => NON_MEASURED.has(e.Bic) || isMeasured(e));
+  const C = compileConventions(profile), H = () => C.hint;
+  const grades = C.grades;
+  const notBuilding = input.filter((e) => !NON_MEASURED.has(e.Bic) && !isMeasured(e, C));
+  const all = input.filter((e) => NON_MEASURED.has(e.Bic) || isMeasured(e, C));
   const ignored = all.filter((e) => NON_MEASURED.has(e.Bic));
   const els = all.filter((e) => !NON_MEASURED.has(e.Bic));
-  ROLE_OF = computeRoles(els);
-  const roleIs = (e, ...r) => { const x = ROLE_OF.get(e.Id); return !!x && r.includes(x.role); };
+  const roleOf = computeRoles(els, C), tradeOf = (e) => elementTrade(e, C, roleOf);
+  const roleIs = (e, ...r) => { const x = roleOf.get(e.Id); return !!x && r.includes(x.role); };
   const issues = [];
   let suppressedCount = 0;
   const add = (key, severity, title, body, action, list, o = {}) => {
     // "This flag is wrong" decisions in the profile remove those types from this check
-    const sup = CONV.suppress[key];
+    const sup = C.suppress[key];
     if (sup) { const before = list.length; list = list.filter((x) => !sup.has(typeKey(x))); suppressedCount += before - list.length; }
     if (!list.length) return;
     const tier = TIER_OF[key] || { key: 5, label: "" };
@@ -4781,7 +4782,7 @@ function runChecks(input, opts = {}) {
   const outside = notBuilding.filter((e) => e.Bic && !MEASURED.has(e.Bic) && e.Volume > 0.001 && !e.IsDemolished && !/CenterLine|Baluster|Reveal|Sketch|Stringer/i.test(e.Bic));
   if (outside.length) {
     const cats = new Map(); for (const e of outside) { const k = e.Category || e.Bic, c = cats.get(k) || { n: 0, v: 0 }; c.n++; c.v += e.Volume; cats.set(k, c); }
-    const V = sumVol(outside), concV = sumVol(outside.filter((e) => isConcreteMat(e.Material))), big = [...outside].sort((a, b) => b.Volume - a.Volume)[0];
+    const V = sumVol(outside), concV = sumVol(outside.filter((e) => isConcreteMat(e.Material, C))), big = [...outside].sort((a, b) => b.Volume - a.Volume)[0];
     add("outside", "eyes", "Solid elements in a category SolvBoQ doesn’t measure",
       `${plural2(outside.length, "element")} with a solid volume, ${fmt2(V)} m³ in all, ${outside.length === 1 ? "is" : "are"} drawn in ${cats.size === 1 ? "a category" : "categories"} SolvBoQ doesn’t measure (${[...cats].sort((a, b) => b[1].v - a[1].v).slice(0, 4).map(([k, c]) => `${k}: ${c.n}, ${fmt2(c.v)} m³`).join("; ")}${cats.size > 4 ? "; and more" : ""}), so none of it is in the BoQ${concV > 0 ? `; ${fmt2(concV)} m³ of it has a concrete material` : ""}. The largest: “${nameOf(big)}”, ${fmt2(big.Volume)} m³.`,
       "If it’s built work, ask the modeller to draw it in the category it belongs to (a wall, a floor, a foundation, or a generic model with its BoQ code), or measure it by hand. If it isn’t part of the works, mark this flag as wrong for the type.", outside, { impact: V });
@@ -5008,7 +5009,7 @@ function runChecks(input, opts = {}) {
     : titleBuilding ? `The model is called “${title.trim()}”, so it’s taken as a building.`
     : civil ? "The model has no brickwork, doors or windows, so it’s taken as a water-retaining structure such as a tank."
     : "The model has brickwork, doors or windows, so it’s taken as a building.";
-  const assumedGrade = (S && S.grade) || CONV.structureGrades[civil ? "civil" : "building"] || "";
+  const assumedGrade = (S && S.grade) || C.structureGrades[civil ? "civil" : "building"] || "";
   const lowGrade = (e) => roleIs(e, "benching", "chamfer", "apron", "kerb", "plinth", "noFines") || H().unreinforced.test(`${e.Type} ${e.Family} ${e.Material}`);
   const assumed = assumedGrade ? noGrade.filter((e) => !lowGrade(e)) : [];
   add("grade", "eyes", "Concrete with no grade in its material",
@@ -5115,7 +5116,7 @@ function runChecks(input, opts = {}) {
   const screed = live.filter((e) => roleIs(e, "screed"));
   add("screed", "handled", "Screed modelled as a floor",
     civil ? "Billed as granolithic screeding by area (his PSG 8.12), with a steel-floated finish, not as structural concrete." : "Treated as a floor finish (building works), not as structural concrete.", "Nothing to do.", screed);
-  const otherThin = live.filter((e) => e.Bic === "OST_Floors" && e.Thickness != null && e.Thickness < 0.1 && tradeOf(e) === "concrete" && !ROLE_OF.has(e.Id));
+  const otherThin = live.filter((e) => e.Bic === "OST_Floors" && e.Thickness != null && e.Thickness < 0.1 && tradeOf(e) === "concrete" && !roleOf.has(e.Id));
   add("thin", "eyes", "Very thin floors with no clear role",
     "Under 100 mm thick, not under or on top of a slab, and not named as blinding or screed. Billed as a slab, they’d pick up reinforcement and formwork they don’t need.",
     "Confirm whether each is blinding, screed or a slab.", otherThin);
@@ -5189,11 +5190,11 @@ function runChecks(input, opts = {}) {
   }
   Object.values(byType).forEach((t) => (t.total = t.trusted + t.eyes + t.unknown));
   const levelsMap = {}; all.forEach((x) => { if (x.Level) levelsMap[x.Level] = x.LevelElevation; });
-  const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(ROLE_OF), issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
+  const out = { structure: civil ? "civil" : "building", materialGrades: grades, assumedGrade: assumed.length ? { grade: assumedGrade, structure: civil ? "civil" : "building", ids: new Set(assumed.map((e) => e.Id)) } : null, roles: Object.fromEntries(roleOf), conv: C, issues, summary: s, elements: all, status, byElement, tradeOfId, levels: levelsMap, trades: tradeList, byType: Object.values(byType).sort((a, b) => b.total - a.total) };
   out.reveals = input.filter((e) => e.Bic === "OST_Reveals");
   // Elements coded X.NOTBUILT (or set as not built in the profile): not measured, but listed under Left out in Map to SANS, so
   // nothing disappears without a word (his GRP covers, 8 Nov 2026, vanished that way)
-  out.notBuilt = input.filter((e) => MEASURED.has(e.Bic) && ((typeof cardOf === "function" && cardOf(e)?.code === "X.NOTBUILT") || CONV.roles[typeKey(e)] === "notBuilt"));
+  out.notBuilt = input.filter((e) => MEASURED.has(e.Bic) && ((typeof cardOf === "function" && cardOf(e)?.code === "X.NOTBUILT") || C.roles[typeKey(e)] === "notBuilt"));
   out.cuts = input.filter((e) => e.Box && (/Opening$/.test(e.Bic || "") || /opening cut/i.test(e.Category || "")));   // opening cuts in floors, roofs and shafts: billed as box-outs   // chamfers modelled as reveals are billed from these
   out.inputs = opts.inputs || null;   // the project's inputs used (inputs.js): the structure, its kind, its geotech
   out.structureWhy = structureWhy;
@@ -5391,7 +5392,7 @@ function deriveItems(r, opts = {}) {
   if (rebarT > 0 && rbDoc) item({ key: "rebar", label: "Reinforcement (from the bending schedule)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: rbDoc.agree ? "ready" : "partly",
     note: `By diameter from ${rbDoc.doc}${rbDoc.pages ? ` (${rbDoc.pages})` : ""}, accepted${rbDoc.by ? ` by ${rbDoc.by}` : ""}; SolvBoQ’s adding up ${rbDoc.check || "had no totals to check against"}.` });
   else if (rebarT > 0) item({ key: "rebar", label: "Reinforcement (estimate)", ref: "1200 G 8.3.1", unit: "t", qty: rebarT, status: "partly",
-    note: `${Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(opts.inputs?.structure?.rebarKg) ? opts.inputs.structure.rebarKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
+    note: `${Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(opts.inputs?.structure?.rebarKg) ? opts.inputs.structure.rebarKg : r.conv.rebar[r.structure === "civil" ? "civil" : "building"]} kg/m³ of reinforced concrete, until the bar schedules are available.` });
 
   const masonry = T("masonry");
   if (masonry.length) {
@@ -5435,7 +5436,7 @@ function deriveItems(r, opts = {}) {
     item({ key: "painting", label: "Protective coating and painting", ref: "1200 H 8.3.13", unit: "t", qty: tons - galv.reduce((s, e) => s + (e.Volume || 0) * STEEL_DENSITY, 0), status: "partly",
       note: galv.length ? `Galvanised members (${plural2(galv.length, "member")}) are left out.` : "All steel is included. Deduct members that are galvanised instead of painted." });
     const cols = steel.filter((e) => e.Bic === "OST_StructuralColumns");
-    item({ key: "hdbolts", label: "Holding-down bolts", ref: "1200 H 8.3.6", unit: "no.", qty: cols.length ? cols.length * CONV.sundries.hdBolts : null, status: cols.length ? "partly" : "none",
+    item({ key: "hdbolts", label: "Holding-down bolts", ref: "1200 H 8.3.6", unit: "no.", qty: cols.length ? cols.length * r.conv.sundries.hdBolts : null, status: cols.length ? "partly" : "none",
       note: cols.length ? `${plural2(cols.length, "steel column base")} at an assumed 4 bolts each. Confirm bolts per base on the drawings.` : "No steel columns are modelled, so the bases can’t be counted." });
   }
 
@@ -5476,7 +5477,7 @@ function deriveItems(r, opts = {}) {
     for (const l of rb) if (V > 0 && tons > 0 && !l.doc) l.calc = `reinforced concrete ${fmt2(V)} m³ × ${Math.round((tons * 1000) / V)} kg/m³ = ${fmt2(tons)} t\n${Math.round((100 * l.qty) / tons)}% of it ${l.key === "rebar|mild" ? "mild steel" : "high tensile"} = ${fmt2(l.qty)} t`;
     // From the bending schedule: the document and page, the figure, and, as a check on both, what it comes to per m³ of the model's
     // reinforced concrete beside the rate the estimate would have used
-    const S = opts.inputs?.structure, est = Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(S?.rebarKg) ? S.rebarKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"];
+    const S = opts.inputs?.structure, est = Number.isFinite(opts.rebar?.kg) ? opts.rebar.kg : Number.isFinite(S?.rebarKg) ? S.rebarKg : r.conv.rebar[r.structure === "civil" ? "civil" : "building"];
     for (const l of rb) if (l.doc) l.calc = `${l.doc.name}${l.doc.pages ? `, ${l.doc.pages}` : ""}: ${l.item.heading.replace(/^Reinforcement: /, "")}, ${l.item.description} = ${fmt2(l.qty)} t`
       + (V > 0 && tons > 0 ? `\nall sizes ${fmt2(tons)} t over the model’s ${fmt2(V)} m³ of reinforced concrete = ${Math.round((tons * 1000) / V)} kg/m³ (the estimate would use ${est} kg/m³)` : "")
       + (l.doc.shared ? "\nthe schedule’s table also lists steel for another structure: its own total can’t be checked against this one" : ""); }
@@ -5967,9 +5968,9 @@ function inferLines(r, ctx) {
   // Edges of benching at its channels (his note, 7 Nov 2026: “formwork to the bottom half of the benching … 150 mm high”, 5.16 m²).
   // The channels are the holes in the benching's outline; its top falls from full height at the walls to a vertical edge at each
   // channel, which is formed (smooth: it's above the floor). His figure is the long sides of each channel (4 × 8.6 m × 0.15 m),
-  // not the ends, so the ends are left out unless the profile says they're formed (CONV.formwork.benchEnds). The edge height comes
+  // not the ends, so the ends are left out unless the profile says they're formed (r.conv.formwork.benchEnds). The edge height comes
   // from the volume, taking the top as falling evenly across a band of even width (his 9 Nov benching: 0.15 m exactly), else the
-  // profile's edge height (CONV.formwork.benchEdge: 150 mm, his figure).
+  // profile's edge height (r.conv.formwork.benchEdge: 150 mm, his figure).
   for (const e of live.filter((e) => role(e) === "benching" && r.tradeOfId[e.Id] === "concrete" && e.Volume > 0)) {
     const all = (e.Openings || []).filter((o) => o.W > 0 && o.H > 0);
     // Extracts from add-ins before 8 Nov list a separate piece of the outline as a hole: a "hole" that could hold another isn't one
@@ -5980,7 +5981,7 @@ function inferLines(r, ctx) {
     // A top that doesn't fall (D about 0) leaves the full height as the edge; a volume more than a flat top could hold, or a fall
     // past the floor, doesn't fit the shape, so the profile's edge height
     // A benching that overlaps concrete it isn't joined to has a solid that can't be trusted (his 8 Nov runs), so the same there too
-    const FW = CONV.formwork, fit = !(e.InfillLess > 0) && Number.isFinite(D) && D >= -0.02 && H - D >= 0.02, edge = fit ? H - Math.max(0, D) : FW.benchEdge;
+    const FW = r.conv.formwork, fit = !(e.InfillLess > 0) && Number.isFinite(D) && D >= -0.02 && H - D >= 0.02, edge = fit ? H - Math.max(0, D) : FW.benchEdge;
     const len = holes.reduce((s, o) => s + 2 * Math.max(o.W, o.H) + (FW.benchEnds ? 2 * Math.min(o.W, o.H) : 0), 0);
     add(`fwedge|bench|${typeKey(e)}`, item(false, `Vertical formwork to edges of benching at its channels (${typeName(e)})`),
       `Inferred: ${FW.benchEnds ? "the edges all round" : "the long sides"} of ${plural2(holes.length, "channel")} (${fmt2(len)} m) × the edge where the benching’s top meets the channel, ${(edge * 1000).toFixed(0)} mm ${fit ? "(from its volume: the top falling evenly from the walls)" : "(the conventions profile’s edge height: the benching’s volume doesn’t give it, or it overlaps other concrete)"}.`,
@@ -6035,8 +6036,8 @@ function inferLines(r, ctx) {
     // kg/m³ and the mild steel share: the user's figures for this model if set, otherwise the profile's
     // kg/m³: this model's figure, else the structure's rate from the project (the designer's), else the profile's
     const St = ctx.structure, sKg = St && Number.isFinite(St.rebarKg) ? St.rebarKg : null;
-    const kg = Number.isFinite(ctx.rebar?.kg) ? ctx.rebar.kg : sKg != null ? sKg : CONV.rebar[r.structure === "civil" ? "civil" : "building"] || 0;
-    const mild = Number.isFinite(ctx.rebar?.mild) ? ctx.rebar.mild : CONV.rebar.mildShare;
+    const kg = Number.isFinite(ctx.rebar?.kg) ? ctx.rebar.kg : sKg != null ? sKg : r.conv.rebar[r.structure === "civil" ? "civil" : "building"] || 0;
+    const mild = Number.isFinite(ctx.rebar?.mild) ? ctx.rebar.mild : r.conv.rebar.mildShare;
     const kgFrom = Number.isFinite(ctx.rebar?.kg) ? " (set for this model)" : sKg != null ? ` (the rate for ${St.name || "this structure"} in the project, ${srcWords(St.srcOf("rebarKg"))})` : "";
     const why = `Estimated at ${kg} kg of steel per m³ of reinforced concrete${kgFrom} (${Math.round(mild * 100)}% mild steel). Replace it with the bar schedule quantities, split by diameter, when they’re available.`;
     // The bending schedule, once he accepted it for this structure (documents.js): its tonnes by steel type and diameter, billed as
@@ -6161,7 +6162,7 @@ function inferLines(r, ctx) {
 // Slabs under 30 m² and narrow rings or strips (a footing ring under a wall) are one pour; overlapping slabs count once.
 // Buildings: saw cuts on about a 5 m grid, 0.4 m per m² (his Incinerator floor: 67 m in 170 m²).
 function floorJoints(r, e, flats = []) {
-  const J = CONV.joints;
+  const J = r.conv.joints;
   if (r.structure !== "civil") return (e.Area || 0) * J.sawCut;
   const t = e.Thickness || (e.Box ? e.Box[5] - e.Box[2] : 0), a = e.Box ? topArea(e, flats) : e.Area || 0;
   const strip = e.Box && a / outerEdge(e).len < 1.5;
@@ -6214,7 +6215,7 @@ function inferEarthworks(r, ctx, opts) {
   const { live, ground } = ctx;
   // The figures: the profile's defaults, then the structure's inputs in the project (from his geotech), then this model's own
   const S = opts.inputs?.structure || null, fromS = S?.earthworks || {}, mine = opts.earthworks || {};
-  const A = { ...CONV.earthworks, ...fromS, ...mine };
+  const A = { ...r.conv.earthworks, ...fromS, ...mine };
   const from = (k) => (mine[k] != null ? "model" : fromS[k] != null ? "project" : "default");
   const fromText = (k) => (from(k) === "model" ? "set for this model under Earthworks" : `from ${S?.name || "the structure"} in the project, ${srcWords(S?.srcOf(k))}`);
   const mhCode = (e) => (typeof cardOf === "function" && cardOf(e)?.code) || "";
@@ -6542,9 +6543,9 @@ function inferMore(r, ctx) {
     const walls = live.filter((e) => e.Bic === "OST_Walls" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Length > 0);
     for (const e of walls) {
       const base = tops.find((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
-      if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= CONV.joints.upstand)) continue;
+      if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= r.conv.joints.upstand)) continue;
       // Walls over 5 m are cast in lifts of up to 5 m, with a horizontal joint between lifts (his note, 7 Nov 2026)
-      const h = e.Box[5] - e.Box[2], lift = CONV.joints.liftHeight || 5, lifts = Math.max(1, Math.ceil((h - 0.01) / lift));
+      const h = e.Box[5] - e.Box[2], lift = r.conv.joints.liftHeight || 5, lifts = Math.max(1, Math.ceil((h - 0.01) / lift));
       add("jwall", "joint", G("8.5", "Joints", "Watertight construction joints with water bar, at the base of walls and between lifts", "m"),
         `Inferred: the length of each wall that stands on a slab or footing, along its centreline, where the water bar sits${lifts > 1 ? `; this wall is ${fmt2(h)} m high, so it’s cast in ${lifts} lifts of up to ${fmt1(lift)} m, with a joint at the base of each` : ""}. Short upstands cast with a suspended slab have none.`, e, e.Length * lifts);
       // Vertical joints: where a floor joint on his layout meets a wall, the wall has a vertical joint its full height (his Joint B:
@@ -6568,14 +6569,14 @@ function inferMore(r, ctx) {
       const lj = layoutJoints(r, e);
       if (lj) add("jfloorlayout", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs", "m"), `Inferred: ${layoutText(lj)}.`, e, lj.total);
       else add("jfloor", "joint", G("8.5", "Joints", "Watertight construction joints in floor slabs (estimate)", "m"),
-        `Inferred: ${CONV.joints.bayThin} m of joint per m² of floor up to ${Math.round(CONV.joints.thinMax * 1000)} mm thick, ${CONV.joints.bayThick} m per m² of thicker bases; slabs under ${CONV.joints.minPour} m² and narrow rings are one pour. Replace it with the joint layout when it’s available.`,
+        `Inferred: ${r.conv.joints.bayThin} m of joint per m² of floor up to ${Math.round(r.conv.joints.thinMax * 1000)} mm thick, ${r.conv.joints.bayThick} m per m² of thicker bases; slabs under ${r.conv.joints.minPour} m² and narrow rings are one pour. Replace it with the joint layout when it’s available.`,
         e, floorJoints(r, e, slabs));
     }
   } else if (groundArea > 0) {
     for (const e of ground) {
       // His Incinerator floor: 67 m of saw-cut joints in 170 m² (0.4 m/m²), sealant over the same length
       add("jsaw", "joint", G("8.5", "Joints", "Saw-cut contraction joints in ground slabs (estimate, about 5 m grid)", "m"),
-        `Inferred: about ${CONV.joints.sawCut} m of joint per m² of ground slab. Replace it with the joint layout when it’s available.`, e, floorJoints(r, e));
+        `Inferred: about ${r.conv.joints.sawCut} m of joint per m² of ground slab. Replace it with the joint layout when it’s available.`, e, floorJoints(r, e));
       add("jseal", "joint", G("8.5", "Joints", "Joint sealant to saw-cut joints (estimate)", "m"), "Inferred: the same length as the saw-cut joints.", e, floorJoints(r, e));
     }
     // Damp-proofing and ant poison under ground-bearing slabs, for buildings
@@ -6586,7 +6587,7 @@ function inferMore(r, ctx) {
   }
 
   // Chamfers modelled as Revit reveals (not building elements themselves): his 82 m of 100 x 100 mm chamfer at the launder walls
-  for (const e of r.reveals || []) if (CONV.hint.chamfer.test(`${e.Type} ${e.Family}`) && e.Length > 0) {
+  for (const e of r.reveals || []) if (r.conv.hint.chamfer.test(`${e.Type} ${e.Family}`) && e.Length > 0) {
     const mm = `${e.Type}`.match(/(\d{2,3})\s*mm/i)?.[1];
     add(`chamfer|${typeKey(e)}`, "fwnarrow", G("8.2.5", "Narrow widths", `${mm ? `${mm} x ${mm} mm chamfer` : "Chamfer"} (${e.Type || e.Family})`, "m"),
       "Inferred: the length of the chamfer reveals modelled on the concrete.", e, e.Length);
@@ -6608,7 +6609,7 @@ function inferMore(r, ctx) {
     const m = `${e.Type} ${e.Family}`.match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/i);
     const w = m ? +m[1] / 1000 : e.Box ? Math.max(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1]) : 0;
     add("lintel", "building", PD("PD 10.1", "Brickwork sundries", "Precast concrete lintels over openings", "m"),
-      `Inferred: opening width plus ${Math.round(CONV.sundries.lintelBearing * 1000)} mm bearing at each end${cavity ? ", one lintel per skin of the cavity walls" : ""}, from the width in the type name.`, e, (w + 2 * CONV.sundries.lintelBearing) * (cavity ? 2 : 1),
+      `Inferred: opening width plus ${Math.round(r.conv.sundries.lintelBearing * 1000)} mm bearing at each end${cavity ? ", one lintel per skin of the cavity walls" : ""}, from the width in the type name.`, e, (w + 2 * r.conv.sundries.lintelBearing) * (cavity ? 2 : 1),
       m ? "" : "Some openings have no size in the type name, so the width is read from the element’s overall size.");
   }
 
@@ -6620,7 +6621,7 @@ function inferMore(r, ctx) {
     add("delivery", "steel", H("8.3.2", "Delivery to site", "Delivery of steelwork to site, normal loads", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("erection", "steel", H("8.3.3", "Erection on site", "Erection of steelwork on site", "t"), "Inferred: the same tonnage as supply and fabrication.", e, t(e));
     add("bolts", "steel", H("8.3.4", "Erection bolts", "Erection bolts, nuts and washers (estimate)", "t"),
-      `Inferred: ${+(CONV.sundries.erectionBolts * 100).toFixed(2)}% of the steel tonnage, until the connection details are known.`, e, CONV.sundries.erectionBolts * t(e));
+      `Inferred: ${+(r.conv.sundries.erectionBolts * 100).toFixed(2)}% of the steel tonnage, until the connection details are known.`, e, r.conv.sundries.erectionBolts * t(e));
     if (!/galvani|hdg/i.test(`${e.Material} ${e.Type}`)) add("coating", "steel", H("8.3.13", "Corrosion protection", "Surface preparation, priming and coating of steelwork", "t"),
       "Inferred: all steel tonnage except members that are galvanised.", e, t(e));
   }
@@ -6628,8 +6629,8 @@ function inferMore(r, ctx) {
   const concTops = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete");
   const onConcrete = (c) => c.Box && concTops.some((s) => Math.abs(s.Box[5] - c.Box[2]) <= 0.3 && s.Box[0] <= c.Box[3] && s.Box[3] >= c.Box[0] && s.Box[1] <= c.Box[4] && s.Box[4] >= c.Box[1]);
   for (const e of steel.filter((e) => e.Bic === "OST_StructuralColumns" && (!e.Box || onConcrete(e))))
-    add("hdbolts", "steel", H("8.3.6", "Holding-down bolts", `Holding-down bolt assemblies (${CONV.sundries.hdBolts} per column base, assumed)`, "No"),
-      `Inferred: ${CONV.sundries.hdBolts} bolts at the base of each steel column that stands on concrete. Confirm the bolts per base on the drawings.`, e, CONV.sundries.hdBolts,
+    add("hdbolts", "steel", H("8.3.6", "Holding-down bolts", `Holding-down bolt assemblies (${r.conv.sundries.hdBolts} per column base, assumed)`, "No"),
+      `Inferred: ${r.conv.sundries.hdBolts} bolts at the base of each steel column that stands on concrete. Confirm the bolts per base on the drawings.`, e, r.conv.sundries.hdBolts,
       e.Box ? "" : "Some columns have no position in the data, so they’re assumed to stand on concrete.");
   return [...lines.values()];
 }
@@ -6788,7 +6789,8 @@ function concreteGroupLabel(e, role) {
 }
 
 // The built-in rules. Each returns an item for the group's first element, a confidence, and any reason to confirm.
-function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null, civil = false) {
+function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null, civil = false, conv = null) {
+  const C = conv || compileConventions(null);
   const mat = e.Material || "", n = nm(e), mm = mmOf(e);
   const it = (section, clause, heading, description, unit, ruleId, check) => ({ item: { section, clause, heading, description, unit }, ruleId, check: check || "" });
   // Clauses for no-fines (PSG 8.10), subsoil drains (PSLE 8.2.14) and cast-in items (PSG 8.13) are from the engineer's Gravity Thickeners BoQ
@@ -6829,7 +6831,7 @@ function ruleFor(e, trade, grades = {}, role = "", assumed = null, part = null, 
     }
     if (/precast/i.test(mat) && /kerb/.test(n)) return it("SANS 1200 MK", "", "Precast concrete kerbs", `${e.Type || "Kerb"}`, "m", "MK-KERB", e.Bic === "OST_GenericModel" ? "Modelled as a Generic Model, so the kerb type is read from its name." : "");
     const mg = typeof materialGrade === "function" ? materialGrade(e) : { grade: gradeOf(mat) };
-    const grade = mg.grade || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || CONV.hint.unreinforced.test(`${n} ${mat}`);
+    const grade = mg.grade || grades[mat] || (assumed?.ids.has(e.Id) ? assumed.grade : ""), unreinf = ["apron", "kerb", "benching", "chamfer"].includes(role) || C.hint.unreinforced.test(`${n} ${mat}`);
     // In a tank, his bill names watertight and non-watertight concrete separately (result.concretePart, from the engine)
     const group = part?.as || card?.as || concreteGroupLabel(e, role), tight = part && !unreinf ? (part.wt ? " (watertight)" : " (non-watertight)") : "";
     const why = !mat ? "No material, so the grade is unknown and concrete is assumed from the element type."
@@ -6939,10 +6941,6 @@ const manholeBand = (e) => (e.Box ? Math.ceil(Math.round((e.Box[5] - e.Box[2]) *
 const groupKey = (e, part) => (e.Structure ? "s:" + String(e.Structure).trim().toLowerCase() + "|" : "") + (typeof cardOf === "function" && cardOf(e)?.code === "LD.MH" ? "mh" + manholeBand(e) + "|" : "") + [e.Bic, e.Family, e.Type, e.Material].map((x) => String(x || "").trim().toLowerCase()).join("|") + (railSloped(e) ? "|sloping" : "")
   + (part ? `|${part.wt ? "watertight" : "non-watertight"}${part.as ? "|" + part.as : ""}` : "");
 
-const LEARN_KEY = "solvboq-mapping-rules-v1";
-function loadLearned() { try { return JSON.parse(localStorage.getItem(LEARN_KEY) || "{}") || {}; } catch (e) { return {}; } }
-function saveLearned(map) { try { localStorage.setItem(LEARN_KEY, JSON.stringify(map)); return true; } catch (e) { return false; } }
-
 // Build mapping groups from a readiness result. decisions: key -> { item, method, confirmed }
 // held: Map of rule id → why, for rules he has often overruled in this project (decisions.js): their matches wait for him
 function buildGroups(result, decisions, learned, held = null) {
@@ -6976,7 +6974,7 @@ function buildGroups(result, decisions, learned, held = null) {
       const open = g.elements.flatMap((x) => result.byElement[x.Id] || []).find((i) => i.tier === 1 && (i.severity === "eyes" || i.severity === "unknown"));
       if (open) { method = "check"; confirmed = false; reason = `You confirmed this item on an earlier run, but a model problem is still open: ${open.title.charAt(0).toLowerCase() + open.title.slice(1)}. Check the quantity before billing it.`; } }
     else {
-      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade, result.concretePart?.[e.Id], result.structure === "civil");
+      const r = ruleFor(e, g.trade, result.materialGrades || {}, result.roles?.[e.Id]?.role || "", result.assumedGrade, result.concretePart?.[e.Id], result.structure === "civil", result.conv);
       // Never confirmed without a look: in-place families (drawn by hand, so the rule is a guess at what they are), and
       // pipework and gratings, which are often priced in the mechanical bill (his Gravity Thickeners bill has none)
       // A readiness flag that could change the quantity or stop it being billed (tier 1 or 2) also holds a rule match back
@@ -7058,6 +7056,8 @@ function billProblems(L, r, accepted) {
     for (const i of r.byElement[e.Id] || []) if (i.tier <= 2 && (i.severity === "eyes" || i.severity === "unknown")) seen.set(i.key, i);
   return [...seen.values()];
 }
+// How a line's quantity was arrived at (the bill, sign-off and the engine's bill stage all use this)
+function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.doc ? "document" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
 function billLines(groups, r, st = {}) {
   const manual = st.manual || {}, less = st.lessOverlap || new Set(), out = st.lineOut || new Set(), prov = st.prov || new Set(), accepted = st.accepted || new Set();
   const mapped = boqLines(groups, { full: true });
@@ -7638,6 +7638,133 @@ function faceParts(r, g = faceGraph(r)) {
   parts.sort((a, b) => a.structure - b.structure || b.volume - a.volume);
   const total = els.reduce((s, e) => s + (e.Volume || 0), 0), sureVol = els.filter((e) => out.get(String(e.Id)).sure && out.get(String(e.Id)).kind !== "notSure").reduce((s, e) => s + (e.Volume || 0), 0);
   return { parts, byId: out, structures: structs.map((s, i) => ({ n: i + 1, volume: s.volume, main: s.main })), total, sure: sureVol };
+}
+
+
+// ===== The engine's single entry (engine review A1 and A2, 19 Nov 2026) =====
+// runEngine({ extract, profile, inputs, decisions, overlay, packs }) → { structure, measured, bill, flags }
+// JSON in, JSON out: no storage, no page, no state kept between runs. The screens read browser storage and the project and
+// pass what they found in; the engine never looks for it. The same call works in the page, in Node and in a signed bill's replay.
+//
+//   extract    the add-in's JSON ({ model, elements, annotations }) or a list of records
+//   profile    the firm's conventions profile (conventions.js), or null for the defaults
+//   inputs     the project's inputs for this model, as engineInputs() gives them (inputs.js), or null
+//   decisions  his decisions on this model's bill: earthworks and rebar (figures he set), mapDecisions (line items he chose),
+//              held (rules he often overrules: [[rule, why]]), manual (typed quantities by line key), lessOverlap, lineOut,
+//              prov (line keys), accepted (element ids whose flags he accepted), aiExpected (Claude's items he added)
+//   overlay    corrections kept in SolvBoQ (overlay.js), laid on the records as if Revit had them
+//   packs      { method }: the method of measurement. SANS 1200 Clause 8 is the only one built
+//
+// The four stages, each one saved and compared on its own:
+//   structure  what each element is (role, trade, part), what it stands on and the order of casting
+//   measured   every volume, face area, length and count with its element, before any standard is applied
+//   bill       those quantities itemised: every line as he sees it, with its elements
+//   flags      the checks on the model, with the elements behind each
+const ENGINE_METHODS = ["SANS 1200 Clause 8"];
+const runR = (v) => (Number.isFinite(v) ? Math.round(v * 1e6) / 1e6 : v == null ? null : v);
+const runSet = (v) => (v instanceof Set ? v : new Set(Array.isArray(v) ? v : []));
+
+// The working result for the screens: the engine's result object, which holds everything the stage outputs are made from.
+// The page keeps it to draw the bill; runEngine turns it into the four plain stages.
+function engineResult({ extract = null, records = null, title = null, profile = null, inputs = null, decisions = {}, overlay = null, faces } = {}) {
+  let recs = records || (Array.isArray(extract) ? extract : recordsFromJSON(extract || { elements: [] }));
+  if (overlay && typeof overlayApply === "function") recs = overlayApply(recs, overlay).records;
+  const d = decisions || {}, t = title != null ? title : (extract && !Array.isArray(extract) && extract.model?.title) || "";
+  const opts = { profile, title: t, earthworks: d.earthworks || {}, rebar: d.rebar, inputs };
+  if (faces !== undefined) opts.faces = faces;
+  return runChecks(recs, opts);
+}
+
+// The groups and lines of the bill under his decisions
+function engineBill(result, decisions = {}) {
+  const d = decisions || {};
+  const held = d.held ? (d.held instanceof Map ? d.held : new Map(d.held)) : null;
+  const groups = buildGroups(result, d.mapDecisions || {}, d.mapping || result.conv?.mapping || {}, held);
+  const st = { manual: d.manual || {}, lessOverlap: runSet(d.lessOverlap), lineOut: runSet(d.lineOut), prov: runSet(d.prov), accepted: runSet(d.accepted), aiExpected: d.aiExpected || [] };
+  return { groups, lines: billLines(groups, result, st) };
+}
+
+function runEngine(input = {}) {
+  const packs = input.packs || {}, method = packs.method || ENGINE_METHODS[0];
+  if (!ENGINE_METHODS.includes(method)) throw new Error(`The method of measurement “${method}” isn’t built: ${ENGINE_METHODS.join(", ")} only.`);
+  const r = engineResult(input);
+  const { lines } = engineBill(r, input.decisions);
+  return { method, structure: stageStructure(r), measured: stageMeasured(r), bill: stageBill(lines), flags: stageFlags(r) };
+}
+
+// Stage: the structure. Faces read: the support graph, the slab kind from it, the order of casting and the parts; else the
+// box rules' slab kind only (the graph needs the faces).
+function stageStructure(r) {
+  const g = typeof faceGraph === "function" ? faceGraph(r) : null;
+  const parts = g && typeof faceParts === "function" ? faceParts(r, g) : null;
+  const ids = (list) => (list || []).map((x) => String(x.id));
+  const elements = (r.elements || []).map((e) => {
+    const id = String(e.Id), role = r.roles?.[e.Id], node = g?.nodes.get(id), part = parts?.byId.get(id), cp = r.concretePart?.[e.Id];
+    return {
+      id, uniqueId: e.UniqueId || null, category: e.Category || e.Bic || "", type: typeKey(e), level: e.Level || "",
+      status: r.status?.[e.Id] || null, trade: r.tradeOfId?.[e.Id] || null,
+      role: role ? { role: role.role, source: role.source, detail: role.detail || "" } : null,
+      code: e.AssemblyCode || "", structureLabel: e.Structure || "",
+      watertight: cp ? !!cp.wt : null,
+      slabKind: r.slabKind?.[e.Id] || null, slabKindWhy: r.slabKindWhy?.[e.Id] || null,
+      on: node ? ids(node.on) : null, into: node ? ids(node.into) : null, carries: node ? ids(node.carries) : null,
+      order: g && typeof faceOrder === "function" && node ? faceOrder(r, e) : null,
+      part: part ? { kind: part.kind, part: part.part || null, sure: !!part.sure, why: part.why || "" } : null,
+    };
+  });
+  return {
+    kind: r.structure, why: r.structureWhy || null, facesRead: !!g,
+    parts: parts ? parts.parts.map((p) => ({ id: p.id, kind: p.kind, label: p.label, structure: p.structure, ids: p.ids.map(String), volume: runR(p.volume), sure: p.sure })) : null,
+    unread: g ? [...(g.unread || [])].map((x) => String(x.id ?? x)) : null,
+    elements,
+  };
+}
+
+// Stage: what is measured, before any standard. The element's own measures, its faces by kind (area, and the area other
+// elements cover), and the counts by type. No clause, no deduction, no rate.
+function stageMeasured(r) {
+  const elements = (r.elements || []).filter((e) => r.status?.[e.Id] !== "excluded").map((e) => {
+    const faces = Array.isArray(e.Faces) ? e.Faces : null, byKind = {};
+    if (faces) for (const f of faces) {
+      const k = f.Kind || "other", x = byKind[k] || (byKind[k] = { area: 0, covered: 0, n: 0 });
+      x.area += f.Area || 0; x.n++; for (const c of f.Contacts || []) x.covered += c.Area || 0;
+    }
+    for (const x of Object.values(byKind)) { x.area = runR(x.area); x.covered = runR(x.covered); }
+    return {
+      id: String(e.Id), type: typeKey(e),
+      volume: runR(e.Volume ?? null), area: runR(e.Area ?? null), length: runR(e.Length ?? null), perimeter: runR(e.Perimeter ?? null),
+      thickness: runR(e.Thickness ?? null), height: e.Box ? runR(e.Box[5] - e.Box[2]) : null,
+      planArea: e.Box ? runR((e.Box[3] - e.Box[0]) * (e.Box[4] - e.Box[1])) : null,
+      openings: Array.isArray(e.Openings) ? e.Openings.length : null,
+      faces: faces ? byKind : null,
+    };
+  });
+  const counts = {};
+  for (const e of elements) counts[e.type] = (counts[e.type] || 0) + 1;
+  return { elements, counts };
+}
+
+// Stage: the bill. Every line as he sees it, with its quantity before and after his decisions and the elements behind it
+// (with what each contributed, where the engine worked it out per element).
+function stageBill(lines) {
+  return lines.map((L) => ({
+    key: L.key, n: L.n, section: L.section, clause: L.clause || "", heading: L.heading || "", description: L.description, unit: L.unit || "",
+    qty: runR(L.qty ?? null), shownQty: runR(L.shownQty ?? null), modelQty: runR(L.modelQty ?? null),
+    basis: basisOf(L),
+    status: L.status, estimate: L.est || null,
+    rules: [...new Set((L.groups || []).map((g) => g.ruleId).filter(Boolean))],
+    elements: (L.groups || []).flatMap((g) => {
+      const by = new Map();
+      for (const p of g.parts || []) if (Number.isFinite(p.qty)) by.set(String(p.id), (by.get(String(p.id)) || 0) + p.qty);
+      return [...new Set(g.elements.map((e) => String(e.Id)))].map((id) => (by.has(id) ? { id, qty: runR(by.get(id)) } : { id }));
+    }),
+    problems: (L.problems || []).map((i) => i.key),
+  }));
+}
+
+// Stage: the checks on the model
+function stageFlags(r) {
+  return (r.issues || []).map((i) => ({ key: i.key, tier: i.tier, severity: i.severity, title: i.title, impact: runR(i.impact), ids: (i.elements || []).map((e) => String(e.Id)) }));
 }
 
 
@@ -8907,14 +9034,14 @@ function signDoc({ n, structure, model, rows, value, extract, snapshot, build, w
     lines: rows, value, snapshot: JSON.parse(JSON.stringify(snapshot)), ...(previous ? { previous, changes } : {}) };
 }
 // The bill worked out again from a signed version's extract and snapshot, with this page's engine: the same lines, if the engine
-// (or the build recorded with it) is the same. api: { runChecks, buildGroups, overlayApply } (the page's, or a test's)
-function signReplay(records, snap, api) {
-  const recs = snap.overlay && api.overlayApply ? api.overlayApply(records, snap.overlay).records : records;
-  const r = api.runChecks(recs, { profile: snap.profile || null, title: snap.title || "", earthworks: snap.earth || {}, rebar: snap.rebar || undefined, inputs: snap.inputs || null });
-  // (the mappings learned in his conventions, and the rules held back because he kept changing their items, as at signing)
-  const groups = api.buildGroups(r, snap.mapDecisions || {}, snap.mapping || {}, snap.held ? new Map(snap.held) : null);
-  const st = { manual: snap.manual || {}, lessOverlap: new Set(snap.lessOverlap || []), lineOut: new Set(snap.lineOut || []), prov: new Set(snap.prov || []), accepted: new Set((snap.accepted || []).map(String)), aiExpected: snap.aiExpected || [] };
-  return signRows(billLines(groups, r, st), r);
+// (or the build recorded with it) is the same. Through the engine's one entry (run.js), as the page builds a bill.
+function signReplay(records, snap) {
+  const decisions = { earthworks: snap.earth || {}, rebar: snap.rebar || undefined,
+    // (the mappings learned in his conventions, and the rules held back because he kept changing their items, as at signing)
+    mapDecisions: snap.mapDecisions || {}, mapping: snap.mapping || {}, held: snap.held || null,
+    manual: snap.manual || {}, lessOverlap: snap.lessOverlap || [], lineOut: snap.lineOut || [], prov: snap.prov || [], accepted: (snap.accepted || []).map(String), aiExpected: snap.aiExpected || [] };
+  const r = engineResult({ records, overlay: snap.overlay || null, profile: snap.profile || null, title: snap.title || "", inputs: snap.inputs || null, decisions });
+  return signRows(engineBill(r, decisions).lines, r);
 }
 // Two sets of rows the same, line for line (key, quantity, basis, status, elements): what a reproduction must give
 const signSame = (a, b) => JSON.stringify(a.map((x) => [x.key, x.qty, x.basis, x.status, [...x.ids].sort()])) === JSON.stringify(b.map((x) => [x.key, x.qty, x.basis, x.status, [...x.ids].sort()]));
@@ -9782,6 +9909,8 @@ async function saveFile(filename, data, mime) {
   const a = document.createElement("a"); a.href = url; a.download = filename; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 // Grades, roles, saved mappings and dismissed flags now live in the active conventions profile (profiles.js)
+// The page's copy of the compiled conventions, for the screens: set from each run's result (engineRunOn). The engine keeps none.
+let CONV = compileConventions(null);
 const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decide", mEdit: null, mQ: "", tier: 0, trade: "", view: "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false };
 
 function load(records, name, meta = {}) {
@@ -9789,7 +9918,7 @@ function load(records, name, meta = {}) {
   if (typeof ovFlush === "function") ovFlush();     // and its corrections kept in SolvBoQ: never laid on the next model
   Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "map", "conv", "next"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
-  state.result = runChecks(typeof ovRecords === "function" ? ovRecords(records) : records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles();
+  engineRunOn(records);
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
   if (meta.ptype) $("fType").value = meta.ptype;
   const d = meta.checkedAt ? new Date(meta.checkedAt) : new Date(); state.checkedIso = isNaN(d) ? "" : d.toISOString(); state.checked = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) + ", " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -10070,7 +10199,15 @@ const cleanName = (n) => String(n || "").replace(/_\d{8}_\d{6}/, "").replace(/\.
 function modelTitle() { return [state.name, state.desc].filter(Boolean).join(" ").replace(/_\d{8}_\d{6}|\.(json|csv|rvt)$/gi, " "); }
 // Reinforcement kg/m³ and mild steel share entered for this model (kept with the earthworks assumptions)
 function rebarOpts() { const e = state.earth || {}; return { kg: Number.isFinite(e.rebarKg) ? e.rebarKg : undefined, mild: Number.isFinite(e.rebarMild) ? e.rebarMild : undefined }; }
-function rerunChecks() { if (state.records) { state.result = runChecks(typeof ovRecords === "function" ? ovRecords(state.records) : state.records, { profile: state.profile, title: modelTitle(), earthworks: state.earth, rebar: rebarOpts(), inputs: typeof piEngine === "function" ? piEngine() : null }); noteCheckTitles(); } }
+// The one place the page runs the engine (run.js). What it needs from the browser and the project is read here and passed in;
+// CONV, the page's copy of the compiled conventions, follows the result (the engine keeps none of its own).
+function engineRunOn(records) {
+  state.result = engineResult({ records: typeof ovRecords === "function" ? ovRecords(records) : records, title: modelTitle(), profile: state.profile,
+    inputs: typeof piEngine === "function" ? piEngine() : null, decisions: { earthworks: state.earth, rebar: rebarOpts() } });
+  CONV = state.result.conv;
+  noteCheckTitles();
+}
+function rerunChecks() { if (state.records) engineRunOn(state.records); }
 function noteCheckTitles() { for (const i of state.result.issues) CHECK_TITLES[i.key] = i.title; }
 function gradePanel(iss) {
   const mats = {};
@@ -11257,7 +11394,6 @@ function editorOverview(lines, groups) {
 // it by a rule (formwork from faces, finishes, joints on a drawn layout), estimated (a rate, a share or a depth that isn't in the
 // model), or not in the model at all. The estimates are listed with what would make each a measurement. Counted by line: SolvBoQ
 // holds no rates, so it can't say what share of the bill's value each is, and says so.
-function basisOf(L) { return L.status === "out" || L.unmapped ? null : L.expected ? "none" : L.edited ? "edited" : L.doc ? "document" : L.est ? "estimated" : L.inferred ? "worked" : "measured"; }
 // How often he kept each rule's suggestion, over every model of the project (decisions.js): the rules he changed, and the ones
 // that no longer confirm by themselves because of it
 function rulesOverview() {
