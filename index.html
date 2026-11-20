@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-20T18:05:31Z">
+<meta name="solvboq-build" content="2026-11-20T19:23:47Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1261,6 +1261,28 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .hvcard.archived{opacity:.78}
 .hvtick{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:10px;border-radius:7px;border:2px solid var(--night);font-size:14px;vertical-align:-3px}
 .hvcard.picked .hvtick{background:var(--night);color:#fff}
+/* The item picker from the method pack, the Revit types on a line, and the element search (20 Nov 2026) */
+.pkmenu{max-height:none;display:flex;flex-direction:column;gap:2px}
+.pkmenu #edItemQ{margin:4px 0 8px;width:100%;box-sizing:border-box}
+.pkhead{padding:8px 4px 2px;font-weight:600}
+.pkopt{text-align:left}
+.pktype{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:6px 12px;padding:8px 10px;border-radius:12px;background:var(--card)}
+.pktype.on{outline:2px solid var(--accent)}
+.pktype small{display:block;color:var(--muted)}
+.mrow.idhit{background:var(--indigo-s);font-weight:600}
+.pkmenu{max-height:440px;overflow:auto}
+.pkmenu #edItemQ{position:sticky;top:0;z-index:1}
+.pkmenu button.pkopt{display:block;height:auto;min-height:0;padding:8px 10px;line-height:1.35;white-space:normal;flex:none}
+.pkmenu button.pkopt>span{display:block}
+.pkmenu button.pkopt small{display:block;position:static;margin-bottom:2px}
+.pkmenu .pkhead{display:block;flex:none;padding:10px 6px 4px;font-weight:600;color:var(--muted)}
+.pkmenu{display:block}
+/* Docked in Revit: element rows that select in Revit, and the way out of an isolate (20 Nov 2026) */
+.edelrow.pick{width:100%;border:0;background:transparent;text-align:left;cursor:pointer;font:inherit;color:inherit}
+.edelrow.pick:hover{background:var(--chip)}
+.edelrow.on{background:var(--indigo-s);box-shadow:inset 3px 0 0 var(--accent)}
+.isobar{position:fixed;left:8px;right:8px;bottom:72px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:10px 12px;border-radius:14px;background:var(--night);color:#fff;box-shadow:0 8px 24px rgba(16,24,40,.3);font-size:13px}
+.isobar .btn.dark{background:var(--lime);color:var(--night);border-color:var(--lime)}
 </style>
 </head>
 <body>
@@ -1429,7 +1451,7 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
       <div class="maphead">
         <h2 id="mboq-h">Bill of Quantities</h2>
         <div class="seg" role="group" aria-label="Show" id="mFilter"></div>
-        <div class="search"><label class="sr" for="mSearch">Search the bill</label><span id="mSearchIcon"></span><input id="mSearch" type="search" placeholder="Search"></div>
+        <div class="search"><label class="sr" for="mSearch">Search the bill</label><span id="mSearchIcon"></span><input id="mSearch" type="search" placeholder="Search: words, a type or an element ID"></div>
         <button class="btn sm" id="btnBoqCopy" type="button">Copy</button>
         <button class="btn sm" id="btnBoqCsv" type="button" hidden><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg>Download</button>
       </div>
@@ -11667,11 +11689,24 @@ function hostSelect(ids, mode = "select") {
   const list = [...new Set((ids || []).map(Number).filter((x) => Number.isFinite(x) && x > 0))];
   if (!HOST || !list.length) return false;
   HOST.postMessage({ type: mode === "isolate" ? "isolate" : "select", ids: list });
-  if (mode === "isolate") { state.revitIso = true; if (state.view === "map") renderMap(); }
-  toast(mode === "isolate" ? `${plural(list.length, "element")} isolated in Revit: everything else is hidden in this view for now` : `${plural(list.length, "element")} selected in Revit, and zoomed to`);
+  state.revitSel = new Set(list.map(String));   // highlighted in the panel's element list too, as in Revit
+  if (mode === "isolate") { state.revitIso = list.length; isoBar(); if (state.view === "map") renderMap(); }
+  toast(mode === "isolate" ? `${plural(list.length, "element")} isolated in Revit. Press Esc or “Show everything” below to see the rest again` : `${plural(list.length, "element")} selected in Revit, and zoomed to`);
   return true;
 }
-function hostShowAll() { if (!HOST) return; HOST.postMessage({ type: "showall" }); state.revitIso = false; if (state.view === "map") renderMap(); toast("Everything is shown again in Revit"); }
+function hostShowAll(quiet) { if (!HOST) return; HOST.postMessage({ type: "showall" }); isoEnded(); if (!quiet) toast("Everything is shown again in Revit"); }
+// The isolate ended (his click, Esc, or Revit's own reset, which the add-in tells the page about): no way out to offer any more
+function isoEnded() { state.revitIso = 0; isoBar(); if (state.view === "map") renderMap(); }
+// While elements are isolated in Revit, a bar above the panel's tabs says so and gives the way out, on every view of the panel
+// (20 Nov 2026: “allow for you to escape the isolate view in an easier way”); Esc does the same
+function isoBar() {
+  let bar = document.getElementById("isoBar");
+  if (!HOST || !state.revitIso) { if (bar) bar.remove(); return; }
+  if (!bar) { bar = h("div", { id: "isoBar", class: "isobar", role: "status" }); document.body.append(bar); }
+  bar.replaceChildren(h("span", {}, h("b", {}, `${plural(state.revitIso, "element")} isolated in Revit. `), "Everything else is hidden in that view for now."),
+    h("button", { type: "button", class: "btn sm dark", id: "btnIsoOff", onclick: () => hostShowAll() }, "Show everything (Esc)"));
+}
+if (HOST && typeof document !== "undefined") document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.revitIso && !document.querySelector("dialog[open]")) { e.preventDefault(); hostShowAll(); } });
 function hostReread() { if (!HOST) return; HOST.postMessage({ type: "reread" }); toast("Reading the model again…"); }
 function hostCodesDone(m) {
   if (m.cancelled) return toast("No codes were written");
@@ -11695,13 +11730,17 @@ function hostSelection(ids) {
   const on = (state.mapLines || []).filter((L) => L.status !== "out" && L.groups.some((g) => g.elements.some((e) => set.has(String(e.Id)))));
   const own = on.filter((L) => !L.inferred && !L.expected);
   state.revitSel = set;
-  if (!on.length) return toast(`${plural(set.size, "element")} selected in Revit ${set.size === 1 ? "isn’t" : "aren’t"} on any line of the bill`);
-  const L = own[0] || on[0];
-  if (typeof selectLine === "function") selectLine(L);
+  if (!on.length) { if (state.view === "map") renderMap(); return toast(`${plural(set.size, "element")} selected in Revit ${set.size === 1 ? "isn’t" : "aren’t"} on any line of the bill`); }
+  // The line he has open stays open when what he selected is on it; else the line the elements are billed on
+  const L = on.find((x) => x.key === state.sel) || own[0] || on[0];
+  if (L.key !== state.sel && typeof selectLine === "function") selectLine(L);
+  // Its elements shown, the ones selected in Revit highlighted and in view
+  state.showEls = true; renderMap();
+  setTimeout(() => document.querySelector(".edelrow.on")?.scrollIntoView({ block: "nearest" }), 0);
   toast(`Selected in Revit: on line ${L.n}${on.length > 1 ? `, and behind ${plural(on.length - 1, "other line")}` : ""}`);
 }
 if (HOST) HOST.addEventListener("message", (e) => { const m = e && e.data; if (!m) return;
-  try { if (m.type === "selection" && Array.isArray(m.ids)) hostSelection(m.ids); else if (m.type === "codesDone") hostCodesDone(m); else if (m.type === "colourDone" && typeof partsColourDone === "function") partsColourDone(m); } catch (err) {} });
+  try { if (m.type === "isolate" && m.on === false) isoEnded(); else if (m.type === "selection" && Array.isArray(m.ids)) hostSelection(m.ids); else if (m.type === "codesDone") hostCodesDone(m); else if (m.type === "colourDone" && typeof partsColourDone === "function") partsColourDone(m); } catch (err) {} });
 
 function currentGroups() { return buildGroups(state.result, state.mapDecisions, CONV.mapping, typeof decHeldRules === "function" ? decHeldRules() : null); }
 function goMap() { state.view = "map"; render(); window.scrollTo(0, 0); }
@@ -12325,6 +12364,8 @@ function lineBasis(L) {
 }
 const lineState = (L) => (L.status === "out" ? ["Left out", "s-out"] : OPEN.has(L.status) ? ["Needs you", "s-need"] : ["Confirmed", "s-ok"]);
 function basisChip(L) { const b = lineBasis(L); if (!b) return h("span", { class: "bchip b-none" }, "—"); const [t, c] = BASIS_WORD[b]; return h("span", { class: "bchip " + c, title: b === "edited" ? "Typed in by you" : b === "document" ? docLineSource(L) : b === "estimated" ? L.est || "" : "" }, t); }
+// Is a Revit element behind this line (its elements, or its share of a worked-out line)?
+const lineHasId = (L, id) => (L.groups || []).some((g) => g.elements.some((e) => String(e.Id) === id) || (g.parts || []).some((p) => String(p.id) === id)) || (L.parts || []).some((p) => String(p.id) === id);
 function renderTree(lines, groups) {
   const live = lines.filter((L) => L.status !== "out"), need = live.filter((L) => OPEN.has(L.status)).length, out = lines.length - live.length;
   const est = live.filter((L) => lineBasis(L) === "estimated").length, noted = lines.filter((L) => lnFor(L)).length;
@@ -12332,9 +12373,17 @@ function renderTree(lines, groups) {
   const filters = [["all", "All lines", live.length], ["need", "Needs you", need], ["est", "Estimated", est], ...(out ? [["out", "Left out", out]] : []), ...(noted ? [["notes", "Your notes", noted]] : [])];
   $("mFilter").replaceChildren(...filters.map(([k, l, n]) => h("button", { type: "button", "aria-pressed": String(f === k), "data-f": k, onclick: () => { state.mFilter2 = k; renderMap(); } }, `${l} · ${n}`)));
   const q = (state.mQ || "").trim().toLowerCase();
+  // A Revit element ID (as Revit's Select by ID shows it): every line that element is on, measured or worked out from it (20 Nov 2026)
+  const idQ = /^\d{3,}$/.test(q) ? q : "", idLines = idQ ? lines.filter((L) => lineHasId(L, idQ)) : null;
   const show = (L) => (f === "all" ? L.status !== "out" : f === "need" ? OPEN.has(L.status) || L.key === state.sel : f === "est" ? (lineBasis(L) === "estimated" || L.key === state.sel) : f === "notes" ? !!lnFor(L) || L.key === state.sel : L.status === "out")
-    && (!q || [L.description, L.heading, L.section, L.clause, ...L.groups.flatMap((g) => [g.sample.Family, g.sample.Type, g.sample.Material])].some((x) => String(x || "").toLowerCase().includes(q)));
+    && (!q || (idQ ? lineHasId(L, idQ) : [L.description, L.heading, L.section, L.clause, ...L.groups.flatMap((g) => [g.sample.Family, g.sample.Type, g.sample.Material, g.sample.AssemblyCode])].some((x) => String(x || "").toLowerCase().includes(q))));
   const rows = [];
+  if (idLines) {
+    const e = state.result.elements.find((x) => String(x.Id) === idQ);
+    rows.push(h("div", { class: "mrow idhit", role: "row", id: "mIdHit" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" },
+      !e ? `No element ${idQ} in this model.` : idLines.length ? `Element ${idQ} (${e.Family || e.Category}: ${e.Type || "no type name"}) is on ${plural(idLines.length, "line")}${f !== "all" && idLines.some((L) => !show(L)) ? ", some hidden by the filter above" : ""}.`
+        : `Element ${idQ} (${e.Family || e.Category}: ${e.Type || "no type name"}) isn’t on any line${state.result.status[e.Id] === "excluded" ? ": SolvBoQ doesn’t measure its category" : ": it has no item yet, or it was left out"}.`))));
+  }
   for (const sec of [...new Set(lines.map((L) => L.section))]) {
     const secLines = lines.filter((L) => L.section === sec), vis = secLines.filter(show);
     if (!vis.length) continue;
@@ -12351,7 +12400,7 @@ function renderTree(lines, groups) {
       if (sub && sub !== lastSub) { lastSub = sub; rows.push(h("div", { class: "mrow subhead", role: "row" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" }, sub), lnForHead(lnHeadKey(sec, L.clause, L.heading)) ? h("span", { class: "lnmark", title: "Your note on this heading" }, lnIcon()) : null))); }
       const [st, sc] = lineState(L);
       rows.push(h("button", { type: "button", class: "mrow line" + (L.key === state.sel ? " sel" : "") + (L.status === "out" ? " struck" : ""), "aria-pressed": String(L.key === state.sel), "data-key": L.key,
-        onclick: () => { state.sel = L.key === state.sel ? null : L.key; state.showEls = false; LN.edit = null; state.itemMenu = false; renderMap(); } },
+        onclick: () => { state.sel = L.key === state.sel ? null : L.key; state.showEls = false; LN.edit = null; state.itemMenu = false; state.mapTarget = null; state.pickCode = null; renderMap(); } },
         h("span", { class: "nlabel" }, h("span", { class: "lnum" }, String(L.n)), h("span", { class: "ldesc" }, L.description), lnFor(L) ? h("span", { class: "lnmark", title: lnFor(L).his != null ? `Your figure: ${mapQty(lnFor(L).his, L.unit)} ${L.unit}. ${lnFor(L).reason}` : lnFor(L).reason }, lnIcon()) : null),
         h("span", { class: "lunit" }, L.unit || ""),
         h("span", { class: "r lqty" + (L.edited ? " edited" : L.shownQty == null ? " none" : "") }, L.status === "out" ? "—" : L.status === "prov" ? "Prov." : L.shownQty == null ? "—" : mapQty(L.shownQty, L.unit)),
@@ -12386,7 +12435,7 @@ function nextOpenAfter(L) {
 }
 function selectLine(L) {
   if (!L) { state.sel = null; renderMap(); return; }
-  state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null;
+  state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null; state.mapTarget = null; state.pickCode = null;
   state.coll.delete(L.section); state.coll.delete(headKey(L));
   renderMap();
   const esc = window.CSS && CSS.escape ? CSS.escape(L.key) : L.key.replace(/["\\]/g, "\\$&");
@@ -12494,6 +12543,110 @@ function edStick() {
   if (!ed.hidden && ed.offsetHeight && ed.offsetHeight <= window.innerHeight - 40) ed.classList.add("stick");
 }
 window.addEventListener("resize", () => { if (state.view === "map") edStick(); });
+// ===== Choosing a line's item (20 Nov 2026: “not all the SANS items are listed”; “if I map something to concrete it should also
+// affect the formwork”; “when I mapped something incorrectly I can not map that element again”) =====
+// The list is the method pack's items (every one, searchable, the likeliest first), not a short list per trade. An item the model's
+// elements can BE (concrete in walls, slabs, columns…: the pack item's BoQ codes) is kept as that code for the Revit type, in SolvBoQ
+// (the overlay, as if the type had been coded in Revit), so the engine reads the element as that thing and its formwork, finishes,
+// reinforcement and joints follow. Any other item is the line's item, as before. Each Revit type on a line can be mapped again or undone
+// on its own (state.mapTarget: the group keys a choice applies to; none = every group on the line).
+const pkPlain = (s) => String(s || "").replace(/\s*›\s*\{[^}]*\}/g, "").replace(/\{[^}]*\}/g, "…").replace(/\s+/g, " ").trim();
+function pkTargets(L) { const t = state.mapTarget; return t && t.length ? L.groups.filter((g) => t.includes(g.key)) : L.groups; }
+// The codes of a pack item that suit every element of the groups (a wall code for walls, a slab code for floors…)
+function pkCodes(it, groups) {
+  return (it.codes || []).filter((c) => { const card = CARD_BY_CODE.get(c); return card && groups.every((g) => g.elements.every((e) => cardCatOk(card, e))); });
+}
+function pkItems(L) {
+  const P = methodOf(state.result), groups = pkTargets(L), e = groups[0]?.sample, r = state.result;
+  const sug = e ? suggestCode(e, r)?.code : null, sec = P.tradeSection?.[groups[0]?.trade] || "";
+  return Object.values(P.items).filter((it) => it.rule !== "expected").map((it) => {
+    const codes = pkCodes(it, groups);
+    const rank = (sug && codes.includes(sug) ? 0 : codes.length ? 1 : it.section === sec ? 2 : 3);
+    return { id: it.id, section: it.section, clause: it.clause || "", heading: pkPlain(it.heading), wording: pkPlain(it.wording), unit: it.unit, codes, rank };
+  }).sort((a, b) => a.rank - b.rank || P.sections.order.indexOf(a.section) - P.sections.order.indexOf(b.section) || String(a.clause).localeCompare(String(b.clause), "en", { numeric: true }));
+}
+// The description an item gets for these elements, when it is the line's item (not a code)
+function pkDescribe(x, g) {
+  const e = g.sample, name = [e.Family, e.Type].filter(Boolean).join(", ");
+  if (x.wording && !/^\(described/.test(x.wording)) return x.wording.replace(/…/g, e.Type || e.Family || "as modelled");
+  if (x.section === "SANS 1200 G" && /concrete/i.test(x.heading)) { const grade = gradeOf(e.Material) || CONV.grades[e.Material] || "30 MPa"; return `Reinforced class ${grade}/19 mm concrete in ${concreteGroupLabel(e, state.result.roles[e.Id]?.role)}`; }
+  return `${x.heading}: ${name || "as modelled"}`;
+}
+async function pkChoose(L, x, code) {
+  const groups = pkTargets(L), P = methodOf(state.result);
+  if (!code && x.codes.length > 1) { state.pickCode = { id: x.id }; renderMap(); return; }
+  code = code || x.codes[0];
+  state.itemMenu = false; state.pickCode = null; state.itemQ = "";
+  if (code) {
+    // What it is: the code, kept for the Revit type; the engine bills it, and works out what follows from it
+    for (const g of groups) delete state.mapDecisions[g.key];
+    await pkForget(groups);
+    const ids = new Set(groups.flatMap((g) => g.elements.map((e) => e.Id)));
+    ovPutCodes(groups.map((g) => ({ e: g.sample, code, from: "him" })));
+    const card = CARD_BY_CODE.get(code), L2 = (state.mapLines || mapLines(currentGroups())).find((y) => y.groups.some((g) => g.elements.some((e) => ids.has(e.Id))));
+    state.mapTarget = null; state.sel = L2 ? L2.key : null;
+    toast(`Kept as ${code} (${card?.title || code}) in SolvBoQ: billed as ${x.heading}, with what follows from it (formwork, finishes, reinforcement, joints)`);
+    renderMap(); return;
+  }
+  const item = { section: x.section, clause: x.clause, heading: x.heading, description: pkDescribe(x, groups[0]), unit: x.unit };
+  for (const g of groups) state.mapDecisions[g.key] = { item, method: "edited", confirmed: true, packItem: x.id };
+  state.changedFrom = state.changedFrom || {}; if (!L.unmapped) state.changedFrom[itemKey(item)] = L.description;
+  state.mapTarget = null; state.sel = itemKey(item);
+  const concrete = /concrete/i.test(x.heading) && x.section === "SANS 1200 G" && (P.items[x.id]?.codes || []).length;
+  const save = state.remember !== false ? groups.map((g) => [g.key, item]) : [];
+  toast(concrete ? `Billed as ${x.heading}. Its formwork isn’t worked out: a ${groups[0].sample.Category || "element of this category"} can’t be a concrete wall, slab or column to SolvBoQ. Draw it as one in Revit, or add the formwork as a line.` : save.length ? "Item changed and saved for this Revit type" : "Item changed");
+  if (save.length) Profiles.setEntries("mapping", save, "mapping", "user"); else renderMap();
+}
+// Forget saved mappings for these groups (they come before the engine's own reading)
+async function pkForget(groups) {
+  const keys = new Set(groups.map((g) => g.key)), p = Profiles.active(), before = p.mapping.length;
+  p.mapping = p.mapping.filter((x) => !keys.has(x.key));
+  if (p.mapping.length !== before) await Profiles.save(p);
+}
+// One Revit type on a line back to what SolvBoQ reads by itself: its decision, its saved mapping and a code kept for it in SolvBoQ
+async function pkUndoGroup(g) {
+  delete state.mapDecisions[g.key]; await pkForget([g]);
+  const kept = g.sample.SetInSolvBoQ?.code;
+  if (kept && typeof OV !== "undefined" && OV.doc) { OV.doc = overlayPut(OV.doc, { e: g.sample, field: "code", v: null }); ovSave(); }
+  rerunChecks(); state.sel = null; toast(`${g.sample.Type || g.sample.Family}: back to what SolvBoQ reads from the model`); render();
+}
+// The picker: search, then the method's items, the likeliest first; a code choice where an item can be more than one thing
+function pkPicker(L, cur) {
+  const all = pkItems(L), q = (state.itemQ || "").trim().toLowerCase(), groups = pkTargets(L);
+  const hit = (x) => !q || [x.section, x.clause, x.heading, x.wording, x.codes.join(" ")].join(" ").toLowerCase().includes(q);
+  const list = all.filter(hit), P = methodOf(state.result);
+  if (state.pickCode) {
+    const x = all.find((y) => y.id === state.pickCode.id);
+    if (x) return h("div", { class: "edmenu pkmenu", id: "pkCodes" },
+      h("span", { class: "edsub" }, `${x.heading}: what is ${groups.length === 1 ? (groups[0].sample.Type || "it") : "it"}? SolvBoQ works out its formwork, finishes and the rest from that.`),
+      ...x.codes.map((c) => h("button", { type: "button", class: "pkopt", "data-code": c, onclick: () => pkChoose(L, x, c) }, h("span", {}, h("small", {}, c), CARD_BY_CODE.get(c)?.title || c))),
+      h("button", { type: "button", class: "edother", onclick: () => { state.pickCode = null; renderMap(); } }, "Back to the items"));
+  }
+  const q0 = h("input", { id: "edItemQ", class: "edinput", type: "search", placeholder: "Search the items: clause, word or code", value: state.itemQ || "", oninput: (e) => { state.itemQ = e.target.value; renderMap(); setTimeout(() => { const i = $("edItemQ"); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }, 0); } });
+  const row = (x) => { const on = cur && x.section === cur.section && x.clause === cur.clause && x.heading === cur.heading;
+    return h("button", { type: "button", role: "option", class: "pkopt", "data-item": x.id, "aria-selected": String(!!on), onclick: () => pkChoose(L, x) },
+      h("span", {}, h("small", {}, `${SECTION_LABEL(x.section)}${x.clause ? " " + x.clause : ""}${x.codes.length ? ` · is ${x.codes.length === 1 ? x.codes[0] : x.codes.length + " kinds"}` : ""}`),
+        `${x.heading}${x.wording && !/^\(described/.test(x.wording) ? ": " + x.wording : ""}`, h("span", { class: "muted" }, ` (${x.unit})`))); };
+  const likely = list.filter((x) => x.rank <= 1), rest = list.filter((x) => x.rank > 1);
+  return h("div", { class: "edmenu pkmenu", role: "listbox", "aria-label": `${P.name} items`, id: "pkMenu" }, q0,
+    likely.length ? h("span", { class: "edsub pkhead" }, "What these elements can be") : null, ...likely.map(row),
+    rest.length ? h("span", { class: "edsub pkhead" }, likely.length ? `Every other item of ${P.name}` : `${P.name}’s items`) : null, ...rest.slice(0, q ? 200 : 120).map(row),
+    !list.length ? h("span", { class: "edsub" }, "No item matches. Try fewer words, or describe it yourself below.") : null,
+    h("button", { type: "button", class: "edother", onclick: () => { state.itemMenu = false; state.mEdit = (pkTargets(L)[0] || L.groups[0]).key; renderMap(); } }, "Describe it yourself…"));
+}
+// The Revit types on a line, each mapped again or undone on its own
+function pkTypes(L) {
+  if (L.expected || L.groups.length === 0) return null;
+  const chosen = state.mapTarget || [];
+  return h("div", { class: "edfield", id: "pkTypes" }, h("span", { class: "edlabel" }, L.groups.length > 1 ? `The ${L.groups.length} Revit types on this line` : "The Revit type on this line"),
+    ...L.groups.map((g) => { const e = g.sample, kept = e.SetInSolvBoQ?.code, how = kept ? `kept as ${e.AssemblyCode} in SolvBoQ` : g.method === "edited" ? "mapped by you" : g.method === "learned" ? "a saved mapping" : g.method === "claude" ? "Claude’s suggestion" : g.method === "rule" || g.method === "check" ? (e.AssemblyCode ? `its code ${e.AssemblyCode}` : "SolvBoQ’s rule") : "no item yet";
+      const mine = kept || g.method === "edited" || g.method === "learned" || g.method === "claude";
+      return h("div", { class: "pktype" + (chosen.includes(g.key) ? " on" : ""), "data-group": g.key },
+        h("span", {}, h("b", {}, `${e.Family || e.Category}: ${e.Type || "no type name"}`), h("small", {}, `${plural(g.elements.length, "element")} · ${how}`)),
+        h("span", { class: "tools" },
+          h("button", { type: "button", class: "btn xs", onclick: () => { state.mapTarget = [g.key]; state.itemMenu = true; state.pickCode = null; state.mEdit = null; renderMap(); edChange(); } }, "Map again"),
+          mine ? h("button", { type: "button", class: "btn xs", onclick: () => pkUndoGroup(g) }, "Undo") : null)); }));
+}
 // A line's panel, in the order of the canvas's “Web 3: The bill” (17 Nov 2026): why it needs him (one sentence: a model problem,
 // a rule to confirm, Claude's suggestion, a figure to measure, a change since the signed bill), the figure and how it was got,
 // how it is worked out and the elements behind it, what would make an estimate a measurement, then Accept, Change, Leave out.
@@ -12557,14 +12710,17 @@ function editorFor(L, lines) {
     els.length && HOST ? h("div", { class: "tools" },
       h("button", { type: "button", class: "btn sm", id: "btnSelRevit", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, `Select in Revit (${els.length})`),
       h("button", { type: "button", class: "btn sm", id: "btnIsoRevit", title: "Hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, "Isolate in Revit"),
-      state.revitIso ? h("button", { type: "button", class: "link accent", id: "btnShowAll", onclick: () => hostShowAll() }, "Show everything again") : null) : null,
+      state.revitIso ? h("button", { type: "button", class: "btn sm dark", id: "btnShowAll", onclick: () => hostShowAll() }, "Show everything again") : null) : null,
     els.length ? h("button", { type: "button", class: "link accent", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "Show"} the ${plural(els.length, "element")} in the model`) : h("span", { class: "edsub" }, "No model elements behind this line."),
     state.showEls && els.length ? h("div", { class: "edels" },
       h("div", { class: "edelrow eh" }, h("span", {}, "ID"), h("span", {}, "Family : type · level"), h("span", { class: "r" }, L.unit || "")),
+      // Docked in Revit, an element's row selects it there (and selecting in Revit highlights its row here)
       h("div", { class: "edelscroll" }, ...els.slice(0, 300).map(({ e, g }) => { const q = part.size ? part.get(String(e.Id)) : L.unit ? basisQty(e, g.item?.unit || L.unit) : null;
-        return h("div", { class: "edelrow" }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
+        const on = !!state.revitSel?.has(String(e.Id));
+        return h(HOST ? "button" : "div", { class: "edelrow" + (on ? " on" : "") + (HOST ? " pick" : ""), "data-el": String(e.Id), ...(HOST ? { type: "button", title: "Select it in Revit", "aria-pressed": String(on), onclick: () => { hostSelect([e.Id]); renderMap(); } } : {}) }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
       h("div", { class: "edelfoot" }, h("span", {}, "Paste into Revit: Manage › Select by ID"),
         h("button", { type: "button", class: "btn xs", onclick: () => copyText(els.map(({ e }) => e.Id).join(";"), plural(els.length, "ID") + " copied for Revit’s Select by ID") }, "Copy IDs for Revit"))) : null));
+  body.push(pkTypes(L));
   // What would turn an estimate into a measurement
   if (L.est && !L.edited) body.push(h("div", { class: "edmeasure" }, h("span", { class: "edmtitle" }, "To measure this, not estimate it"),
     h("p", { class: "edtext", id: "estNote" }, "An estimate, not a measurement. " + L.est),
@@ -12588,18 +12744,15 @@ function editorFor(L, lines) {
   // Change it: the item, the quantity, and the assumptions behind a worked-out line
   const chg = [];
   if (!L.expected) {
-    const opts = quickPicks(g0);
     const cur = L.unmapped ? null : { section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit };
     const was = state.changedFrom?.[L.key];
     chg.push(h("div", { class: "edfield" },
       h("span", { class: "edlabel" }, "SANS item"),
       h("button", { type: "button", class: "edselect", "aria-haspopup": "listbox", "aria-expanded": String(!!state.itemMenu), onclick: () => { state.itemMenu = !state.itemMenu; state.mEdit = null; renderMap(); } },
         h("span", {}, cur ? cur.description : "Choose an item"), svg('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg>')),
-      state.itemMenu ? h("div", { class: "edmenu", role: "listbox", "aria-label": "SANS items" },
-        ...opts.map((p) => { const on = cur && p.description === cur.description && p.section === cur.section; return h("button", { type: "button", role: "option", "aria-selected": String(!!on), onclick: () => (on ? (state.itemMenu = false, renderMap()) : setLineItem(L, p)) },
-          h("span", {}, h("small", {}, `${SECTION_LABEL(p.section)}${p.clause ? " " + p.clause : ""}`), p.description), on ? svg('<svg width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--accent)" stroke-width="2.6" aria-hidden="true"><path d="M5 12l5 5 9-10"></path></svg>') : null); }),
-        h("button", { type: "button", class: "edother", onclick: () => { state.itemMenu = false; state.mEdit = g0.key; renderMap(); } }, "Another item…")) : null,
-      state.mEdit === g0.key ? editRow(g0, L.groups) : null,
+      state.itemMenu ? pkPicker(L, cur) : null,
+      state.mapTarget && state.itemMenu ? h("span", { class: "edhint" }, `For ${pkTargets(L).map((g) => g.sample.Type || g.sample.Family).join(", ")} only. `, h("button", { type: "button", class: "link", onclick: () => { state.mapTarget = null; renderMap(); } }, "Every type on the line")) : null,
+      state.mEdit && L.groups.some((g) => g.key === state.mEdit) ? editRow(L.groups.find((g) => g.key === state.mEdit), state.mapTarget ? pkTargets(L) : L.groups) : null,
       was ? h("span", { class: "edhint" }, `Was: ${was}`) : null,
       h("label", { class: "edcheck" }, h("input", { type: "checkbox", checked: state.remember !== false ? true : null, onchange: (e) => { state.remember = e.target.checked; } }), "Map this Revit type the same way next time"),
       // While Claude works, say so here (it takes 20 to 60 seconds); an error stays visible until the next ask
