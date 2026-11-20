@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-19T13:44:17Z">
+<meta name="solvboq-build" content="2026-11-20T11:48:03Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1152,6 +1152,43 @@ body.docked .toast{top:12px;bottom:auto}
 .docans .stdtable{font-size:12px}
 .calc.docsrc{display:flex;flex-direction:column;gap:4px}
 .docfor{min-width:min(240px,100%);max-width:100%}
+/* Set up (the journey's step 1): the overview's Set up card and the New project dialog */
+.hvmain{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px}
+.hvmain .hvstructs{flex:none}
+.hvsetup{background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px}
+.hvsetup h2{margin:0;font-size:20px;line-height:1.3;font-weight:700}
+.hvsetrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:12px 16px;border-radius:14px;background:var(--head)}
+.hvsetrow span{color:var(--muted)}
+.hvsetrow b{font-weight:600;text-align:right;overflow-wrap:anywhere}
+.hvsetrow b.warn{color:var(--amber-t)}
+.hvsetmiss{display:flex;flex-direction:column;gap:4px;padding:8px 16px 0}
+.hvsetmiss>span:first-child{font-weight:600}
+.hvsetmiss ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;line-height:1.45}
+.hvsetup .tools{padding-top:8px}
+.npdlg .npform{display:flex;flex-direction:column;gap:6px}
+.npdlg .npform .edlabel{margin-top:10px}
+.npdlg .npform .tools{margin-top:16px}
+.npdlg .edpath{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.npdlg .edpath h2{margin:0;font-size:22px}
+.npmethods{display:flex;flex-direction:column;gap:6px}
+.nprow{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:8px}
+@media (max-width:640px){.nprow{grid-template-columns:minmax(0,1fr)}}
+/* The AI layer on the bill (20 Nov 2026): the reviewer's suggestions, a figure explained, the cover note */
+.aimiss{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px 12px;padding:12px 14px;border-radius:14px;background:var(--head)}
+.aimiss>div:first-child{display:flex;flex-direction:column;gap:3px;min-width:0;flex:1 1 260px}
+.aimiss.off{opacity:.45}
+.aimiss .acts{display:flex;gap:6px;align-items:flex-start}
+.explain{display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:12px 14px;border-radius:14px;background:var(--indigo-s)}
+.explain ul{margin:0;padding-left:18px;line-height:1.45}
+#signCoverText{width:100%;font:inherit;line-height:1.5}
+/* A signed version: does today's SolvBoQ give exactly this bill? (20 Nov 2026) */
+.signrepro{flex-basis:100%;display:flex;flex-direction:column;gap:6px;margin:6px 0 4px;padding:10px 14px;border-radius:14px;background:var(--head)}
+.signrepro.ok{background:var(--green-s)}
+.signrepro.no{background:var(--amber-s)}
+/* Claims: the query list for the contractor (20 Nov 2026) */
+.clqueries{display:flex;flex-direction:column;gap:8px;padding-bottom:14px;margin-bottom:6px;border-bottom:1px solid var(--rule)}
+.clquery{display:flex;flex-direction:column;gap:4px}
+.clquery textarea{width:100%;line-height:1.45}
 </style>
 </head>
 <body>
@@ -8188,6 +8225,128 @@ function billLines(groups, r, st = {}) {
   return all;
 }
 
+// ===== The AI layer's pure parts (20 Nov 2026): the item matcher, and the bill reviewer's two jobs on the journey =====
+// The architecture's AI row: Claude proposes and never calculates, and nothing it proposes is used until he confirms it.
+//   Item matcher   a group no rule places gets an item from the METHOD PACK (methods/*.js): Claude chooses one of the pack's items by
+//                  its id, so the section, clause, heading and unit are the pack's (under the contract's amendments), never Claude's;
+//                  Claude writes only the description, in his wording. “None fits” leaves the clause blank (no clause is guessed).
+//   Explain        a line's figure in plain words, from SolvBoQ's own working only (journey step 5).
+//   Cover note     a draft at sign-off: the assumptions, the estimates being accepted and what to watch (journey step 6).
+// For both pieces of writing, every figure Claude writes must already be in what it was given (aiStrayFigures): it may repeat
+// SolvBoQ's numbers, never make its own. Prompts, schemas and checks only; the page calls Claude (mapview.js, signview.js, app.js).
+// Top-level names: AI_*, ai*, match*.
+
+// ----- Item matcher -----
+const aiPlain = (s) => String(s || "").replace(/\s*›\s*\{[^}]*\}/g, "").replace(/\{[^}]*\}/g, "…").replace(/\s+/g, " ").trim();
+// The items Claude may choose from: every item of the composed pack except the placeholders the bill always lists (rule “expected”)
+function matchCandidates(P) {
+  return Object.values(P.items).filter((it) => it.rule !== "expected").map((it) => ({ id: it.id, section: it.section, clause: it.clause || "",
+    heading: aiPlain(it.heading), wording: aiPlain(it.wording) || (it.rule === "element" ? "(described from the element: grade, what it is)" : ""), unit: it.unit }));
+}
+const MATCH_OTHER = "other";
+function matchSchema(P) {
+  return { type: "object", additionalProperties: false, required: ["id", "item", "section", "description", "unit", "confidence", "reason"],
+    properties: { id: { type: "string" }, item: { type: "string", enum: [...Object.keys(P.items).filter((k) => P.items[k].rule !== "expected"), MATCH_OTHER] },
+      section: { type: "string", enum: P.sections.order }, description: { type: "string" }, unit: { type: "string", enum: P.units },
+      confidence: { type: "number" }, reason: { type: "string" } } };
+}
+// groups: [{ sample, elements }]; ctx: { kind (the structure's kind, words), pack (the structure pack's name), hasPast }
+function matchPrompt(groups, P, ctx = {}) {
+  const list = groups.map((g, i) => `g${i + 1} | ${g.sample.Category} | ${g.sample.Family || "-"} | ${g.sample.Type || "-"} | ${g.sample.Material || "no material"} | ${g.elements.length} el. | ${g.sample.Volume ? g.sample.Volume.toFixed(2) + " m³ each" : g.sample.Length ? g.sample.Length.toFixed(2) + " m each" : ""}`);
+  const items = matchCandidates(P).map((c) => `${c.id} | ${c.section} ${c.clause} | ${c.heading} | ${c.wording} | ${c.unit}`);
+  return `You are a South African quantity surveyor placing Revit model elements in a Bill of Quantities measured under ${P.name}${P.amendments?.length ? ` (with ${P.amendments.map((a) => a.name).join(", ")})` : ""}.
+${ctx.kind ? `The structure: ${ctx.kind}${ctx.pack ? ` (${ctx.pack})` : ""}.` : ""}
+
+The method's items (id | section clause | heading | wording, “…” filled from the element | unit):
+${items.join("\n")}
+
+Groups SolvBoQ's rules couldn't place (id | category | family | type | material | count | size):
+${list.join("\n")}
+
+For each group, choose the ONE item of the method above it belongs to, by its id. Write the description as it should read in the bill, in the engineer's wording, under that item's heading. Choose “${MATCH_OTHER}” only when none of the items fits, and then give the section; its clause is left blank for the engineer. Give the unit the bill uses (the item's own unit when you choose one). Give a confidence from 0 to 1 and one short sentence why.${ctx.hasPast ? "\n\nWhere one of the engineer's past bills (in the system prompt) has an item for the same thing, use his wording." : ""}
+Do not work out any quantity: SolvBoQ measures.`;
+}
+// Claude's answer for one group as the bill item it would be, or null when it can't be used. The section, clause, heading and unit of a
+// chosen item are the pack's; only the description is Claude's.
+function matchItem(P, ans) {
+  if (!ans || typeof ans !== "object") return null;
+  const desc = String(ans.description || "").replace(/[\u0000-\u001f]/g, " ").trim().slice(0, 240);
+  const it = ans.item && ans.item !== MATCH_OTHER ? P.items[ans.item] : null;
+  if (it && it.rule !== "expected") return { packItem: it.id, other: false, item: { section: it.section, clause: it.clause || "", heading: aiPlain(it.heading), description: desc || aiPlain(it.wording), unit: it.unit } };
+  if (ans.item !== MATCH_OTHER || !P.sections.order.includes(ans.section) || !desc) return null;
+  return { packItem: "", other: true, item: { section: ans.section, clause: "", heading: "Items the method has no item for", description: desc, unit: P.units.includes(ans.unit) ? ans.unit : "No" } };
+}
+
+// ----- The bill reviewer: items the bill likely lacks, placed on the method's items the same way -----
+function missingSchema(P) {
+  return { type: "object", additionalProperties: false, required: ["item", "packItem", "section", "why", "unit", "source", "check", "confidence"],
+    properties: { item: { type: "string" }, packItem: { type: "string", enum: [...Object.keys(P.items), MATCH_OTHER] }, section: { type: "string", enum: P.sections.order },
+      why: { type: "string" }, unit: { type: "string", enum: [...P.units, "Sum"] }, source: { type: "string" }, check: { type: "string" }, confidence: { type: "number" } } };
+}
+function missingPromptItems(P) {
+  return `The method's items (id | section clause | heading | wording | unit): name the one each suggestion would be billed under by its id, or “${MATCH_OTHER}” with the section when none fits (its clause is then left blank: never guess one).
+${matchCandidates(P).map((c) => `${c.id} | ${c.section} ${c.clause} | ${c.heading} | ${c.wording} | ${c.unit}`).join("\n")}`;
+}
+// A suggestion as the “To measure” line it becomes when he adds it: the section, clause and unit of the pack's item when Claude named one
+function missingLine(P, s) {
+  const it = s.packItem && s.packItem !== MATCH_OTHER ? P.items[s.packItem] : null;
+  const why = `${s.why}${s.source ? ` Source: ${s.source}.` : ""}${s.check ? ` Check: ${s.check}.` : ""}`;
+  if (it) return { section: it.section, clause: it.clause || "", heading: "Suggested by Claude", description: s.item, unit: it.unit, why, packItem: it.id };
+  return { section: P.sections.order.includes(s.section) ? s.section : "General", clause: "", heading: "Suggested by Claude", description: s.item, unit: [...P.units, "Sum"].includes(s.unit) ? s.unit : "Sum", why, packItem: "" };
+}
+
+// ----- Figures: Claude may repeat SolvBoQ's, never make its own -----
+// A figure as written (“1,033.25”, “1 033”, “35 MPa” → 35), compared as numbers; small counts up to 12 and years are let through
+const aiNums = (text) => (String(text || "").replace(/(\d)[  ,](?=\d{3}\b)/g, "$1").match(/\d+(?:\.\d+)?/g) || []).map(Number);
+function aiStrayFigures(written, given) {
+  const have = new Set(aiNums(given).map((x) => +x.toFixed(4)));
+  const near = (x) => have.has(+x.toFixed(4)) || [...have].some((y) => y !== 0 && Math.abs(x - y) / Math.abs(y) < 0.005);
+  return [...new Set(aiNums(written).filter((x) => !(Number.isInteger(x) && x <= 12) && !(x >= 1900 && x <= 2100 && Number.isInteger(x)) && !near(x)))];
+}
+
+// ----- Explain a figure -----
+const AI_EXPLAIN_SCHEMA = { type: "object", additionalProperties: false, required: ["explanation", "look"],
+  properties: { explanation: { type: "string" }, look: { type: "array", items: { type: "string" } } } };
+// line: { section, clause, heading, description, unit, qty, basis, est, why }; working: the text of “How this figure is worked out”
+function aiExplainGiven(line, working) {
+  return [`Line: ${line.section} ${line.clause || ""} | ${line.heading || ""} | ${line.description} | ${line.unit}`, `Quantity: ${line.qty == null ? "not measured yet" : line.qty} ${line.unit}`,
+    `How it was arrived at: ${line.basis || "unknown"}`, line.est ? `What makes it an estimate: ${line.est}` : "", line.why ? `Why it is on the bill: ${line.why}` : "", `SolvBoQ's working:\n${working || "(none)"}`].filter(Boolean).join("\n");
+}
+function aiExplainPrompt(line, working) {
+  return `You explain one line of a Bill of Quantities to the civil engineer who will sign it. SolvBoQ measured it; your job is only to put its working into plain words.
+
+${aiExplainGiven(line, working)}
+
+Write the explanation in two to five short sentences, for an engineer: what was measured, from which elements, and how the figure follows from the working. Use only figures that appear above; do not work out, round or estimate any new figure. If the working doesn't explain something, say so plainly. Then list up to three things he should look at in the model before he accepts it.`;
+}
+
+// ----- The cover note at sign-off -----
+const AI_COVER_SCHEMA = { type: "object", additionalProperties: false, required: ["assumptions", "estimates", "watch"],
+  properties: { assumptions: { type: "array", items: { type: "string" } }, estimates: { type: "array", items: { type: "string" } }, watch: { type: "array", items: { type: "string" } } } };
+// facts: { structure, method, byBasis (text), value (text), estimates [{ description, qty, unit, est }], out [descriptions], prov [descriptions],
+//          missing [{ for, what, until }], flags (count of model problems billed as they are) }
+function aiCoverGiven(f) {
+  return [`Structure: ${f.structure}`, `Method of measurement: ${f.method}`, `The bill by how it was arrived at: ${f.byBasis}`, f.value ? `At his rates: ${f.value}` : "",
+    f.estimates?.length ? `Estimates he is accepting:\n${f.estimates.map((x) => `- ${x.description}: ${x.qty == null ? "–" : x.qty} ${x.unit}. ${x.est || ""}`).join("\n")}` : "Estimates: none",
+    f.missing?.length ? `Information still missing, and what SolvBoQ does until then:\n${f.missing.map((m) => `- ${m.what} (${m.for}): ${m.until}`).join("\n")}` : "",
+    f.out?.length ? `Lines left out of the bill:\n${f.out.map((d) => `- ${d}`).join("\n")}` : "", f.prov?.length ? `Provisional lines:\n${f.prov.map((d) => `- ${d}`).join("\n")}` : "",
+    f.flags ? `Lines billed with a model problem accepted as it is: ${f.flags}` : ""].filter(Boolean).join("\n\n");
+}
+function aiCoverPrompt(f) {
+  return `Draft the cover note that goes with a Bill of Quantities the engineer is about to sign. Write for the client's quantity surveyor and the contractor: plain, short sentences, South African English.
+
+${aiCoverGiven(f)}
+
+Give three lists, each item one sentence:
+1. assumptions: what the quantities assume (method, missing information and what was done meanwhile, items left out or provisional);
+2. estimates: each estimate being accepted, what it rests on, and what would make it a measurement;
+3. watch: the items most likely to change at construction, worth watching in payment claims.
+Use only figures that appear above; do not work out any new figure. Leave a list empty when there is nothing for it.`;
+}
+const aiCoverText = (n) => [["Assumptions", n.assumptions], ["Estimates accepted", n.estimates], ["Items to watch", n.watch]]
+  .filter(([, xs]) => xs?.length).map(([t, xs]) => `${t}\n${xs.map((x) => `- ${x}`).join("\n")}`).join("\n\n");
+
+
 // ===== Formwork from real faces (hybrid engine plan, Phase 2, shadow mode) =====
 // The add-in records every face of each concrete element and what lies against it (FaceReader.cs). This works out formwork from
 // them, run beside today's box rules and not yet billed: a face is formed where nothing cast before it, or in the same pour, lies
@@ -9241,6 +9400,52 @@ function signedFigures(cmps, findings) {
   return { over: cmps.reduce((t, c) => t + (c.over || 0), 0), lines: cmps.reduce((t, c) => t + c.rows.filter((r) => r.over).length, 0), twice: (findings || []).filter((f) => f.kind === "dup").length };
 }
 
+// ----- The query list for the contractor (20 Nov 2026, the canvas's “Check a payment certificate” screen: “Drafted for you”) -----
+// One paragraph per finding he raises, written from the finding's own figures by rule (no AI: every figure is the certificate's or his
+// bill's), addressed to the contractor: which item, what is claimed against what, and what is asked for. against: how his bill is named
+// (“the signed bill”, “the Engineer’s bill”). Our own reading problems (reader) are never a query: null.
+const CLAIM_ASK = {
+  over: "Please send the measurement that supports the extra {extra}, or the instruction that increased it.",
+  overMaster: "Please send the measurement that supports the extra {extra}.",
+  dup: "Please confirm these are different work, or withdraw one of them.",
+  dupSoft: "Please confirm these are separate quantities.",
+  prevUp: "Please explain why the previous total was raised.",
+  prevDown: "Please explain why the previous total was lowered.",
+  arith: "Please correct the amount.",
+  sum: "Please confirm which figure is right; the lower is certified until it is resolved.",
+  rateChange: "Rates are fixed at tender unless a variation changed them: please send the instruction.",
+  rateMaster: "Rates are fixed at tender unless a variation changed them: please send the instruction, or claim at the bill rate.",
+  billOver: "Please show which items take the bill over its tendered total, and the instructions that cover them.",
+  rateOnly: "Rate-only items are paid only when the Engineer orders the work: please send the instruction.",
+  negative: "Please confirm the corrected total to date is now right.",
+  gone: "Please confirm whether the work was removed on purpose, or the item renumbered.",
+  notInMaster: "Please send the instruction or variation order for this item.",
+};
+const claimRef = (l) => {
+  const d = String(l.description || "").replace(/\s+/g, " ").trim(), short = d.length > 90 ? d.slice(0, d.lastIndexOf(" ", 88) > 40 ? d.lastIndexOf(" ", 88) : 88) + "…" : d;
+  return [l.bill ? `Bill ${l.bill}${l.item ? `, item ${l.item}` : ""}` : l.item ? `Item ${l.item}` : "", short].filter(Boolean).join(": ");
+};
+function claimQuery(f, against = "the Engineer’s bill") {
+  if (!f || f.kind === "reader") return null;
+  const l = (f.lines || [])[0] || {}, u = l.unit, ask = (CLAIM_ASK[f.kind] || "Please explain.");
+  const fill = (s, x) => s.replace("{extra}", x);
+  if (f.kind === "overMaster" && f.master) {
+    const claimed = l.toDateQty ?? 0, agreed = f.master.agreed ?? 0;
+    return `${claimRef(l)}. ${qfmt(claimed, u)} is claimed to date against ${qfmt(agreed, u)} in ${against}${f.master.item ? ` (item ${f.master.item})` : ""}. ${fill(ask, qfmt(claimed - agreed, u))}`;
+  }
+  if (f.kind === "over") return `${claimRef(l)}. ${qfmt(l.toDateQty, u)} is claimed to date against ${qfmt(l.billQty, u)} in the bill. ${fill(ask, qfmt(l.toDateQty - l.billQty, u))}`;
+  if (f.kind === "rateMaster" && f.master) return `${claimRef(l)}. The rate claimed is ${money(l.rate)}; ${against} has ${money(f.master.rate)}${f.master.item ? ` (item ${f.master.item})` : ""}. ${ask}`;
+  if (f.kind === "notInMaster") return `${claimRef(l)}. ${qfmt(l.toDateQty ?? 0, u)} (${money(l.toDateAmount || 0)}) is claimed on an item that isn’t in ${against}. ${ask}`;
+  if (f.kind === "dup" || f.kind === "dupSoft") {
+    const [a, b] = f.lines || [];
+    return `${claimRef(a || {})} and ${claimRef(b || {})}. Both claim ${qfmt(a?.toDateQty ?? 0, a?.unit)} to date. ${ask}`;
+  }
+  if (f.kind === "billOver") return `${f.text} ${ask}`;
+  return `${claimRef(l)}. ${f.text} ${ask}`;
+}
+// The list as text, numbered, for the letter or email
+const claimQueryText = (head, qs) => [head, "", ...qs.map((q, i) => `${i + 1}. ${q}`)].join("\n");
+
 
 // ===== A small .xlsx reader: values only (the cached results of formulas), no library =====
 // An .xlsx file is a zip of XML files. The zip is read here; inflating is passed in, because the browser does it with
@@ -9982,14 +10187,17 @@ function signChanges(prev, rows) {
 // profile, earth, rebar, title, mapping, held } (plain lists, no Sets or Maps)
 // method: the pack that itemised it and the amendments laid on it, each with its version (packStamp), so the bill says
 // which standard measured it and a replay uses the same
-function signDoc({ n, structure, model, rows, value, extract, snapshot, build, who, at, changes = null, previous = null, method = null }) {
-  return { format: SIGN_FORMAT, n, structure, model, at, build, ...(method ? { method: JSON.parse(JSON.stringify(method)) } : {}), signedBy: who.uid || "", name: who.name || "", email: who.email || "", registration: who.registration || "",
+// structurePack: the structure pack that said what kind of structure it is (structureStamp: id, version, name; 20 Nov 2026), so the
+// bill records everything that measured it: the build (the engine), the method pack and the structure pack, each with its version
+function signDoc({ n, structure, model, rows, value, extract, snapshot, build, who, at, changes = null, previous = null, method = null, structurePack = null }) {
+  return { format: SIGN_FORMAT, n, structure, model, at, build, ...(method ? { method: JSON.parse(JSON.stringify(method)) } : {}),
+    ...(structurePack ? { structurePack: JSON.parse(JSON.stringify(structurePack)) } : {}), signedBy: who.uid || "", name: who.name || "", email: who.email || "", registration: who.registration || "",
     extract: { print: extract.print, schemaVersion: extract.schemaVersion ?? 0, elements: extract.elements, checked: extract.checked || "" },
     lines: rows, value, snapshot: JSON.parse(JSON.stringify(snapshot)), ...(previous ? { previous, changes } : {}) };
 }
 // The bill worked out again from a signed version's extract and snapshot, with this page's engine: the same lines, if the engine
 // (or the build recorded with it) is the same. Through the engine's one entry (run.js), as the page builds a bill.
-function signReplay(records, snap, method = null) {
+function signReplayRun(records, snap, method = null) {
   const decisions = { earthworks: snap.earth || {}, rebar: snap.rebar || undefined,
     // (the mappings learned in his conventions, and the rules held back because he kept changing their items, as at signing)
     mapDecisions: snap.mapDecisions || {}, mapping: snap.mapping || {}, held: snap.held || null,
@@ -9997,8 +10205,26 @@ function signReplay(records, snap, method = null) {
   // The pack and amendments it was signed under (older versions: the project's choice in the snapshot, else the defaults)
   const how = method ? { method: method.id, amendments: (method.amendments || []).map((a) => a.id) } : {};
   const r = engineResult({ records, overlay: snap.overlay || null, profile: snap.profile || null, title: snap.title || "", inputs: snap.inputs || null, decisions, ...how });
-  return signRows(engineBill(r, decisions).lines, r);
+  return { rows: signRows(engineBill(r, decisions).lines, r), r };
 }
+function signReplay(records, snap, method = null) { return signReplayRun(records, snap, method).rows; }
+// Does today's SolvBoQ give exactly the bill that was signed? (20 Nov 2026: the architecture's “pinned engine version”.) The signed
+// lines are what the version is, always; this says whether today's engine, packs and build still work them out the same, and if not,
+// what differs and which build to open to see it worked out as it was. build: this page's build stamp.
+// → { same, rows, changes (signChanges, signed → today), lines: { signed, now }, method / structurePack / build: { signed, now, same } }
+function signReproduce(b, records, build = "") {
+  const { rows, r } = signReplayRun(records, b.snapshot || {}, b.method || null);
+  const stampSame = (x, y) => !!x && !!y && x.id === y.id && x.version === y.version && JSON.stringify((x.amendments || []).map((a) => [a.id, a.version])) === JSON.stringify((y.amendments || []).map((a) => [a.id, a.version]));
+  const method = { signed: b.method || null, now: packStamp(r.method) }, sp = { signed: b.structurePack || null, now: structureStamp(r.structurePack) };
+  method.same = !b.method || stampSame(method.signed, method.now);
+  sp.same = b.structurePack === undefined ? true : (!sp.signed && !sp.now) || stampSame(sp.signed, sp.now);
+  const same = signSame(rows, b.lines);
+  return { same, rows, changes: same ? [] : signChanges(b.lines, rows), lines: { signed: b.lines.length, now: rows.length },
+    method, structurePack: sp, build: { signed: b.build || "", now: build || "", same: !!b.build && b.build === build } };
+}
+// The build a version was signed with, as publish.mjs keeps it beside the page
+const signBuildUrl = (stamp) => (stamp ? `https://tazzibastra.github.io/solvboq-app/builds/${String(stamp).replace(/[^0-9A-Za-z-]/g, "-")}.html` : "");
+const structureStampText = (s) => (s ? `${s.name} v${s.version}` : "no structure pack");
 // Two sets of rows the same, line for line (key, quantity, basis, status, elements): what a reproduction must give
 const signSame = (a, b) => JSON.stringify(a.map((x) => [x.key, x.qty, x.basis, x.status, [...x.ids].sort()])) === JSON.stringify(b.map((x) => [x.key, x.qty, x.basis, x.status, [...x.ids].sort()]));
 
@@ -10120,9 +10346,28 @@ function apiSampler(key) {
   };
 }
 
-// Which Claude the page uses: the artifact's inside Claude, otherwise the API when a key is set
+// Development only (20 Nov 2026): the dev server (dev.mjs) asks Claude through Claude Code on this PC, so testing runs on the Claude
+// subscription signed in there rather than an API key. Same interface and answer shape as apiSampler; only on localhost, and only when
+// the dev server says it can (the published page never does).
+const devClaude = () => (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && window.SOLVBOQ_DEV_CLAUDE ? window.SOLVBOQ_DEV_CLAUDE : null);
+function devCliSampler() {
+  return {
+    api: true, dev: true,
+    async json(prompt, opts = {}) {
+      let r;
+      try {
+        r = await fetch("/__claude", { method: "POST", headers: { "Content-Type": "application/json", "X-SolvBoQ-Dev": "1" }, signal: opts.signal,
+          body: JSON.stringify({ prompt, system: opts.system || "", schema: opts.schema || null, effort: opts.effort || "medium", maxTokens: opts.maxTokens || 16000 }) });
+      } catch (e) { throw Object.assign(new Error(e.message), { code: e.name === "AbortError" ? "cancelled" : "offline", detail: e.message }); }
+      const j = await r.json().catch(() => ({ error: "The dev server's answer couldn't be read.", code: "invalid_json" }));
+      if (!r.ok || j.error) throw Object.assign(new Error(j.error || `HTTP ${r.status}`), { code: j.code || "unavailable", detail: j.error || "" });
+      return j.answer;
+    },
+  };
+}
+// Which Claude the page uses: the artifact's inside Claude; on the dev server, Claude Code on this PC; otherwise the API when a key is set
 function connectClaude() {
-  sampleFn = artifactSample || (claudeKey() && window.AnthropicSDK ? apiSampler(claudeKey()) : null);
+  sampleFn = artifactSample || (devClaude() ? devCliSampler() : null) || (claudeKey() && window.AnthropicSDK ? apiSampler(claudeKey()) : null);
   const ask = $("btnAsk"), st = $("aiStatus");
   if (ask) ask.disabled = !sampleFn;
   if (st && !state.ai?.length) st.textContent = sampleFn ? "" : "Add your Claude API key under Settings › Practice and wording › Claude (your key) to ask Claude from here. Everything else works without it.";
@@ -10170,6 +10415,7 @@ function claudeTab() {
     h("div", { class: "convtitle" }, h("div", {}, h("h3", {}, "Claude"),
       h("span", {}, artifactSample ? "This page is open in Claude, so it uses Claude directly. The API key is only needed when it’s opened from Revit or as a file."
         : "Claude suggests items for unmapped groups, reads unfamiliar type names and lists what the bill may be missing. Opened from Revit, it needs a Claude API key."))),
+    devClaude() ? h("div", { class: "banner", id: "devClaudeNote" }, h("span", null, h("b", null, "Dev server. "), `Claude is asked through ${devClaude().via} on this PC (${devClaude().model}), on the Claude subscription signed in there. No API key is used here; the published page still needs one.`)) : null,
     h("div", { class: "edbox" },
       h("span", { class: "edlabel" }, "API key ", h("span", { class: "edsub" }, key ? `· saved: ${masked}` : "· not set")),
       h("p", { class: "edtext" }, CLAUDE_ME.on ? "Paste the key from the Claude Console (console.anthropic.com › API keys). It’s kept with your account, readable by you alone, so it works in any browser you sign in to and in the panel in Revit. It’s never in the page, and is sent only to Claude."
@@ -10198,15 +10444,10 @@ function claudeTab() {
   ];
 }
 
-// ----- Answer formats (structured output: Claude's reply must match these) -----
-const MAP_SCHEMA = { type: "object", additionalProperties: false, required: ["id", "skip", "section", "clause", "heading", "description", "unit", "confidence", "reason"],
-  properties: { id: { type: "string" }, skip: { type: "boolean" }, section: { type: "string" }, clause: { type: "string" }, heading: { type: "string" }, description: { type: "string" },
-    unit: { type: "string", enum: ["m³", "m²", "m", "t", "No"] }, confidence: { type: "number" }, reason: { type: "string" } } };
+// ----- Answer formats (structured output: Claude's reply must match these). The item matcher's and the bill reviewer's are built from
+// the method pack (assist.js matchSchema, missingSchema) -----
 const ROLE_SCHEMA = { type: "object", additionalProperties: false, required: ["id", "role", "confidence", "reason"],
   properties: { id: { type: "string" }, role: { type: "string", enum: Object.keys(ROLES) }, confidence: { type: "number" }, reason: { type: "string" } } };
-const MISSING_SCHEMA = { type: "object", additionalProperties: false, required: ["item", "why", "section", "clause", "unit", "source", "check", "confidence"],
-  properties: { item: { type: "string" }, why: { type: "string" }, section: { type: "string" }, clause: { type: "string" }, unit: { type: "string", enum: ["m³", "m²", "m", "t", "No", "Sum"] },
-    source: { type: "string" }, check: { type: "string" }, confidence: { type: "number" } } };
 
 // ===== Store: the one place that reads and writes saved data (Firebase: Auth + Firestore, project autoboq-8f01c) =====
 // Sign-in is required (decided 17 Nov 2026): Microsoft, Google or an email link; no guests. Everyone signed in with a firm's
@@ -10431,6 +10672,10 @@ const Store = (() => {
     sendVerify: () => wrap(() => A.sendEmailVerification(user, { url: linkHome() })),
     // After confirming the email: read the account again, and do what sign-in does with a verified email
     recheck: () => wrap(async () => { await A.reload(user); await user.getIdToken(true); settled = await settle(user); tellUser(); }),
+    // Development only (20 Nov 2026): the dev server (dev.mjs) hands the page a test account, and on localhost the sign-in card
+    // signs in with it. Never on any other address, and the published page is never given an account.
+    devAccount: () => (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && window.SOLVBOQ_DEV?.email && window.SOLVBOQ_DEV?.password ? window.SOLVBOQ_DEV : null),
+    signInDev: () => wrap(() => { const d = Store.devAccount(); if (!d) throw new Error("The dev account is only for the dev server on localhost."); return signInWith((a) => A.signInWithEmailAndPassword(a, d.email, d.password)); }),
     signOut: () => wrap(() => A.signOut(auth)),
 
     // The panel: start a sign-in through the browser. Returns { code, url }; signed in when done() resolves (or it throws)
@@ -11016,15 +11261,15 @@ let sampleFn = null, dl = null, aiCtl = null;
 useCap("sample").then((fn) => { artifactSample = fn; connectClaude(); });
 useCap("downloads").then((d) => { dl = d; $("btnFixCsv").hidden = !d && !STANDALONE; });
 function buildPrompt(withPast) {
-  const inv = inventory(state.result);
+  const inv = inventory(state.result), P = methodOf(state.result), s = typeof piEngine === "function" ? piEngine()?.structure : null, sp = state.result.structurePack;
+  const kind = KIND_BY_ID.get(s?.kind)?.title || (sp ? sp.title || sp.name : state.result.structure === "building" ? "a building" : "not named (no structure pack fits it)");
   // The bill as SolvBoQ has it now: modelled, inferred and still-to-measure lines
   const lines = [...boqLines(currentGroups(), { full: true }), ...(state.result.derived.expected || []), ...(state.aiExpected || [])]
     .map((l) => `${l.section} ${l.clause || ""} | ${l.description} | ${l.unit || ""}`);
-  return `You are an experienced South African civil engineer preparing a Bill of Quantities under SANS 1200 and the client's particular specification, from a Revit model.
+  return `You are an experienced South African civil engineer reviewing a Bill of Quantities measured under ${P.name}, made by SolvBoQ from a Revit model.
 
-Project type: ${$("fType").value}
-Structure: ${state.result.structure === "civil" ? "a water-retaining or civil structure" : state.result.structure === "building" ? "a building" : "not named (no structure pack fits it)"}
-What's being built: ${state.desc || $("fProject").value || "not described"}
+Structure: ${s?.name ? `${s.name}, ` : ""}${kind}
+What's being built: ${state.desc || $("fProject").value || modelTitle() || "not described"}
 Levels: ${inv.levels || "unknown"}
 
 Model inventory (category | family | type | material | count | volume | area):
@@ -11035,33 +11280,35 @@ ${[...new Set(lines)].join("\n")}
 
 Automated checks already found: ${inv.findings || "nothing"}
 
-Task: list up to 12 items this bill very likely needs that are NOT in the draft bill above. ${withPast ? "First compare with the engineer's past bills for this kind of structure (in the system prompt): items they had that this draft lacks, where this structure plausibly needs them. Then add" : "Include"} scope models rarely show (testing, coatings, joint sealants, specific fittings, provisional items). Don't list anything the draft already covers under other wording. For each, give the SANS section and clause where you're confident of it (leave the clause empty otherwise, never guess one), the unit, and the source: "Past bill: <bill name>, item <n>" or "Typical for this structure". Say where to confirm it (drawings, specification, geotechnical report, designer). Be conservative with confidence: these are prompts for the engineer to check, not facts.`;
+${missingPromptItems(P)}
+
+Task: list up to 12 items this bill very likely needs that are NOT in the draft bill above. ${withPast ? "First compare with the engineer's past bills for this kind of structure (in the system prompt): items they had that this draft lacks, where this structure plausibly needs them. Then add" : "Include"} scope models rarely show (testing, coatings, joint sealants, specific fittings, provisional items). Don't list anything the draft already covers under other wording. For each, give the item it would be billed under (above), the unit, and the source: "Past bill: <bill name>, item <n>" or "Typical for this structure". Say where to confirm it (drawings, specification, geotechnical report, designer). Don't give any quantity. Be conservative with confidence: these are prompts for the engineer to check, not facts.`;
 }
-$("btnAsk").addEventListener("click", async () => {
-  if (!sampleFn || !state.result) return;
-  aiCtl = new AbortController(); $("btnAsk").disabled = true; $("btnStop").hidden = false;
-  $("aiStatus").textContent = "Thinking. This usually takes 20 to 60 seconds.";
+// The bill reviewer (the architecture's AI row): asked from the bill's overview (mapview.js) or the model checks; its suggestions are
+// prompts for him, added to the bill only as “To measure” lines he chooses
+async function askMissing(after) {
+  if (!sampleFn || !state.result || aiCtl) return;
+  aiCtl = new AbortController(); state.aiMissMsg = "Claude is reading the bill against your past bills. This usually takes 20 to 60 seconds."; after();
   try {
-    const past = pastBillsText(state.result.structure === "civil" ? "civil" : "building");
-    const out = await sampleFn.json(buildPrompt(!!past), { signal: aiCtl.signal, modelTier: "default", schema: MISSING_SCHEMA, effort: "high",
+    const past = pastBillsText(state.result.structure === "civil" ? "civil" : "building"), P = methodOf(state.result);
+    const out = await sampleFn.json(buildPrompt(!!past), { signal: aiCtl.signal, modelTier: "default", schema: missingSchema(P), effort: "high",
       system: past ? `The engineer's own past bills for this kind of structure. Item | section | reference | description | unit.
 
 ${past}` : undefined });
     const list = Array.isArray(out) ? out : out && Array.isArray(out.items) ? out.items : [];
-    state.ai = list.filter((x) => x && x.item).slice(0, 12).map((x, i) => ({ id: "ai" + i, item: String(x.item), why: String(x.why || ""), section: String(x.section || ""), check: String(x.check || ""),
-      clause: String(x.clause || ""), unit: [...UNITS, "Sum"].includes(x.unit) ? x.unit : "", source: String(x.source || ""), confidence: Math.max(0, Math.min(1, parseFloat(x.confidence) || 0)) }));
+    state.ai = list.filter((x) => x && x.item).slice(0, 12).map((x, i) => ({ id: "ai" + i, item: String(x.item).slice(0, 240), why: String(x.why || ""), section: String(x.section || ""), check: String(x.check || ""),
+      packItem: String(x.packItem || ""), unit: String(x.unit || ""), source: String(x.source || ""), confidence: Math.max(0, Math.min(1, parseFloat(x.confidence) || 0)) }))
+      .map((x) => { const L = missingLine(P, x); return { ...x, section: L.section, clause: L.clause, unit: L.unit }; });
     state.aiAsk = new Set(); state.aiDismiss = new Set();
-    $("aiStatus").textContent = state.ai.length ? plural(state.ai.length, "suggestion") + ". Add the ones worth raising to the fix list." : "Claude didn’t suggest anything missing for this model.";
+    state.aiMissMsg = state.ai.length ? `${plural(state.ai.length, "suggestion")}. Add the ones the bill needs as “To measure” lines; the rest you can raise with the designer or set aside.` : "Claude didn’t suggest anything missing for this bill.";
   } catch (e) {
-    const c = e && e.code;
-    $("aiStatus").textContent = claudeErrorText(e);
-  } finally { $("btnAsk").disabled = false; $("btnStop").hidden = true; aiCtl = null; renderMissing(); renderFix(); renderTitle(); }
-});
+    state.aiMissMsg = claudeErrorText(e);
+  } finally { aiCtl = null; after(); }
+}
+$("btnAsk").addEventListener("click", () => askMissing(() => { const busy = !!aiCtl; $("btnAsk").disabled = busy; $("btnStop").hidden = !busy; $("aiStatus").textContent = state.aiMissMsg || ""; if (!busy) { renderMissing(); renderFix(); renderTitle(); } }));
 $("btnStop").addEventListener("click", () => aiCtl && aiCtl.abort());
-// A Claude suggestion added to the bill becomes a “To measure” line in Map to SANS, with Claude's reason and source
-const aiSection = (s) => { const m = /1200\s*([A-Z]{1,2})\b/i.exec(s.section || ""); return m ? `SANS 1200 ${m[1].toUpperCase()}` : /\bPD\b|building/i.test(s.section || "") ? "PD" : "General"; };
-const aiLine = (s) => ({ section: aiSection(s), clause: s.clause, heading: "Suggested by Claude", description: s.item, unit: s.unit || "Sum",
-  why: `${s.why}${s.source ? ` Source: ${s.source}.` : ""}${s.check ? ` Check: ${s.check}.` : ""}` });
+// A Claude suggestion added to the bill becomes a “To measure” line in Map to SANS, with Claude's reason and source, on the method's item
+const aiLine = (s) => missingLine(methodOf(state.result), s);
 const inBill = (s) => (state.aiExpected || []).some((x) => x.description === s.item);
 function toggleBill(s) {
   state.aiExpected = state.aiExpected || [];
@@ -11458,40 +11705,33 @@ useCap("downloads").then((d) => { $("btnBoqCsv").hidden = !d && !STANDALONE; });
 
 // ===== Claude for unmatched groups =====
 let mapCtl = null;
+// The item matcher (the architecture's AI row; assist.js): Claude chooses one of the method pack's items by id for each group the rules
+// couldn't place, so the clause, heading and unit are the pack's under the project's amendments; Claude writes the description. Shown as
+// “Claude suggestion”, never confirmed until he accepts it.
 async function askClaude(groups) {
   if (!sampleFn || !groups.length || mapCtl) return;
   mapCtl = new AbortController();
   const st = { set textContent(v) { state.aiMsg = v; } };
   st.textContent = "Claude is looking at the unmatched groups. This usually takes 20 to 60 seconds."; renderMap();
-  const list = groups.map((g, i) => `g${i + 1} | ${g.sample.Category} | ${g.sample.Family || "-"} | ${g.sample.Type || "-"} | ${g.sample.Material || "no material"} | ${g.elements.length} el. | ${g.sample.Volume ? g.sample.Volume.toFixed(2) + " m³ each" : ""}`).join("\n");
-  const prompt = `You are a South African quantity surveyor mapping Revit model elements to Bill of Quantities items under SANS 1200 and the client's PD particular specification (building work).
-
-Project type: ${$("fType").value}
-
-Unmatched groups (id | category | family | type | material | count | size):
-${list}
-
-For each group, choose the most likely BoQ item. Use these sections only: SANS 1200 D (earthworks), SANS 1200 G (concrete: 8.4.2 blinding m², 8.4.3 strength concrete m³, 8.6 precast elements No), SANS 1200 H (steelwork: 8.3.1 supply and fabrication t, 8.3.7 handrails m, 8.3.8 ladders No, 8.3.9 flooring m²), SANS 1200 HB (cladding and sheeting: 8.2.2 roof and side cladding m², 8.2.3 flashings and rainwater m), SANS 1200 L (pipelines m, fittings No), SANS 1200 MK (kerbs m), PD (PD 10.1 brickwork m², PD 10.4 doors and windows No, PD 10.8 miscellaneous items). Write the description the way a South African BoQ would, for example "Reinforced class 30 MPa/19 mm concrete in walls". If you genuinely can't tell, set "id" and "skip": true.
-
-Reply with ONLY a JSON array, one object per group:
-{"id": "g1", "section": "SANS 1200 G", "clause": "8.4.3", "heading": "Strength concrete", "description": "...", "unit": "m³" | "m²" | "m" | "t" | "No", "confidence": 0 to 1, "reason": "one short sentence"}`;
+  const P = methodOf(state.result), s = typeof piEngine === "function" ? piEngine()?.structure : null, sp = state.result.structurePack;
+  const kind = KIND_BY_ID.get(s?.kind)?.title || (sp ? sp.title || sp.name : state.result.structure === "building" ? "a building" : "");
   try {
     const past = pastBillsText(state.result.structure === "civil" ? "civil" : "building");
-    const out = await sampleFn.json(prompt + (past ? "\n\nWhere one of the engineer's past bills (in the system prompt) has an item for the same thing, use his wording, clause and unit." : ""),
-      { signal: mapCtl.signal, modelTier: "default", schema: MAP_SCHEMA, system: past ? `The engineer's own past bills for this kind of structure. Item | section | reference | description | unit.
+    const out = await sampleFn.json(matchPrompt(groups, P, { kind, pack: sp?.name || "", hasPast: !!past }),
+      { signal: mapCtl.signal, modelTier: "default", schema: matchSchema(P), effort: "medium", system: past ? `The engineer's own past bills for this kind of structure. Item | section | reference | description | unit.
 
 ${past}` : undefined });
     const arr = Array.isArray(out) ? out : out && Array.isArray(out.items) ? out.items : [];
     let used = 0;
     for (const x of arr) {
-      const i = parseInt(String(x && x.id || "").replace(/\D/g, ""), 10) - 1; const g = groups[i];
-      if (!g || x.skip || !x.description) continue;
-      const unit = UNITS.includes(x.unit) ? x.unit : x.unit === "no." || x.unit === "No." ? "No" : "No";
-      state.mapDecisions[g.key] = { item: { section: SECTION_ORDER.includes(x.section) ? x.section : "PD", clause: String(x.clause || ""), heading: String(x.heading || ""), description: String(x.description), unit },
-        method: "claude", confirmed: false, confidence: Math.max(0, Math.min(1, parseFloat(x.confidence) || 0)), reason: String(x.reason || "Suggested by Claude.") };
+      const i = parseInt(String(x && x.id || "").replace(/\D/g, ""), 10) - 1, g = groups[i], m = g ? matchItem(P, x) : null;
+      if (!m) continue;
+      const why = String(x.reason || "Suggested by Claude.").slice(0, 300);
+      state.mapDecisions[g.key] = { item: m.item, method: "claude", confirmed: false, packItem: m.packItem, confidence: Math.max(0, Math.min(1, parseFloat(x.confidence) || 0)),
+        reason: m.other ? `${why} None of ${P.name}’s items fits, so the clause is left blank for you.` : why };
       used++;
     }
-    st.textContent = used ? `Claude suggested items for ${plural(used, "group")}. Check each one, then accept or change it.` : "Claude couldn’t place these groups. Choose an item for each one yourself.";
+    st.textContent = used ? `Claude suggested items for ${plural(used, "group")}, from ${P.name}’s items. Check each one, then accept or change it.` : "Claude couldn’t place these groups. Choose an item for each one yourself.";
   } catch (e) {
     st.textContent = claudeErrorText(e);
   } finally {
@@ -12199,6 +12439,7 @@ function editorFor(L, lines) {
   body.push(h("div", { class: "edfield", id: "edWorking" },
     cb ? null : h("span", { class: "edlabel" }, "How this figure is worked out"),
     cb,
+    explainBox(L),
     L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
       h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
     h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
@@ -12314,6 +12555,23 @@ function edChange() { setTimeout(() => { const c = $("edChange"); if (!c) return
 const fmtN = (v, d) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d);
 
 // Nothing selected: progress, how lines were mapped, and the quick ways through
+// The bill reviewer on the bill (the architecture's AI row; app.js askMissing): items a bill of this kind usually has that this one
+// lacks, against his past bills. Each is a prompt for him: added only as a “To measure” line he chooses, on the method's item.
+function missingOverview() {
+  const list = state.ai || [], busy = !!aiCtl;
+  const row = (s) => { const dis = state.aiDismiss?.has(s.id), on = inBill(s);
+    return h("div", { class: "aimiss" + (dis ? " off" : ""), "data-ai": s.id },
+      h("div", {}, h("b", {}, s.item), h("span", {}, s.why), h("span", { class: "muted" }, [[s.section, s.clause].filter(Boolean).join(" ") || "No clause: none of the method’s items fits", s.source, s.check && "Check: " + s.check].filter(Boolean).join(". "))),
+      h("div", { class: "acts" },
+        h("button", { type: "button", class: on ? "btn xs dark" : "btn xs", "aria-pressed": String(on), onclick: () => { toggleBill(s); renderMap(); } }, on ? "In the bill" : "Add to the bill"),
+        h("button", { type: "button", class: "btn xs", onclick: () => { state.aiDismiss ||= new Set(); dis ? state.aiDismiss.delete(s.id) : state.aiDismiss.add(s.id); renderMap(); } }, dis ? "Undo" : "Not needed"))); };
+  return h("div", { class: "edfield", id: "mvMissing" },
+    h("span", { class: "edtitle sm" }, "Items this bill may be missing"),
+    h("p", { class: "edtext" }, state.aiMissMsg || (sampleFn ? `Claude compares this bill with your past bills of the same kind and lists what they had that this one lacks. It doesn’t measure anything: what you add comes in as a “To measure” line.` : "Claude can compare this bill with your past bills of the same kind. It needs your Claude key (Settings › Practice and wording › Claude).")),
+    sampleFn ? h("div", { class: "tools" }, busy ? h("button", { type: "button", class: "btn sm", onclick: () => aiCtl && aiCtl.abort() }, "Stop")
+      : h("button", { type: "button", class: "btn sm accent", id: "mvAskMissing", onclick: () => askMissing(renderMap) }, list.length ? "Ask again" : "Ask Claude what’s missing")) : null,
+    ...list.map(row));
+}
 function editorOverview(lines, groups) {
   const c = (st) => lines.filter((L) => (Array.isArray(st) ? st.includes(L.status) : L.status === st)).length;
   const stats = [["Confirmed", c(["done", "prov", "out"]), "s-done"], ["To confirm", c(["confirm", "claude"]), "s-confirm"], ["Model problems", c(["flag", "unmapped"]), "s-flag"], ["To measure", c("measure"), "s-measure"]];
@@ -12336,6 +12594,7 @@ function editorOverview(lines, groups) {
     ...batches.map((l) => bulkRow(`${plural(l.length, "group")} of ${(TRADE[l[0].trade]?.label || "other items").toLowerCase()}`, l[0].reason || "Matched by a rule.", () => confirmBatch(l))),
     unmatched.length && sampleFn ? h("div", { class: "bulk" }, h("div", {}, h("b", {}, `${plural(unmatched.length, "unmatched group")}`), h("span", {}, state.aiMsg || "Claude can suggest an item for each one.")),
       mapCtl ? h("button", { type: "button", class: "btn sm", onclick: () => mapCtl && mapCtl.abort() }, "Stop") : h("button", { type: "button", class: "btn sm accent", onclick: () => askClaude(unmatched) }, "Ask Claude")) : null,
+    missingOverview(),
     lnOverview(),
     typeof signBanner === "function" ? signBanner() : null,
     revOverview(),
@@ -12554,6 +12813,43 @@ function docSourceBox(L) {
     d.quote ? h("p", { class: "edtext" }, `The schedule says: “${d.quote}”`) : null,
     d.check ? h("p", { class: "edtext" + (/don’t agree/.test(d.check) ? " warn" : "") }, `The figures were added up by SolvBoQ, not by Claude: the total ${d.check}.`) : null,
     h("button", { type: "button", class: "link accent", onclick: () => { state.view = "proj"; render(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "See the document under Project"));
+}
+// ----- Explain this figure (the bill reviewer, journey step 5; assist.js): Claude puts SolvBoQ's own working into plain words. It is
+// given the working and nothing else, and any figure it writes that isn't in the working is pointed out: it explains, never calculates.
+// Kept for the session per line and quantity; asked again only when the figure changes.
+function lineWorkingText(L) {
+  const rows = calcRows(L), u = L.unit || "", q = (v) => `${mapQty(v, L.unit)} ${u}`;
+  return [L.calc || "", ...rows.map((r) => `${r.e.Type || r.e.Family || r.e.Category} [${r.e.Id}]${r.e.Level ? ` on ${r.e.Level}` : ""}${r.sub ? ` (${r.sub})` : ""}: ${q(r.q)}`),
+    rows.length ? `They add up to ${q(rows.reduce((t, r) => t + r.q, 0))}` : "", L.lessOn ? `Less the overlap he chose to take off: ${fmt2(L.overlapLess)} m³` : "",
+    L.edited ? `He typed his own quantity: ${q(L.shownQty)}` : "", L.doc ? docLineSource(L) : ""].filter(Boolean).join("\n");
+}
+const explainKey = (L) => `${L.key}|${L.shownQty ?? L.qty ?? ""}`;
+async function explainLine(L) {
+  if (!sampleFn) return;
+  state.explain ||= {};
+  const k = explainKey(L), working = lineWorkingText(L), b = lineBasis(L);
+  const line = { section: L.section, clause: L.clause, heading: L.heading, description: L.description, unit: L.unit, qty: L.shownQty ?? L.qty, basis: b ? BASIS_WORD[b][0] : "", est: L.est || "", why: L.why || "" };
+  state.explain[k] = { busy: true }; renderMap();
+  try {
+    const out = await sampleFn.json(aiExplainPrompt(line, working), { schema: AI_EXPLAIN_SCHEMA, effort: "medium", maxTokens: 2000 });
+    const x = out?.items?.[0] || out || {};
+    const text = String(x.explanation || "").trim(), look = (Array.isArray(x.look) ? x.look : []).map(String).filter(Boolean).slice(0, 3);
+    const given = [working, line.description, line.heading, line.section, line.clause, line.qty].join("\n");
+    state.explain[k] = text ? { text, look, stray: aiStrayFigures([text, ...look].join("\n"), given) } : { err: "Claude gave no explanation. The working above is the figure’s own account." };
+  } catch (e) { state.explain[k] = { err: typeof claudeErrorText === "function" ? claudeErrorText(e) : e.message }; }
+  renderMap();
+}
+function explainBox(L) {
+  if (L.expected || L.unmapped || !sampleFn || (L.shownQty ?? L.qty) == null) return null;
+  const x = state.explain?.[explainKey(L)];
+  if (!x) return h("button", { type: "button", class: "link accent", id: "edExplain", onclick: () => explainLine(L) }, "Explain this figure in plain words");
+  if (x.busy) return h("p", { class: "edtext muted", id: "edExplainText" }, "Claude is reading the working…");
+  if (x.err) return h("p", { class: "edtext warn", id: "edExplainText" }, x.err);
+  return h("div", { class: "explain", id: "edExplainText" },
+    h("span", { class: "edsub" }, "In plain words (Claude, from the working above)"),
+    h("p", { class: "edtext" }, x.text),
+    x.look.length ? h("ul", {}, x.look.map((t) => h("li", {}, t))) : null,
+    x.stray.length ? h("p", { class: "edtext warn" }, `Claude wrote ${x.stray.length === 1 ? "a figure" : "figures"} that ${x.stray.length === 1 ? "isn’t" : "aren’t"} in SolvBoQ’s working (${x.stray.join(", ")}). Go by the working above.`) : null);
 }
 function calcBox(L) {
   if (L.expected || L.unmapped) return null;
@@ -12841,7 +13137,7 @@ function renderSign() {
     const doc = signDoc({ n, structure: st, model: state.name, rows, value: val, at: new Date().toISOString(), build: document.querySelector('meta[name="solvboq-build"]')?.content || "",
       extract: { print: signPrint(), schemaVersion: state.records.model?.schemaVersion ?? 0, elements: state.records.length, checked: state.checked || "" }, snapshot,
       who: { uid: Store.user?.uid || "", name, email: Store.user?.email || "", registration: reg }, previous: last ? last.n : null, changes,
-      method: packStamp(methodOf(state.result)) });
+      method: packStamp(methodOf(state.result)), structurePack: structureStamp(state.result.structurePack) });
     try {
       await Store.signBill(CL.pid, st.id, st, doc, { model: state.records.model || { title: modelTitle() }, elements: state.records, ...(state.records.annotations ? { annotations: state.records.annotations } : {}) });
       toast(`Version ${n} signed`); state.signAccept = false; SIGN.key = ""; await signLoad();
@@ -12868,6 +13164,7 @@ function renderSign() {
       tick(!est.length || accepted, !est.length ? "No estimates" : accepted ? "The estimates are accepted" : `${plural(est.length, "estimate")} to accept above`, null)),
     changes ? h("div", { class: "edfield", id: "signChanges" }, h("span", { class: "edtitle sm" }, `${plural(changes.length, "change")} from version ${last.n}`),
       changes.length ? h("div", { class: "howlist" }, ...changes.slice(0, 30).map((c) => h("div", {}, `${c.kind === "new" ? "New" : c.kind === "gone" ? "Gone" : "Changed"}: ${c.description} ${c.was == null ? "" : mapQty(c.was, c.unit)} → ${c.now == null ? "–" : mapQty(c.now, c.unit)} ${c.unit}`))) : h("p", { class: "edtext" }, "The bill is as signed.")) : null,
+    signCoverBox({ lines, rows, val, est, st }),
     // Who signs
     cloud ? h("div", { class: "edfield signwho" },
       h("label", {}, "Your name", h("input", { id: "signName", type: "text", autocomplete: "name", value: me.name || "" })),
@@ -12877,20 +13174,90 @@ function renderSign() {
     // Signed versions, as stored
     SIGN.list.length ? h("div", { class: "edfield", id: "signedList" }, h("span", { class: "edtitle sm" }, "Signed versions"),
       ...SIGN.list.slice().reverse().map((b) => h("div", { class: "signrow" },
-        h("span", {}, h("b", {}, `Version ${b.n}`), ` · ${new Date(b.at).toLocaleDateString("en-GB")} · ${b.name}${b.registration ? ` (${b.registration})` : ""} · ${plural(b.lines.length, "line")}${b.changes ? ` · ${plural(b.changes.length, "change")} from version ${b.previous}` : ""} · build ${b.build || "–"}${b.method ? ` · ${packStampText(b.method)}` : ""}`),
+        h("span", {}, h("b", {}, `Version ${b.n}`), ` · ${new Date(b.at).toLocaleDateString("en-GB")} · ${b.name}${b.registration ? ` (${b.registration})` : ""} · ${plural(b.lines.length, "line")}${b.changes ? ` · ${plural(b.changes.length, "change")} from version ${b.previous}` : ""} · build ${b.build || "–"}${b.method ? ` · ${packStampText(b.method)}` : ""}${b.structurePack ? ` · ${structureStampText(b.structurePack)}` : ""}`),
         h("button", { type: "button", class: "btn xs", onclick: () => { SIGN.open = SIGN.open === b.n ? null : b.n; renderSign(); } }, SIGN.open === b.n ? "Close" : "Open"),
-        h("button", { type: "button", class: "btn xs", onclick: () => signCsv(b) }, "Download"))),
+        h("button", { type: "button", class: "btn xs", onclick: () => signCsv(b) }, "Download"),
+        h("button", { type: "button", class: "btn xs", "data-repro": String(b.n), disabled: SIGN.repro?.[b.n]?.busy ? "" : null, onclick: () => signCheckRepro(b) }, "Check it reproduces"),
+        signReproBox(b))),
       SIGN.open ? signTable(SIGN.list.find((b) => b.n === SIGN.open)) : null) : null));
+}
+// ----- The cover note (the bill reviewer, journey step 6; assist.js): Claude drafts it from what the sign-off page already shows (the
+// bill by basis and value, the estimates, lines left out or provisional, the project's missing inputs). He edits it, copies or downloads
+// it; any figure Claude wrote that isn't in what it was given is pointed out. It isn't part of the signed record.
+function signCoverFacts({ lines, val, est, st }) {
+  const inp = typeof piDoc === "function" ? piDoc() : null, stage = inp?.project?.stage || "tender";
+  const missing = inp ? inputsMissing(inp, stage).map((m) => ({ for: m.level, what: m.need.what, until: IF_MISSING[m.need.missing] || "" })) : [];
+  return { structure: st.name || modelTitle(), method: packStampText(packStamp(methodOf(state.result))),
+    byBasis: Object.entries(val.lines).map(([k, c]) => `${plural(c, "line")} ${k}`).join(", "),
+    value: val.value ? `measured ${signMoney(val.value.measured)}, worked out ${signMoney(val.value.worked)}, ${val.value.document ? `from documents ${signMoney(val.value.document)}, ` : ""}estimated ${signMoney(val.value.estimated)}` : "",
+    estimates: est.map((x) => ({ description: x.description, qty: x.qty == null ? null : mapQty(x.qty, x.unit), unit: x.unit, est: x.est || "" })),
+    out: lines.filter((L) => L.status === "out").map((L) => L.description), prov: lines.filter((L) => L.status === "prov").map((L) => L.description), missing };
+}
+async function signCoverAsk(ctx) {
+  if (!sampleFn) return;
+  const f = signCoverFacts(ctx);
+  SIGN.cover = { busy: true }; renderSign();
+  try {
+    const out = await sampleFn.json(aiCoverPrompt(f), { schema: AI_COVER_SCHEMA, effort: "medium", maxTokens: 4000 });
+    const n = out?.items?.[0] || out || {}, text = aiCoverText({ assumptions: (n.assumptions || []).map(String), estimates: (n.estimates || []).map(String), watch: (n.watch || []).map(String) });
+    SIGN.cover = text ? { text, stray: aiStrayFigures(text, aiCoverGiven(f)) } : { err: "Claude gave no draft. Write the cover note yourself." };
+  } catch (e) { SIGN.cover = { err: typeof claudeErrorText === "function" ? claudeErrorText(e) : e.message }; }
+  renderSign();
+}
+function signCoverBox(ctx) {
+  const c = SIGN.cover;
+  if (!sampleFn && !c) return h("div", { class: "edfield", id: "signCover" }, h("span", { class: "edtitle sm" }, "Cover note"),
+    h("p", { class: "edtext muted" }, "Claude can draft the cover note (assumptions, estimates, items to watch) from this page. It needs your Claude key (Settings › Practice and wording › Claude)."));
+  const name = `${(ctx.st.name || modelTitle()).replace(/[^\w\- ]+/g, "")} cover note.txt`;
+  return h("div", { class: "edfield", id: "signCover" }, h("span", { class: "edtitle sm" }, "Cover note"),
+    !c ? h("p", { class: "edtext" }, "A draft for the bill’s cover note: what the quantities assume, the estimates you’re accepting and what to watch in the claims. Claude writes it from this page only; it adds no figures.") : null,
+    c?.busy ? h("p", { class: "edtext muted" }, "Claude is drafting the cover note…") : null,
+    c?.err ? h("p", { class: "edtext warn" }, c.err) : null,
+    c?.text != null ? h("textarea", { id: "signCoverText", class: "lnwhy", rows: 12, oninput: (e) => { c.text = e.target.value; } }, c.text) : null,
+    c?.stray?.length ? h("p", { class: "edtext warn" }, `The draft has ${c.stray.length === 1 ? "a figure" : "figures"} that ${c.stray.length === 1 ? "isn’t" : "aren’t"} on this page (${c.stray.join(", ")}): check ${c.stray.length === 1 ? "it" : "them"} before you send it.`) : null,
+    h("div", { class: "tools" },
+      sampleFn && !c?.busy ? h("button", { type: "button", class: "btn sm accent", id: "signCoverAsk", onclick: () => signCoverAsk(ctx) }, c?.text != null ? "Draft it again" : "Draft the cover note with Claude") : null,
+      c?.text ? h("button", { type: "button", class: "btn sm", onclick: () => copyText(c.text, "Cover note copied") }, "Copy") : null,
+      c?.text ? h("button", { type: "button", class: "btn sm", onclick: () => { const a = h("a", { href: URL.createObjectURL(new Blob([c.text], { type: "text/plain" })), download: name }); a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000); } }, "Download") : null));
+}
+// ----- Does today's SolvBoQ give exactly this signed bill? (20 Nov 2026, the architecture's “pinned engine version”) -----
+// The version is what was stored, always. This works it out again from its stored extract and snapshot with today's engine and packs,
+// and says whether it is the same, line for line; if not, which lines differ and the build it was signed with, to see it as it was.
+async function signCheckRepro(b) {
+  SIGN.repro ||= {}; SIGN.repro[b.n] = { busy: true }; renderSign();
+  try {
+    const data = await Store.loadSignedExtract(CL.pid, SIGN.sid, b);
+    SIGN.repro[b.n] = signReproduce(b, recordsFromJSON(data), document.querySelector('meta[name="solvboq-build"]')?.content || "");
+  } catch (e) { SIGN.repro[b.n] = { err: `The extract version ${b.n} was signed on couldn’t be fetched: ${e.message}` }; }
+  renderSign();
+}
+function signReproBox(b) {
+  const x = SIGN.repro?.[b.n]; if (!x) return null;
+  if (x.busy) return h("p", { class: "edtext muted signrepro" }, "Working it out again from what was stored…");
+  if (x.err) return h("p", { class: "edtext warn signrepro" }, x.err);
+  const url = signBuildUrl(b.build), packs = [];
+  if (!x.method.same) packs.push(`the method pack is ${packStampText(x.method.now)} today (signed under ${packStampText(x.method.signed)})`);
+  if (!x.structurePack.same) packs.push(`the structure pack is ${structureStampText(x.structurePack.now)} today (signed under ${structureStampText(x.structurePack.signed)})`);
+  if (x.same) return h("div", { class: "signrepro ok", id: `repro${b.n}` }, h("p", { class: "edtext" }, h("b", {}, "It reproduces. "),
+    `Today’s SolvBoQ works out the same ${plural(x.lines.signed, "line")} from what was stored: the same quantities, bases and elements${x.build.same ? ", on the same build" : `. This build is ${x.build.now || "unstamped"}; it was signed on ${b.build || "an unrecorded build"}`}.`),
+    packs.length ? h("p", { class: "edtext muted" }, `Although ${packs.join(", and ")}, nothing on this bill changes.`) : null);
+  return h("div", { class: "signrepro no", id: `repro${b.n}` },
+    h("p", { class: "edtext warn" }, h("b", {}, "Today’s SolvBoQ gives a different bill. "), `${plural(x.changes.length, "line")} differ${x.changes.length === 1 ? "s" : ""} from version ${b.n} as signed (${x.lines.signed} lines signed, ${x.lines.now} worked out today). Version ${b.n} stands as signed: this doesn’t change it.`),
+    packs.length ? h("p", { class: "edtext" }, `Since it was signed, ${packs.join(", and ")}.`) : null,
+    h("div", { class: "howlist" }, ...x.changes.slice(0, 8).map((c) => h("div", {}, `${c.kind === "new" ? "New today" : c.kind === "gone" ? "Not worked out today" : "Changed"}: ${c.description} ${c.was == null ? "" : mapQty(c.was, c.unit)} → ${c.now == null ? "–" : mapQty(c.now, c.unit)} ${c.unit}`)),
+      x.changes.length > 8 ? h("div", { class: "muted" }, `and ${x.changes.length - 8} more`) : null),
+    url ? h("p", { class: "edtext" }, "To see it worked out exactly as it was, open ", h("a", { href: url, target: "_blank", rel: "noopener" }, `the build it was signed with (${b.build})`), " and load the same model.")
+      : h("p", { class: "edtext muted" }, "This version doesn’t record its build, so the engine it was signed with can’t be opened again."));
 }
 // A signed version exactly as stored: never worked out again
 function signTable(b) {
-  return h("div", { class: "signtable", id: "signTable" }, h("p", { class: "edtext muted" }, `Version ${b.n} as signed, from what was stored (build ${b.build || "–"}${b.method ? `; measured under ${packStampText(b.method)}` : ""}): it doesn’t change when SolvBoQ does.`),
+  return h("div", { class: "signtable", id: "signTable" }, h("p", { class: "edtext muted" }, `Version ${b.n} as signed, from what was stored (build ${b.build || "–"}${b.method ? `; measured under ${packStampText(b.method)}` : ""}${b.structurePack ? `, ${structureStampText(b.structurePack)}` : ""}): it doesn’t change when SolvBoQ does.`),
     h("table", {}, h("thead", {}, h("tr", {}, ...["Item", "Description", "Unit", "Quantity", "Basis"].map((t) => h("th", {}, t)))),
       h("tbody", {}, ...b.lines.map((x) => h("tr", {}, h("td", {}, String(x.n)), h("td", {}, x.heading ? `${x.heading}: ${x.description}` : x.description), h("td", {}, x.unit), h("td", {}, x.prov ? "Prov." : x.qty == null ? "" : mapQty(x.qty, x.unit)), h("td", {}, x.basis))))));
 }
 async function signCsv(b) {
   const cols = ["item", "section", "clause", "heading", "description", "unit", "quantity", "basis", "element_ids"];
-  const data = [`# ${b.structure?.name || ""} version ${b.n}, signed ${b.at} by ${b.name}${b.registration ? ` (${b.registration})` : ""}, build ${b.build || ""}${b.method ? `, ${packStampText(b.method)}` : ""}`, cols.join(","),
+  const data = [`# ${b.structure?.name || ""} version ${b.n}, signed ${b.at} by ${b.name}${b.registration ? ` (${b.registration})` : ""}, build ${b.build || ""}${b.method ? `, ${packStampText(b.method)}` : ""}${b.structurePack ? `, ${structureStampText(b.structurePack)}` : ""}`, cols.join(","),
     ...b.lines.map((x) => [x.n, x.section, x.clause, x.heading, x.description, x.unit, x.prov ? "Prov." : x.qty ?? "", x.basis, x.ids.join(";")].map(csvCell).join(","))].join("\n");
   try { await saveFile(`signed_${signSlug(b.structure?.name || b.model)}_v${b.n}.csv`, data); } catch (e) { if (e && e.code !== "declined") toast("The file couldn’t be saved here."); }
 }
@@ -13158,8 +13525,10 @@ async function openCertificate(id, already) {
 }
 function recheck() { if (CL.open) { CL.open.res = checkCertificate(CL.open.cert, { previous: CL.open.previous, tolerance: CL.tol / 100 }); renderClaims(); } }
 
-async function setReview(f, status, note) {
-  const v = status ? { status, note: note || "" } : null;
+// query: his own wording of the finding's query for the contractor (the query list), kept with the decision; undefined keeps what was there
+async function setReview(f, status, note, query) {
+  const q = query === undefined ? CL.reviews[f.key]?.query : query;
+  const v = status ? { status, note: note || "", ...(q ? { query: q } : {}) } : null;
   if (Store.user && CL.pid) {
     try { CL.reviews[f.key] = await Store.saveReview(CL.pid, CL.open.id, f.key, v); } catch (e) { toast(e.message); return; }
   } else {
@@ -13191,12 +13560,16 @@ function chooseProject(pid) {
   if (typeof pvAfterProjects === "function") pvAfterProjects();
   if (state.view === "claims") renderClaims(); else if (state.view === "master") renderMaster();
 }
+// A new project: its name, contract, method and first structure in one dialog (homeview.js hvNewDialog, journey step 1, Set up);
+// the method and structure go into the project's inputs before the project is opened (inputsview.js piSetUp)
 async function newProject(meta) {
-  const name = prompt("Name of the project", meta?.project || "");
-  if (!name) return;
-  const contract = prompt("Contract number (used to check that certificates belong to this project)", meta?.contract || "") || "";
-  try { const p = await Store.createProject({ name, contract }); CL.projects.push(p); chooseProject(p.id); }
-  catch (e) { CL.err = e.message; toast(e.message); if (state.view === "claims") renderClaims(); }
+  const got = await hvNewDialog(meta);
+  if (!got) return;
+  try {
+    const p = await Store.createProject({ name: got.name, contract: got.contract });
+    await piSetUp(p.id, got);
+    CL.projects.push(p); chooseProject(p.id);
+  } catch (e) { CL.err = e.message; toast(e.message); if (state.view === "claims") renderClaims(); }
 }
 Store.onUser((u) => {
   CL.projects = []; CL.pid = null; CL.certs = []; CL.loaded = false;
@@ -13258,7 +13631,8 @@ function renderClaims() {
   }
   const { cert, previous } = CL.open, m = cert.meta;
   // Bills compared with his master BoQs: their findings join the certificate's own
-  const cmps = clComparisons(cert), res = { ...CL.open.res, findings: [...CL.open.res.findings, ...cmps.flatMap((c) => c.findings)].sort((a, b) => a.tier - b.tier || b.impact - a.impact) };
+  // Each finding against one of his bills knows how to name it to the contractor (the query list)
+  const cmps = clComparisons(cert), res = { ...CL.open.res, findings: [...CL.open.res.findings, ...cmps.flatMap((c) => c.findings.map((f) => Object.assign(f, { against: c.master?.signed ? "the signed bill" : "the Engineer’s bill" })))].sort((a, b) => a.tier - b.tier || b.impact - a.impact) };
   const signedCmps = cmps.filter((c) => c.master.signed), fig = signedFigures(signedCmps, res.findings);
   if (CL.tab === "master") return clRenderMaster(v, cert, cmps, res, previous);
   const st = (f) => CL.reviews[f.key]?.status;
@@ -13486,6 +13860,25 @@ function lineTable(l) {
     h("div", { class: "edrow" }, h("span", { class: "sub" }, "Rate"), h("b", null, fmtR(l.rate)), l.ref ? h("span", { class: "sub" }, l.ref) : null));
 }
 
+// ----- The query list for the contractor (the canvas's “Check a payment certificate”: “Drafted for you”) -----
+// Every finding he marks Query, drafted from its own figures (claims.js claimQuery), biggest value first; he can change the wording, which
+// is kept with his decision. Accepted findings and ones he says are not an issue are left out. Downloaded as text for the letter.
+const clQueries = (res) => res.findings.filter((f) => CL.reviews[f.key]?.status === "query" && f.kind !== "reader")
+  .map((f) => ({ f, draft: claimQuery(f, f.against), text: CL.reviews[f.key].query || claimQuery(f, f.against) })).filter((q) => q.draft);
+function clQueryList(res, m) {
+  const qs = clQueries(res), name = `${certLabel(m)}`;
+  return h("div", { class: "clqueries", id: "clQueries" },
+    h("div", { class: "edlabel" }, `Query list for the contractor${qs.length ? ` · ${qs.length}` : ""}`),
+    qs.length ? h("span", { class: "sub" }, "Drafted for you from each finding’s figures. Change any wording; accepted findings are left out.")
+      : h("span", { class: "sub" }, "Each finding you mark Query is drafted here for the contractor, with its figures."),
+    ...qs.map((q, i) => h("div", { class: "clquery", "data-key": q.f.key },
+      h("span", { class: "sub" }, `${i + 1}. ${CLAIM_KINDS[q.f.kind].short}${q.f.impact ? ` · ${rands(q.f.impact)}` : ""}`),
+      h("textarea", { class: "edinput cltext", rows: "3", "aria-label": `Query ${i + 1}`, onchange: (e) => { const t = e.target.value.trim(); setReview(q.f, "query", CL.reviews[q.f.key]?.note || "", t && t !== q.draft ? t : null); } }, q.text),
+      q.text !== q.draft ? h("button", { type: "button", class: "link", onclick: () => setReview(q.f, "query", CL.reviews[q.f.key]?.note || "", null) }, "Back to the draft") : null)),
+    qs.length ? h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn dark sm", id: "clQueryDownload", onclick: () => saveFile(`${name} queries.txt`, claimQueryText(`Queries on ${name}${m.contract ? `, contract ${m.contract}` : ""}${m.contractor ? `, ${m.contractor}` : ""}`, qs.map((q) => q.text))) }, "Download the query list"),
+      h("button", { type: "button", class: "btn sm", onclick: () => copyText(claimQueryText(`Queries on ${name}`, qs.map((q) => q.text)), "Query list copied") }, "Copy")) : null);
+}
 function claimEditor(res, m, previous) {
   const f = res.findings.find((x) => x.key === CL.sel);
   if (!f) {
@@ -13495,6 +13888,7 @@ function claimEditor(res, m, previous) {
     return [
       h("div", { class: "edhead" }, h("h2", null, m.contractor || "Certificate"), h("span", { class: "sub" }, [m.project, m.contract && "Contract " + m.contract].filter(Boolean).join(" · "))),
       h("div", { class: "edbody ov" },
+        clQueryList(res, m),
         h("div", { class: "edlabel" }, "Findings"),
         Object.entries(byKind).sort((a, b) => CLAIM_KINDS[a[0]].tier - CLAIM_KINDS[b[0]].tier || b[1].r - a[1].r).map(([k, x]) =>
           h("div", { class: "edrow" }, h("span", null, h("span", { class: "cltier t" + CLAIM_KINDS[k].tier, "aria-hidden": "true" }), CLAIM_KINDS[k].title), h("span", { class: "sub", style: "white-space:nowrap" }, `${x.n} · ${rands(x.r)}`))),
@@ -13505,7 +13899,7 @@ function claimEditor(res, m, previous) {
         h("div", { class: "sub" }, `Read ${res.totals.lines.toLocaleString("en-GB")} lines on ${res.bills.length} bills and groups from ${cert0(m)}. `,
           clReadText(res.totals, false)),
         h("div", { class: "sub" }, "The bill quantities are the ones printed on the certificate. They’re the tendered quantities, which can be out of date: the master BoQ (next step) will replace them with yours.")),
-      h("div", { class: "edfoot" }, h("button", { class: "btn dark", type: "button", onclick: () => downloadQueries(res, m) }, "Download query list"),
+      h("div", { class: "edfoot" }, h("button", { class: "btn dark", type: "button", onclick: () => downloadQueries(res, m) }, "Download the findings (CSV)"),
         Store.user && CL.pid && h("button", { class: "btn sm", type: "button", onclick: async () => { if (!confirm(`Delete ${certLabel(m)} from this project? Your decisions on its findings go too.`)) return; try { await Store.deleteCertificate(CL.pid, CL.open.id); CL.certs = await Store.listCertificates(CL.pid); CL.open = null; renderClaims(); } catch (e) { toast(e.message); } } }, "Delete")),
     ];
   }
@@ -14654,6 +15048,9 @@ function renderSignIn() {
   if (!show) { if (gate) gate.remove(); renderVerifyBar(); renderPanelAsk(); return; }
   if (!gate) { gate = h("div", { id: "signinGate", class: "gate" }); document.body.append(gate); }
   const go = async (what, fn) => { SG.err = ""; SG.busy = what; renderSignIn(); try { await fn(); } catch (e) { SG.err = e.message; } SG.busy = ""; renderSignIn(); };
+  // The dev server on localhost: sign in with its test account at once, once per page load (signing out stays signed out)
+  const dev = Store.devAccount();
+  if (dev && !SG.devTried) { SG.devTried = true; setTimeout(() => go("dev", Store.signInDev), 0); }
   // Opened from the link on another computer (no email kept here) or a link that failed: finish with the email typed in
   const landed = Store.isLink(location.href);
   const linkErr = Store.linkError;
@@ -14665,6 +15062,8 @@ function renderSignIn() {
     h("div", { class: "gatebrand" }, svg('<svg width="22" height="22" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M2 14V8h3v6M6.5 14V3h3v11M11 14v-4h3v4" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"></path></svg>'), h("b", null, "SolvBoQ")),
     h("h1", { id: "sgH" }, "Sign in to SolvBoQ"),
     h("p", { class: "sub" }, "Sign in with your work email and your firm’s projects are there. If someone outside your firm invited you, use the email they invited."),
+    dev ? h("div", { class: "banner", id: "sgDev" }, h("span", null, h("b", null, "Dev server. "), SG.busy === "dev" ? `Signing in as ${dev.email}…` : `Only on localhost: sign in as the test account ${dev.email}. `,
+      SG.busy === "dev" ? null : h("button", { type: "button", class: "btn xs", id: "sgDevBtn", onclick: () => go("dev", Store.signInDev) }, "Sign in as the dev account"))) : null,
     Store.hasGuest ? h("div", { class: "banner" }, h("span", null, h("b", null, "Projects on this computer move with you. "), "This browser has projects from before sign-in was needed. They move to your account (and into your firm) when you sign in.")) : null,
     !file && SG.ask ? h("div", { class: "banner", id: "sgRevitWaiting" }, h("span", null, h("b", null, "Revit is waiting. "), `Sign in here, then check the code ${SG.ask.code} and send the sign-in to Revit.`)) : null,
     file ? sgPanelBox(busy) : h("div", { class: "gatebtns" },
@@ -14969,6 +15368,17 @@ async function piSave() {
   } else { piLocal(doc); PI.saving = "Saved in this browser. Open a project so it’s kept with the project."; }
   if (state.view === "proj") { const s = $("piSaveLine"); if (s) s.textContent = PI.err || PI.saving; }
 }
+// A new project's inputs, from the New project dialog: its method and first structure, saved before the project is opened so
+// piLoad finds them there (and doesn't take inputs left in this browser for it)
+async function piSetUp(pid, got) {
+  const at = new Date().toISOString(), who = piWho(), doc = inputsBlank();
+  doc.project.method = got.method || ""; doc.project.by = who; doc.project.at = at;
+  if (got.structure?.name) doc.structures.push({ id: "s" + Date.now().toString(36), name: got.structure.name, kind: got.structure.kind || "", models: [], grade: "", rebarKg: null, earthworks: {},
+    geotech: { report: {}, method: "average", limitations: "", holes: [] }, src: got.structure.kind ? { kind: { from: "judgement", why: "Chosen when the project was made", by: who, at } } : {}, by: who, at });
+  const d = normInputs(doc);
+  if (piOnCloud() || Store.user) await Store.saveInputs(pid, d).catch((e) => toast(`The project’s set-up wasn’t saved: ${e.message}`));
+  PI.pid = pid; PI.doc = d; PI.loaded = true; PI.err = "";
+}
 // A value changed: keep who changed it and when, with the source he gave
 function piStamp(s, field) { s.src ||= {}; const cur = s.src[field] || {}; s.src[field] = { ...cur, by: piWho(), at: new Date().toISOString() }; s.by = piWho(); s.at = new Date().toISOString(); }
 
@@ -14978,14 +15388,16 @@ function renderProj() {
   const d = piDoc(), p = d.project, focus = document.activeElement?.id;
   const proj = CL.projects?.find((x) => x.id === CL.pid);
   const stage = p.stage || "tender";
-  const missing = inputsMissing(d, stage);
+  const missing = inputsMissing(d, stage), props = piProposals();
   const method = MEASUREMENT_METHODS.find((m) => m.id === (p.method || "sans1200"));
   const settingsLine = [method.id === "sans1200" ? "SANS 1200 Clause 8" : method.title, (STAGES.find((x) => x[0] === stage) || [, stage])[1], p.spec || "no particular specification", p.provisional.length ? plural(p.provisional.length, "provisional sum") : ""].filter(Boolean).join(" · ");
   v.replaceChildren(
     h("section", { class: "card stdhead" },
       h("div", { class: "stdintro" },
         h("h2", null, "Project inputs"),
-        h("p", null, "A few minutes, mostly checking: confirm the structures SolvBoQ found in the model, give it the geotechnical report once, and check what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."),
+        h("p", null, state.records && !state.fromSample
+          ? "A few minutes, mostly checking: confirm the structures SolvBoQ found in the model, give it the geotechnical report once, and check what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."
+          : "A few minutes, once per project: the method of measurement, the structures the bill prices separately with their kind, then the geotechnical report and the drawings and schedules for Claude to read. Everything else has a default, marked as assumed in the bill until you change it. A model read later adds its own structures here for you to confirm."),
         h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
       h("details", { class: "pisettings", open: PI.settingsOpen ? true : null, ontoggle: (e) => { PI.settingsOpen = e.target.open; } },
         h("summary", null, h("b", null, "Project settings: "), settingsLine, h("span", { class: "sub" }, " · change")),
@@ -15029,16 +15441,16 @@ function renderProj() {
             h("span", null, h("input", { id: `piTol_${k}`, class: "edinput", type: "number", min: "0", max: String(max), step: "any", value: String(piTol(k)), onchange: (e) => piTolSet(k, e.target.value) }), h("span", { class: "eunit" }, "%")))),
           h("span", { class: "edsub" }, PI_TOL.map(([k, , def]) => p.tolerances?.[k] == null ? null : k).filter(Boolean).length ? "Changed for this project." : "SolvBoQ’s defaults."))))),
 
-    piProposals(),
-    piReportCard(),
-    typeof docsCard === "function" ? docsCard() : null,
-
+    props,
+    // The structures before the report and the documents: both are read for the structures listed here
     h("section", { class: "card stdbody stdmats", id: "piStructs" },
-      h("div", { class: "stdintro" }, h("h2", null, "Structures"),
+      h("div", { class: "stdintro" }, h("h2", null, props ? "Structures" : "1. Structures"),
         h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it. Kinds follow the Uniclass 2015 Entities table.")),
-      d.structures.length ? null : h("p", { class: "sub" }, "None yet. Without them, each model is one structure and its kind is taken from its title."),
+      d.structures.length ? null : h("p", { class: "sub" }, "None yet. Add each structure the bill prices separately and choose its kind. Without them, each model is one structure and its kind is taken from its title."),
       ...d.structures.map((s, i) => piStructure(s, i)),
       h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: piAddStructure }, "Add a structure"))),
+    piReportCard(),
+    typeof docsCard === "function" ? docsCard() : null,
 
     h("section", { class: "card stdbody stdmats" },
       h("div", { class: "stdintro" }, h("h2", null, `Still needed for the ${stage} bill`),
@@ -15298,7 +15710,7 @@ async function docsLoad() {
   } catch (e) { DOCS.err = e.message; }
   docsAfter();
 }
-function docsAfter() { if (state.view === "proj" && typeof renderProj === "function") renderProj(); }
+function docsAfter() { if (state.view === "proj" && typeof renderProj === "function") renderProj(); else if (state.view === "ov" && typeof renderOv === "function") renderOv(); }
 async function docsSave(d, quiet) {
   const doc = docNorm(d);
   const i = DOCS.list.findIndex((x) => x.id === doc.id); if (i >= 0) DOCS.list[i] = doc; else DOCS.list.push(doc);
@@ -15736,6 +16148,80 @@ function hvCard(p) {
     (s.chips || []).length ? h("div", { class: "hvchips" }, s.chips.map(([t, tone]) => h("span", { class: "hvchip " + tone }, t))) : null,
     h("div", { class: "hvfoot" }, h("span", null, hvPeople(p)), h("span", { class: "hvopen" }, "Open")));
 }
+// ----- Set up, the journey's step 1 (the canvas's “Target user journey”): name the project, pick the method and the kind of structure -----
+// One dialog in place of the browser's prompts. Resolves { name, contract, method, structure: { name, kind } | null }, or null on Cancel.
+function hvNewDialog(meta) {
+  return new Promise((resolve) => {
+    let d = $("npDlg"); if (d) d.remove();
+    d = h("dialog", { id: "npDlg", class: "mbdlg ov npdlg", "aria-labelledby": "npH" });
+    let done = false, kindSet = false;
+    const finish = (v) => { if (done) return; done = true; if (d.open) d.close(); d.remove(); resolve(v); };
+    const name = h("input", { id: "npName", class: "piinput", "aria-required": "true", autocomplete: "off", value: meta?.project || "", placeholder: "For example: Paarl WWTW upgrade" });
+    const contract = h("input", { id: "npContract", class: "piinput", autocomplete: "off", value: meta?.contract || "", placeholder: "For example: CES11/2024" });
+    const kind = h("select", { id: "npKind", class: "piinput", onchange: () => { kindSet = true; } },
+      h("option", { value: "" }, "Choose the kind…"), ...STRUCTURE_KINDS.map((k) => h("option", { value: k.id }, k.title)));
+    const stName = h("input", { id: "npStName", class: "piinput", autocomplete: "off", placeholder: "For example: Gravity Thickeners",
+      oninput: () => { if (!kindSet) kind.value = guessKind(stName.value) || ""; } });
+    const methods = MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" },
+      h("input", { type: "radio", name: "npMethod", value: m.id, checked: m.id === "sans1200" ? true : null, disabled: m.built ? null : true }),
+      h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"))));
+    const err = h("div", { class: "err", role: "alert", hidden: true });
+    const form = h("form", { class: "edbody npform", onsubmit: (e) => {
+        e.preventDefault();
+        const n = name.value.trim(); if (!n) { err.textContent = "Give the project a name."; err.hidden = false; name.focus(); return; }
+        const st = stName.value.trim();
+        finish({ name: n, contract: contract.value.trim(), method: d.querySelector('input[name="npMethod"]:checked')?.value || "sans1200", structure: st ? { name: st, kind: kind.value } : null });
+      } },
+      h("div", { class: "edpath" }, h("h2", { id: "npH" }, "New project"),
+        h("button", { type: "button", class: "ibtn", "aria-label": "Close", title: "Close", onclick: () => finish(null) }, svg('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'))),
+      h("p", { class: "sub" }, "One project per contract: its structures, bills and payment certificates are kept in it, for everyone you add."),
+      h("label", { class: "edlabel", for: "npName" }, "Name of the project"), name,
+      h("label", { class: "edlabel", for: "npContract" }, "Contract number"), contract,
+      h("span", { class: "edsub" }, "Used to check that payment certificates belong to this project. You can leave it for now."),
+      h("span", { class: "edlabel" }, "Method of measurement"), h("div", { class: "npmethods" }, ...methods),
+      h("span", { class: "edsub" }, "The one the contract’s pricing assumptions call up."),
+      h("span", { class: "edlabel" }, "First structure (you can add the others later)"),
+      h("div", { class: "nprow" }, stName, kind),
+      h("span", { class: "edsub" }, "One per structure the bill prices separately, for example a tank, a chamber or a building. The kind decides its earthworks rule, its standard grade and what else it needs."),
+      err,
+      h("div", { class: "tools" }, h("button", { type: "submit", class: "btn dark", id: "npCreate" }, "Create the project"), h("button", { type: "button", class: "btn", onclick: () => finish(null) }, "Cancel")));
+    d.append(form);
+    d.addEventListener("cancel", (e) => { e.preventDefault(); finish(null); });
+    d.addEventListener("click", (e) => { if (e.target === d) finish(null); });
+    document.body.append(d); d.showModal(); name.focus();
+  });
+}
+// What the project has and what is still missing, from its inputs and documents (the journey's “project home”)
+function hvSetupState() {
+  if (!hvInputsHere(CL.pid)) return null;
+  const d = piDoc(), p = d.project, stage = p.stage || "tender", docsHere = typeof DOCS !== "undefined" && DOCS.loaded && DOCS.pid === CL.pid;
+  const method = MEASUREMENT_METHODS.find((m) => m.id === (p.method || "sans1200"));
+  const kinds = d.structures.filter((s) => KIND_BY_ID.get(s.kind));
+  const docs = docsHere ? DOCS.list : null, waiting = docsHere && typeof docsAnswers === "function" ? docsAnswers().filter((x) => x.ans.status === "open").length : 0;
+  const missing = inputsMissing(d, stage);
+  return { p, stage, method, structures: d.structures, kinds: kinds.length, docs, waiting, missing };
+}
+function hvSetupCard() {
+  const s = hvSetupState();
+  const row = (label, text, tone) => h("div", { class: "hvsetrow" }, h("span", null, label), h("b", { class: tone || "" }, text));
+  const go = () => goProj();
+  if (!s) return h("section", { class: "hvsetup", id: "hvSetup" }, h("div", { class: "hvstructshead" }, h("h2", null, "Set up")), h("p", { class: "sub" }, "Loading the project’s set-up…"));
+  const todo = s.missing.length;
+  const methodText = `${s.method.id === "sans1200" ? "SANS 1200 Clause 8" : s.method.title.replace(/\s*\(.*$/, "")}${s.p.method ? "" : " (assumed: not chosen yet)"}`;
+  const stText = s.structures.length ? s.structures.map((x) => `${x.name || "Unnamed"}${KIND_BY_ID.get(x.kind) ? "" : " (kind not set)"}`).join(", ") : "None yet";
+  const docText = !s.docs ? "…" : s.docs.length ? `${plural(s.docs.length, "document")}${s.waiting ? `, ${plural(s.waiting, "answer")} waiting for you` : ""}` : "None yet: the ground report, drawings and schedules";
+  return h("section", { class: "hvsetup", id: "hvSetup" },
+    h("div", { class: "hvstructshead" }, h("h2", null, "Set up"),
+      h("span", { class: "hvchip " + (todo ? "amber" : "green") }, todo ? `${plural(todo, "thing")} still needed` : "Done for the " + s.stage + " bill")),
+    row("Method of measurement", methodText, s.p.method ? "" : "warn"),
+    row("Structures", stText, !s.structures.length || s.kinds < s.structures.length ? "warn" : ""),
+    row("Documents", docText, s.docs && !s.docs.length ? "warn" : ""),
+    todo ? h("div", { class: "hvsetmiss" }, h("span", null, `Still needed for the ${s.stage} bill`),
+      h("ul", null, s.missing.slice(0, 4).map((m) => h("li", null, h("b", null, m.need.what), m.level !== "Project" ? ` (${m.level})` : "", ": ", IF_MISSING[m.need.missing] || ""))),
+      s.missing.length > 4 ? h("span", { class: "sub" }, `and ${s.missing.length - 4} more`) : null) : null,
+    h("div", { class: "tools" }, h("button", { type: "button", class: "hvbtn " + (todo ? "night" : "outline"), id: "hvSetupGo", onclick: go }, todo ? "Set up the project" : "Change the set-up")));
+}
+
 function hvOpenProject(pid) { if (pid !== CL.pid) chooseProject(pid); goOv(); }
 async function hvNewProject() { const was = CL.pid; await newProject(null); if (CL.pid && CL.pid !== was) goOv(); }
 function renderHome() {
@@ -15829,11 +16315,18 @@ function hvNext(list) {
     else if (st.n === 4 || st.n === 5) items.push({ t: `${s.name}: ${plural(st.open, "line")} need${st.open === 1 ? "s" : ""} you`, s: st.est ? `${plural(st.est, "line")} still estimated` : st.label.replace(/^Step \d of 6: /, "Next: "), b: "Review the bill", go: () => stOpen(s, "need") });
     else if (st.n === 6) items.push({ t: `${s.name}: ready to sign`, s: "Every line is confirmed", b: "Sign it off", go: () => stOpen(s, "sign") });
   }
+  // A project just made, or one whose structures have no model yet: set it up, then bring the model
+  const set = hvSetupState();
+  if (list && set && (!set.structures.length || set.kinds < set.structures.length))
+    items.push({ t: "Set up the project", s: set.structures.length ? "Choose the kind of each structure: it decides its earthworks rule, grade and questions" : "Name its structures and their kind, and add the ground report, drawings and schedules", b: "Set it up", go: goProj, lime: !items.length });
+  const noModel = (list || []).filter((s) => s.step.n === 2);
+  if (noModel.length) items.push({ t: noModel.length === 1 ? `${noModel[0].name}: bring the model` : `Bring the models of ${plural(noModel.length, "structure")}`,
+    s: "Open the model in Revit and read it with the SolvBoQ add-in (Settings › Modelling guide has the add-in), or upload model data under Bills", b: "Get the Revit add-in", go: () => goStandards(), lime: !items.length });
   const unknown = (list || []).some((s) => s.step.n === 0);
   return h("section", { class: "hvnext", id: "hvNext" }, h("h2", null, "Next for you"),
     items.length ? items.slice(0, 4).map((it) => h("div", { class: "hvnextitem" }, h("b", null, it.t), h("span", null, it.s),
       h("button", { type: "button", class: "hvbtn " + (it.lime ? "lime" : "ghost"), onclick: it.go }, it.b)))
-      : h("div", { class: "hvnextitem" }, h("b", null, list ? "Nothing waiting for you" : "…"), list ? h("span", null, unknown ? "Open a structure to see where its bill stands." : "Every structure is signed or up to date.") : null));
+      : h("div", { class: "hvnextitem" }, h("b", null, list ? "Nothing waiting for you" : "…"), list ? h("span", null, unknown ? "Open a structure to see where its bill stands." : list.length ? "Every structure is signed or up to date." : "") : null));
 }
 function renderOv() {
   const v = $("viewOv"), p = CL.projects.find((x) => x.id === CL.pid);
@@ -15854,10 +16347,10 @@ function renderOv() {
     HV.ovErr ? h("div", { class: "err" }, `The project couldn’t be read: ${HV.ovErr}`)
       : !list ? h("p", { class: "sub" }, "Loading the structures…")
       : list.length ? list.map(hvRowEl)
-      : h("p", { class: "sub" }, "No structures yet. Open a model of this project in Revit and read it with the SolvBoQ add-in (or upload model data under Bills): each model is a structure until you name them under Settings."));
+      : h("p", { class: "sub" }, "No structures yet. Add them under Set up, or open a model of this project in Revit and read it with the SolvBoQ add-in (or upload model data under Bills): each model is a structure until you name them."));
   v.replaceChildren(
     h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, p.name), h("p", null, sub))),
-    h("div", { class: "hvov" }, structs, h("div", { class: "hvside" }, hvNext(list), typeof pplCard === "function" ? pplCard() : null)));
+    h("div", { class: "hvov" }, h("div", { class: "hvmain" }, hvSetupCard(), structs), h("div", { class: "hvside" }, hvNext(list), typeof pplCard === "function" ? pplCard() : null)));
 }
 
 // After the project list loads or the project changes (projectview.js pvAfterProjects)
