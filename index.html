@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-20T12:28:37Z">
+<meta name="solvboq-build" content="2026-11-20T18:05:31Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1254,6 +1254,13 @@ body.docked .editor .edbody{flex:1;overflow:auto}
 #viewFirm .stdintro h2,#viewFirm h2{font-size:18px;font-weight:700;color:var(--ink)}
 @media (max-width:1000px){ #saveState{display:none} }
 body.docked.ed-open .editor{align-self:stretch;height:auto}
+/* Projects: archiving (20 Nov 2026) */
+.hvtools{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.hvtools .sub{margin-right:6px}
+.hvcard.picked{outline:3px solid var(--night);outline-offset:-3px}
+.hvcard.archived{opacity:.78}
+.hvtick{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:10px;border-radius:7px;border:2px solid var(--night);font-size:14px;vertical-align:-3px}
+.hvcard.picked .hvtick{background:var(--night);color:#fff}
 </style>
 </head>
 <body>
@@ -10812,6 +10819,14 @@ const Store = (() => {
       if (firm) add(await F.getDocs(F.query(F.collection(db, "projects"), F.where("firm", "==", firm.id))));
       return [...all.values()].sort((a, b) => String(a.name).localeCompare(String(b.name)));
     }),
+    // Archiving a project (20 Nov 2026): it leaves the project lists for everyone and keeps everything in it; restoring brings it back.
+    // A detail of the project, so anyone who can edit it can (the projects rule: not the owner, members or firm)
+    setArchived: (pid, on) => wrap(async () => {
+      need();
+      const v = on ? { by: user.email || user.uid, at: new Date().toISOString() } : null;
+      await F.updateDoc(F.doc(db, "projects", pid), { archived: v ?? F.deleteField() });
+      return v;
+    }),
     // A new project belongs to the firm (when there is one); its id is a readable start and 20 random characters
     createProject: ({ name, contract }) => wrap(async () => {
       need();
@@ -11092,7 +11107,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", deleteProject: "deleting the project", linkModel: "model’s project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", deleteProject: "deleting the project", setArchived: "archiving the project", linkModel: "model’s project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -13633,11 +13648,14 @@ async function setReview(f, status, note, query) {
 }
 
 // ----- Account and project -----
+// The projects shown in the lists: not archived (keep: the one open, so it still shows while he restores it)
+const liveProjects = (keep) => CL.projects.filter((p) => !p.archived || p.id === keep);
 async function loadProjects() {
   try {
     CL.projects = await Store.myProjects();
     try { const last = localStorage.getItem("solvboq-claims-project-v1"); if (CL.projects.some((p) => p.id === last)) CL.pid = last; } catch (e) {}
-    if (!CL.pid && CL.projects.length) CL.pid = CL.projects[0].id;
+    if (CL.pid && CL.projects.find((p) => p.id === CL.pid)?.archived) CL.pid = null;
+    if (!CL.pid && liveProjects().length) CL.pid = liveProjects()[0].id;
     CL.certs = CL.pid ? await Store.listCertificates(CL.pid) : [];
   } catch (e) { CL.err = e.message; }
   CL.loaded = true;
@@ -13677,7 +13695,7 @@ function accountCard() {
   // Not signed in: the sign-in page covers the app (signin.js); offline, say so
   if (!u) return h("div", { class: "banner" }, h("span", null, h("b", null, Store.ready ? "Not signed in. " : "Connecting… "), Store.ready ? "Certificates checked now aren’t saved until you sign in." : ""));
   const sel = h("select", { onchange: (e) => (e.target.value === "+" ? newProject(CL.open?.cert.meta) : chooseProject(e.target.value)) },
-    CL.projects.map((p) => h("option", { value: p.id, selected: p.id === CL.pid }, p.name + (p.contract ? ` (${p.contract})` : ""))), h("option", { value: "+" }, "New project…"));
+    liveProjects(CL.pid).map((p) => h("option", { value: p.id, selected: p.id === CL.pid }, p.name + (p.contract ? ` (${p.contract})` : "") + (p.archived ? " (archived)" : ""))), h("option", { value: "+" }, "New project…"));
   return h("div", { class: "clacct" },
     CL.projects.length ? h("label", { class: "field" }, "Project", sel) : h("div", { class: "clauthtxt" }, h("b", null, CL.loaded ? "No projects yet" : "Loading your projects…"), CL.loaded && h("span", { class: "sub" }, "Create one for the contract, then drop its certificates here.")),
     !CL.projects.length && CL.loaded && h("button", { class: "btn dark", type: "button", onclick: () => newProject(CL.open?.cert.meta) }, "New project"),
@@ -14966,7 +14984,7 @@ function renderProjects() {
   if (!Store.user) { sel.replaceChildren(opt("", Store.ready ? "Not signed in" : "Connecting…", true)); sel.disabled = true; return; }
   sel.disabled = false;
   sel.replaceChildren(
-    ...(CL.projects.length ? CL.projects.map((p) => opt(p.id, p.name + (p.contract ? ` (${p.contract})` : ""), p.id === CL.pid)) : [opt("", CL.loaded ? "No project yet" : "Loading projects…", true)]),
+    ...(liveProjects(CL.pid).length ? liveProjects(CL.pid).map((p) => opt(p.id, p.name + (p.contract ? ` (${p.contract})` : "") + (p.archived ? " (archived)" : ""), p.id === CL.pid)) : [opt("", CL.loaded ? "No project yet" : "Loading projects…", true)]),
     opt("+new", "New project…"));
 }
 $("projSel").addEventListener("change", async (e) => {
@@ -15554,6 +15572,7 @@ function renderProj() {
       missing.length ? h("div", { class: "tablewrap" }, h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "For"), h("th", null, "What"), h("th", null, "Who"), h("th", null, "Until then"))),
         h("tbody", null, missing.map((m) => h("tr", null, h("td", null, m.level), h("td", null, h("b", null, m.need.what), h("div", { class: "sub" }, m.need.why)), h("td", null, ACTORS[m.need.who] || m.need.who), h("td", null, IF_MISSING[m.need.missing] || ""))))))
         : h("p", null, "Nothing missing for this stage at the project level.")),
+    typeof hvArchiveCard === "function" ? hvArchiveCard() : null,
     typeof hvDeleteCard === "function" ? hvDeleteCard() : null);
   if (focus && $(focus)) $(focus).focus({ preventScroll: true });
   else if (focusAt >= 0) v.querySelectorAll(PI_FOCUSABLE)[focusAt]?.focus({ preventScroll: true });
@@ -16243,13 +16262,30 @@ function hvBar(pct, fill, track) {
   return h("div", { class: "hvbar " + track, "aria-hidden": "true" }, pct > 0 ? h("div", { class: "hvfill " + fill, style: `width:${Math.max(0, Math.min(100, Math.round(pct)))}%` }) : null);
 }
 function hvCard(p) {
-  const s = HV.sum[p.id] || { loading: true };
-  return h("a", { class: "hvcard", href: "#", "data-pid": p.id, onclick: (e) => { e.preventDefault(); hvOpenProject(p.id); } },
-    h("div", { class: "hvcardhead" }, h("b", null, p.name), h("span", null, s.loading ? "…" : s.err ? s.err : `${s.method} · ${plural(s.structures, "structure")}`)),
+  const s = HV.sum[p.id] || { loading: true }, picking = !!HV.pick, picked = picking && HV.pick.has(p.id);
+  const click = (e) => { e.preventDefault(); if (picking) { picked ? HV.pick.delete(p.id) : HV.pick.add(p.id); renderHome(); } else if (!p.archived) hvOpenProject(p.id); };
+  return h("a", { class: "hvcard" + (picked ? " picked" : "") + (p.archived ? " archived" : ""), href: "#", "data-pid": p.id, "aria-pressed": picking ? String(picked) : null, onclick: click },
+    h("div", { class: "hvcardhead" }, h("b", null, picking ? h("span", { class: "hvtick", "aria-hidden": "true" }, picked ? "✓" : "") : null, p.name),
+      h("span", null, s.loading ? "…" : s.err ? s.err : `${s.method} · ${plural(s.structures, "structure")}`)),
     h("div", { class: "hvsigned" }, h("div", { class: "hvrow" }, h("span", null, "Bills signed"), h("b", null, s.loading || s.err ? "–" : `${s.signed} of ${s.structures}`)),
       hvBar(s.structures ? (100 * s.signed) / s.structures : 0, "green", "light")),
-    (s.chips || []).length ? h("div", { class: "hvchips" }, s.chips.map(([t, tone]) => h("span", { class: "hvchip " + tone }, t))) : null,
-    h("div", { class: "hvfoot" }, h("span", null, hvPeople(p)), h("span", { class: "hvopen" }, "Open")));
+    !p.archived && (s.chips || []).length ? h("div", { class: "hvchips" }, s.chips.map(([t, tone]) => h("span", { class: "hvchip " + tone }, t))) : null,
+    h("div", { class: "hvfoot" }, h("span", null, p.archived ? `Archived ${hvDay(p.archived.at)}${p.archived.by ? ` by ${p.archived.by}` : ""}` : hvPeople(p)),
+      p.archived ? h("button", { type: "button", class: "hvbtn outline", "data-restore": p.id, onclick: (e) => { e.preventDefault(); e.stopPropagation(); hvArchive([p.id], false); } }, "Restore")
+        : h("span", { class: "hvopen" }, picking ? (picked ? "Selected" : "Select") : "Open")));
+}
+// Archiving (20 Nov 2026): projects leave the lists for everyone and keep everything in them; Restore brings one back
+async function hvArchive(ids, on) {
+  const done = [], failed = [];
+  for (const id of ids) {
+    try { const v = await Store.setArchived(id, on); const p = CL.projects.find((x) => x.id === id); if (p) { if (on) p.archived = v; else delete p.archived; } done.push(id); }
+    catch (e) { failed.push(`${CL.projects.find((x) => x.id === id)?.name || id}: ${e.message}`); }
+  }
+  if (on && done.includes(CL.pid)) { const next = liveProjects()[0]; if (next) chooseProject(next.id); else { CL.pid = null; if (typeof pvAfterProjects === "function") pvAfterProjects(); } }
+  HV.pick = null; HV.sum = {};
+  if (typeof renderProjects === "function") renderProjects();   // the switcher in the top bar
+  toast(failed.length ? `${done.length ? `${plural(done.length, "project")} ${on ? "archived" : "restored"}; ` : ""}not done: ${failed.join("; ")}` : `${plural(done.length, "project")} ${on ? "archived: they’re under Archived, with everything in them" : "restored"}`);
+  if (state.view === "home") renderHome(); else navMark();
 }
 // ----- Set up, the journey's step 1 (the canvas's “Target user journey”): name the project, pick the method and the kind of structure -----
 // One dialog in place of the browser's prompts. Resolves { name, contract, method, structure: { name, kind } | null }, or null on Cancel.
@@ -16297,6 +16333,16 @@ function hvNewDialog(meta) {
     d.addEventListener("click", (e) => { if (e.target === d) finish(null); });
     document.body.append(d); d.showModal(); name.focus();
   });
+}
+// Archiving this project (20 Nov 2026), from its Settings: anyone who can edit it; it keeps everything and can be restored
+function hvArchiveCard() {
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  if (!p || !Store.user) return null;
+  return h("section", { class: "card setcard", id: "projArchive" },
+    h("h2", null, p.archived ? "This project is archived" : "Archive this project"),
+    h("p", { class: "sub" }, p.archived ? `Archived ${hvDay(p.archived.at)}${p.archived.by ? ` by ${p.archived.by}` : ""}: it’s out of the project lists for everyone, with everything in it kept.`
+      : `Takes ${p.name} out of the project lists for everyone on it, and keeps everything in it: models, bills, signed versions, certificates and decisions. Restore it any time from Projects › Archived.`),
+    h("div", { class: "tools" }, h("button", { type: "button", class: "btn", id: "btnArchiveProject", onclick: () => hvArchive([p.id], !p.archived) }, p.archived ? "Restore this project" : "Archive this project")));
 }
 // Deleting a project (20 Nov 2026): its owner only (the rules), after typing its name, since everything in it goes for everyone on it
 function hvDeleteCard() {
@@ -16369,19 +16415,32 @@ function hvSetupCard() {
 function hvOpenProject(pid) { if (pid !== CL.pid) chooseProject(pid); goOv(); }
 async function hvNewProject() { const was = CL.pid; await newProject(null); if (CL.pid && CL.pid !== was) goOv(); }
 function renderHome() {
-  const v = $("viewHome"), u = Store.user;
+  const v = $("viewHome"), u = Store.user, live = CL.projects.filter((p) => !p.archived), arch = CL.projects.filter((p) => p.archived);
+  if (HV.showArchived && !arch.length) HV.showArchived = false;
+  const shown = HV.showArchived ? arch : live, picking = !!HV.pick;
+  const tools = !u || !CL.loaded ? null
+    : picking ? h("div", { class: "hvtools" },
+        h("span", { class: "sub" }, HV.pick.size ? `${plural(HV.pick.size, "project")} selected` : "Click the projects to archive"),
+        h("button", { type: "button", class: "hvbtn outline", onclick: () => { HV.pick = new Set(live.map((p) => p.id)); renderHome(); } }, "Select all"),
+        h("button", { type: "button", class: "hvbtn night", id: "hvArchiveGo", disabled: HV.pick.size ? null : true, onclick: () => hvArchive([...HV.pick], true) }, `Archive${HV.pick.size ? ` ${HV.pick.size}` : ""}`),
+        h("button", { type: "button", class: "hvbtn outline", onclick: () => { HV.pick = null; renderHome(); } }, "Cancel"))
+    : h("div", { class: "hvtools" },
+        arch.length ? h("button", { type: "button", class: "hvbtn outline", id: "hvShowArchived", "aria-pressed": String(!!HV.showArchived), onclick: () => { HV.showArchived = !HV.showArchived; renderHome(); } }, HV.showArchived ? "Back to projects" : `Archived (${arch.length})`) : null,
+        !HV.showArchived && live.length ? h("button", { type: "button", class: "hvbtn outline", id: "hvArchivePick", onclick: () => { HV.pick = new Set(); renderHome(); } }, "Archive projects…") : null,
+        !HV.showArchived ? h("button", { type: "button", class: "hvbtn night big", id: "hvNew", onclick: hvNewProject }, "New project") : null);
   const head = h("div", { class: "hvtitle" },
-    h("div", { class: "hvtitletext" }, h("h1", null, "Projects"),
-      h("p", null, Store.firm ? "Everyone at your firm sees the firm’s projects. Add outside people by email." : "Your projects, and the ones you were invited to. Add people by email.")),
-    u && CL.loaded ? h("button", { type: "button", class: "hvbtn night big", id: "hvNew", onclick: hvNewProject }, "New project") : null);
+    h("div", { class: "hvtitletext" }, h("h1", null, HV.showArchived ? "Archived projects" : "Projects"),
+      h("p", null, HV.showArchived ? "Kept with everything in them, out of the lists. Restore one to bring it back for everyone on it."
+        : Store.firm ? "Everyone at your firm sees the firm’s projects. Add outside people by email." : "Your projects, and the ones you were invited to. Add people by email.")),
+    tools);
   const note = (text, btn) => h("section", { class: "hvcard plain" }, h("p", null, text), btn || null);
   let body;
   if (!Store.available) body = note(`Projects are kept in the cloud, and it’s off in this copy of the page. ${Store.why || ""}`, h("button", { type: "button", class: "hvbtn night", onclick: goBills }, "Open the bill"));
   else if (!u) body = note(Store.ready ? "Sign in to see your projects." : "Connecting…");
   else if (!CL.loaded) body = note("Loading your projects…");
   else if (CL.err && !CL.projects.length) body = note(`Your projects couldn’t be read: ${CL.err}`);
-  else if (!CL.projects.length) body = note("No projects yet. Start one for the contract: its structures, bills and payment certificates are kept in it, for everyone you add.");
-  else { hvSums(); body = h("div", { class: "hvgrid" }, CL.projects.map(hvCard)); }
+  else if (!shown.length) body = note(arch.length ? `No projects open: ${plural(arch.length, "project")} archived. Start one for the contract, or restore one under Archived.` : "No projects yet. Start one for the contract: its structures, bills and payment certificates are kept in it, for everyone you add.");
+  else { hvSums(); body = h("div", { class: "hvgrid" }, shown.map(hvCard)); }
   v.replaceChildren(head, body);
 }
 
@@ -16666,7 +16725,7 @@ function frRender() {
   if (!show) { if (box) box.remove(); return; }
   if (!box) { box = h("div", { id: "firstRun", class: "gate" }); document.body.append(box); }
   const m = frModel(), last = (() => { try { return localStorage.getItem("solvboq-claims-project-v1") || ""; } catch (e) { return ""; } })();
-  const list = CL.projects.slice().sort((a, b) => (b.id === last) - (a.id === last) || String(a.name).localeCompare(String(b.name)));
+  const list = liveProjects().slice().sort((a, b) => (b.id === last) - (a.id === last) || String(a.name).localeCompare(String(b.name)));
   if (!FR.pick) FR.pick = list[0]?.id || "+new";
   const revitProject = String(m.project || "").trim();
   if (FR.newName == null) FR.newName = revitProject && !/^project name$/i.test(revitProject) ? revitProject : frTitle();
