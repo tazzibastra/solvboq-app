@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-20T11:48:03Z">
+<meta name="solvboq-build" content="2026-11-20T12:28:37Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -293,7 +293,9 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .st-measure{background:var(--card);color:var(--ink-2);box-shadow:inset 0 0 0 1px var(--line)}
 .st-parked{background:var(--chip);color:var(--ink-2)}
 .mfoot{padding:14px 28px;font-size:12px;color:var(--muted)}
-.editor{flex:1 1 360px;max-width:460px;min-width:0;background:var(--card);border-radius:28px;display:flex;flex-direction:column;position:sticky;top:20px;max-height:calc(100vh - 40px);overflow:hidden}
+.editor{flex:1 1 360px;max-width:460px;min-width:0;background:var(--card);border-radius:28px;display:flex;flex-direction:column;align-self:flex-start;overflow:hidden}
+.editor.stick{position:sticky;top:20px}
+.editor .edbody{flex:none;overflow:visible}
 .edhead{padding:22px 24px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px}
 .edhead h2{margin:0;font-size:19px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
 .edhead .stpill{align-self:flex-start}
@@ -1189,6 +1191,69 @@ body.docked .toast{top:12px;bottom:auto}
 .clqueries{display:flex;flex-direction:column;gap:8px;padding-bottom:14px;margin-bottom:6px;border-bottom:1px solid var(--rule)}
 .clquery{display:flex;flex-direction:column;gap:4px}
 .clquery textarea{width:100%;line-height:1.45}
+/* New project in two columns (20 Nov 2026): no scrolling on a laptop screen; one column on a phone */
+.npdlg{width:min(940px,96vw)}
+.npdlg.mbdlg.ov{width:min(940px,96vw)}
+.npgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px 32px;align-items:start}
+.npcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.npcol .piinput{width:100%;box-sizing:border-box}
+@media (max-width:720px){.npgrid{grid-template-columns:minmax(0,1fr)}}
+/* Deleting a project */
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.danger:disabled{opacity:.45;cursor:not-allowed}
+.setdanger{border:1px solid var(--red-s)}
+/* Docked in Revit the line's panel is full-screen over the bill: there it scrolls inside, as before */
+body.docked .editor .edbody{flex:1;overflow:auto}
+/* ===== Settings, reworked (20 Nov 2026): a side menu grouped by firm and project, no wrapping row of tabs ===== */
+@media (min-width:1000px){
+  body[data-section="settings"] .page{display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:24px;row-gap:20px;align-items:start;grid-auto-flow:row dense}
+  body[data-section="settings"] .page>*{grid-column:1/-1;min-width:0}
+  body[data-section="settings"] .page>#subSettings{grid-column:1;position:sticky;top:20px}
+  body[data-section="settings"] .page>main{grid-column:2}
+  body[data-section="settings"] #subSettings{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px}
+  body[data-section="settings"] #subSettings .setgroups{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:2px;padding:10px;border-radius:24px}
+  body[data-section="settings"] #subSettings .subtab{text-align:left;width:100%;border-radius:14px}
+  body[data-section="settings"] #subSettings .subgroup{align-self:stretch;padding:12px 12px 0}
+  body[data-section="settings"] #subSettings .subname{display:block;padding:0 12px 6px;font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body[data-section="settings"] #subSettings .subgroup:not(:first-child){margin-top:10px;border-top:1px solid var(--rule);padding-top:14px}
+  body[data-section="settings"] #subSettings .subtools{justify-content:stretch}
+  body[data-section="settings"] #subSettings .addinbtn{width:100%;justify-content:center;box-sizing:border-box}
+}
+/* Narrower: the menu is one row that scrolls sideways, never wraps under itself */
+@media (max-width:999px){
+  #subSettings .setgroups{flex-wrap:nowrap;overflow-x:auto;max-width:100%;scrollbar-width:none}
+  #subSettings .subtab,#subSettings .subgroup{flex:none;white-space:nowrap}
+  #subSettings .subname{display:none}
+}
+.subname{display:none}
+/* Settings pages: cards with even spacing, never touching */
+#viewFirm,#viewProj,#viewConv,#viewStd{display:flex;flex-direction:column;gap:20px}
+#viewFirm>*,#viewProj>*{margin:0}
+/* The project's settings as plain cards (no fold), each with its heading and what it is for */
+.setcard{padding:24px 28px;display:flex;flex-direction:column;gap:12px}
+.setcard>h2{margin:0;font-size:18px;font-weight:700}
+.setcard>.sub{margin:0;max-width:80ch;line-height:1.5}
+.setgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px 28px;align-items:start}
+.setgrid>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.setgrid .piinput,.setgrid .lnwhy{width:100%;box-sizing:border-box}
+/* Tables that are wider than their card scroll inside it, not off the page */
+.tablewrap{overflow-x:auto;max-width:100%}
+.tablewrap .stdtable{min-width:640px}
+/* The top bar keeps one row: the save status shortens first */
+@media (max-width:1100px){ .savestate{max-width:200px} .tbfirm{display:none} }
+/* The project's Settings: every card's heading the same, and the still-needed table's columns readable */
+#viewProj .stdintro h2{font-size:18px;font-weight:700;color:var(--ink);margin:0 0 6px}
+#viewProj .stdmats{padding:24px 28px}
+.tablewrap .stdtable th,.tablewrap .stdtable td{vertical-align:top;padding:8px 10px}
+.tablewrap .stdtable td:nth-child(1){width:110px}
+.tablewrap .stdtable td:nth-child(3),.tablewrap .stdtable td:nth-child(4){width:190px;min-width:150px}
+.tablewrap .stdtable{table-layout:fixed;min-width:600px}
+.tablewrap .stdtable th:nth-child(1){width:90px}
+.tablewrap .stdtable th:nth-child(3),.tablewrap .stdtable th:nth-child(4){width:170px}
+.tablewrap .stdtable td{overflow-wrap:anywhere}
+#viewFirm .stdintro h2,#viewFirm h2{font-size:18px;font-weight:700;color:var(--ink)}
+@media (max-width:1000px){ #saveState{display:none} }
+body.docked.ed-open .editor{align-self:stretch;height:auto}
 </style>
 </head>
 <body>
@@ -1283,11 +1348,11 @@ body.docked .toast{top:12px;bottom:auto}
   <!-- Two levels (T-025): the firm's (its practice and wording, the modelling guide, its people; your Claude key) and this
        project's (method, structures, documents, tolerances) -->
   <nav class="subtabs setgroups" aria-label="Settings">
-    <span class="subgroup" id="setFirmLabel">Firm</span>
+    <span class="subgroup" id="setFirmLabel">Your firm</span><span class="subname" id="setFirmName"></span>
     <button type="button" class="subtab" id="btnConv">Practice and wording</button>
     <button type="button" class="subtab" id="navStd">Modelling guide</button>
     <button type="button" class="subtab" id="navFirm">People</button>
-    <span class="subgroup">Project</span>
+    <span class="subgroup" id="setProjLabel">This project</span><span class="subname" id="setProjName"></span>
     <button type="button" class="subtab" id="navProj">Inputs and tolerances</button>
   </nav>
   <div class="subtools">
@@ -10890,6 +10955,26 @@ const Store = (() => {
       for (const l of lines) for (const f of CLAIM_FIELDS) if (!(f in l)) l[f] = null;
       return { meta: h.meta || {}, summary: h.summary || [], subtotals: h.subtotals || [], read: h.read || {}, lines, info: { fileName: h.fileName, savedBy: h.savedBy, savedAt: h.savedAt } };
     }),
+    // A whole project and everything kept under it (20 Nov 2026). Only its owner can (rules: the project, and its signed bills). Firestore
+    // doesn't remove a document's sub-collections with it, so each is listed and removed: certificates and their lines, the reviews,
+    // models and their pieces, master BoQs, decisions, documents, inputs, notes, corrections kept in SolvBoQ, the structures with their
+    // signed bills and the extracts kept with them, and invitations to it; the project document last, since the rules read it.
+    deleteProject: (pid) => wrap(async () => {
+      need();
+      const under = (...s) => F.collection(db, "projects", pid, ...s), docs = async (col) => (await F.getDocs(col)).docs;
+      const refs = [], bills = [];
+      for (const c of ["certificates", "models"]) for (const d of await docs(under(c))) { for (const x of await docs(F.collection(d.ref, "parts"))) refs.push(x.ref); refs.push(d.ref); }
+      for (const c of ["reviews", "masters", "decisions", "documents", "inputs", "notes", "overlays"]) for (const d of await docs(under(c))) refs.push(d.ref);
+      for (const s of await docs(under("structures"))) {
+        for (const b of await docs(F.collection(s.ref, "bills"))) { for (const x of await docs(F.collection(b.ref, "extract"))) bills.push(x.ref); bills.push(b.ref); }
+        refs.push(s.ref);
+      }
+      const invites = (await F.getDocs(F.query(F.collection(db, "invites"), F.where("project", "==", pid)))).docs.map((d) => d.ref);
+      const all = [...bills, ...refs, ...invites];
+      for (let i = 0; i < all.length; i += 400) { const b = F.writeBatch(db); all.slice(i, i + 400).forEach((r) => b.delete(r)); await b.commit(); }
+      await F.deleteDoc(F.doc(db, "projects", pid));
+      return all.length;
+    }),
     deleteCertificate: (pid, cid) => wrap(async () => {
       need();
       const snap = await F.getDocs(F.collection(db, "projects", pid, "certificates", cid, "parts"));
@@ -11007,7 +11092,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", linkModel: "model’s project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", deleteProject: "deleting the project", linkModel: "model’s project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -12384,7 +12469,16 @@ function renderEditor(lines, groups) {
   document.body.classList.toggle("ed-open", docked && (!!L || !!state.ovOpen));
   const back = docked ? h("div", { class: "edhead" }, h("button", { type: "button", class: "btn sm", id: "btnBackBill", style: "align-self:flex-start", onclick: () => { state.ovOpen = false; renderMap(); } }, "‹ Back to the bill")) : null;
   $("mEditor").replaceChildren(...(L ? editorFor(L, lines) : docked && !state.ovOpen ? [] : [back, ...editorOverview(lines, groups)].filter(Boolean)));
+  edStick();
 }
+// The panel beside the bill has no height of its own and no scrollbar (20 Nov 2026): it stays pinned beside the bill while it fits on the
+// screen, and a longer one (the overview) scrolls with the page instead
+function edStick() {
+  const ed = $("mEditor"); if (!ed) return;
+  ed.classList.remove("stick");
+  if (!ed.hidden && ed.offsetHeight && ed.offsetHeight <= window.innerHeight - 40) ed.classList.add("stick");
+}
+window.addEventListener("resize", () => { if (state.view === "map") edStick(); });
 // A line's panel, in the order of the canvas's “Web 3: The bill” (17 Nov 2026): why it needs him (one sentence: a model problem,
 // a rule to confirm, Claude's suggestion, a figure to measure, a change since the signed bill), the figure and how it was got,
 // how it is worked out and the elements behind it, what would make an estimate a measurement, then Accept, Change, Leave out.
@@ -15383,82 +15477,86 @@ async function piSetUp(pid, got) {
 function piStamp(s, field) { s.src ||= {}; const cur = s.src[field] || {}; s.src[field] = { ...cur, by: piWho(), at: new Date().toISOString() }; s.by = piWho(); s.at = new Date().toISOString(); }
 
 // ----- The page -----
+// The project's settings (reworked 20 Nov 2026): plain cards in the order he sets a project up, nothing folded away. The method of
+// measurement, the structures, the ground report, the documents, the bill (stage, specification, policy), the tolerances, what is still
+// needed, and deleting the project. Every change redraws the page; the field he was in keeps the focus, by id or by its place.
+const PI_FOCUSABLE = "input,select,textarea,button,summary,a[href],[tabindex]";
 function renderProj() {
   const v = $("viewProj"); if (!v) return;
-  const d = piDoc(), p = d.project, focus = document.activeElement?.id;
+  const d = piDoc(), p = d.project, act = document.activeElement, focus = act?.id;
+  const focusAt = !focus && act && v.contains(act) ? [...v.querySelectorAll(PI_FOCUSABLE)].indexOf(act) : -1;
   const proj = CL.projects?.find((x) => x.id === CL.pid);
   const stage = p.stage || "tender";
   const missing = inputsMissing(d, stage), props = piProposals();
-  const method = MEASUREMENT_METHODS.find((m) => m.id === (p.method || "sans1200"));
-  const settingsLine = [method.id === "sans1200" ? "SANS 1200 Clause 8" : method.title, (STAGES.find((x) => x[0] === stage) || [, stage])[1], p.spec || "no particular specification", p.provisional.length ? plural(p.provisional.length, "provisional sum") : ""].filter(Boolean).join(" · ");
+  const card = (id, title, sub, ...kids) => h("section", { class: "card setcard", id }, h("h2", null, title), sub ? h("p", { class: "sub" }, sub) : null, ...kids);
   v.replaceChildren(
-    h("section", { class: "card stdhead" },
-      h("div", { class: "stdintro" },
-        h("h2", null, "Project inputs"),
-        h("p", null, state.records && !state.fromSample
-          ? "A few minutes, mostly checking: confirm the structures SolvBoQ found in the model, give it the geotechnical report once, and check what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."
-          : "A few minutes, once per project: the method of measurement, the structures the bill prices separately with their kind, then the geotechnical report and the drawings and schedules for Claude to read. Everything else has a default, marked as assumed in the bill until you change it. A model read later adds its own structures here for you to confirm."),
-        h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
-      h("details", { class: "pisettings", open: PI.settingsOpen ? true : null, ontoggle: (e) => { PI.settingsOpen = e.target.open; } },
-        h("summary", null, h("b", null, "Project settings: "), settingsLine, h("span", { class: "sub" }, " · change")),
-      h("div", { class: "pigrid" },
-        h("div", { class: "pifield" },
-          h("span", { class: "edlabel" }, "Method of measurement"),
+    card("piIntro", proj ? `Setting up ${proj.name}` : "Setting up this project",
+      state.records && !state.fromSample
+        ? "A few minutes, mostly checking: the structures SolvBoQ found in the model, the geotechnical report once, and what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."
+        : "A few minutes, once per project: the method of measurement, the structures the bill prices separately with their kind, then the geotechnical report and the drawings and schedules. Everything else has a default, marked as assumed in the bill until you change it.",
+      h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
+
+    card("piMethodCard", "Method of measurement", "The one the contract’s pricing assumptions call up, and the contract’s amendments laid on it. A signed bill records both.",
+      h("div", { class: "setgrid" },
+        h("div", null,
           ...MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" }, h("input", { type: "radio", name: "piMethod", checked: (p.method || "sans1200") === m.id ? true : null, onchange: () => { p.method = m.id; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
             h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"), h("span", { class: "sub" }, m.note)))),
-          p.method && !MEASUREMENT_METHODS.find((m) => m.id === p.method)?.built ? h("div", { class: "edprob" }, "SolvBoQ bills to SANS 1200 Clause 8 so far: the items and clause numbers in Map to SANS are SANS 1200’s, not this method’s.") : null,
-          !p.method ? h("span", { class: "edsub" }, "Not set: SANS 1200 Clause 8 is assumed.") : null,
-          // The contract's amendments laid on the method's pack (methods/pack.js), each with its version; the signed bill records them
-          ...(() => { const pk = packFind(p.method || "sans1200"); if (!pk) return [];
-            const am = packAmendments(pk.id, p.overlays);
-            return [h("span", { class: "edlabel", id: "piPackHead" }, `Measured with the ${pk.name} pack, version ${pk.version}`),
-              ...am.map((a) => h("label", { class: "pichoice", "data-overlay": a.id }, h("input", { type: "checkbox", checked: a.on ? true : null, onchange: (e) => {
-                  const on = new Set(am.filter((x) => x.on).map((x) => x.id)); if (e.target.checked) on.add(a.id); else on.delete(a.id);
-                  p.overlays = [...on]; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
-                h("span", null, h("b", null, a.name), h("span", { class: "sub" }, ` (version ${a.version}) `, a.note)))),
-              p.overlays == null ? h("span", { class: "edsub" }, "Not set: the pack’s usual amendments are used.") : null]; })()),
-        h("div", { class: "pifield" },
-          h("span", { class: "edlabel" }, "Stage of the bill"),
-          h("div", { class: "seg", role: "group", "aria-label": "Stage" }, ...STAGES.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(stage === k), onclick: () => { p.stage = k; piChanged(); } }, l))),
-          h("span", { class: "edsub" }, "What’s still needed is listed for this stage."),
-          h("label", { class: "edlabel", for: "piSpec" }, "Client’s particular specification"),
-          h("input", { id: "piSpec", class: "piinput", value: p.spec, placeholder: "For example: PD particular specification, rev 2", onchange: (e) => { p.spec = e.target.value; piChanged(); } }),
-          h("label", { class: "edlabel", for: "piAmend" }, "Amendments to the method in the contract"),
-          h("textarea", { id: "piAmend", class: "lnwhy", rows: 2, placeholder: "As the pricing assumptions word them", onchange: (e) => { p.amendments = e.target.value; piChanged(); } }, p.amendments)),
-        h("div", { class: "pifield" },
-          h("span", { class: "edlabel" }, "Policy: provisional sums and contingencies"),
-          h("span", { class: "edsub" }, "Priced from the specification, so they’re listed here for the general bill, not generated from the model."),
-          h("label", { class: "edrow" }, "Contingencies", h("span", null, h("input", { id: "piCont", class: "edinput", inputmode: "decimal", value: p.contingency ?? "", onchange: (e) => { p.contingency = e.target.value; piChanged(); } }), h("span", { class: "eunit" }, "%"))),
-          ...p.provisional.map((x, i) => h("div", { class: "pirow" },
-            h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
-            h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
-            h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
-          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum"))),
-        h("div", { class: "pifield", id: "piTols" },
-          h("span", { class: "edlabel" }, "Tolerances"),
-          h("span", { class: "edsub" }, "How far a figure may be off before SolvBoQ flags it, for everyone on this project."),
-          ...PI_TOL.map(([k, label, , max, why]) => h("label", { class: "edrow", title: why }, label,
-            h("span", null, h("input", { id: `piTol_${k}`, class: "edinput", type: "number", min: "0", max: String(max), step: "any", value: String(piTol(k)), onchange: (e) => piTolSet(k, e.target.value) }), h("span", { class: "eunit" }, "%")))),
-          h("span", { class: "edsub" }, PI_TOL.map(([k, , def]) => p.tolerances?.[k] == null ? null : k).filter(Boolean).length ? "Changed for this project." : "SolvBoQ’s defaults."))))),
+          p.method && !MEASUREMENT_METHODS.find((m) => m.id === p.method)?.built ? h("div", { class: "edprob" }, "SolvBoQ bills to SANS 1200 Clause 8 so far: the items and clause numbers in the bill are SANS 1200’s, not this method’s.") : null,
+          !p.method ? h("span", { class: "edsub" }, "Not chosen yet: SANS 1200 Clause 8 is assumed.") : null),
+        // The contract's amendments laid on the method's pack (methods/pack.js), each with its version; the signed bill records them
+        h("div", null, ...(() => { const pk = packFind(p.method || "sans1200"); if (!pk) return [];
+          const am = packAmendments(pk.id, p.overlays);
+          return [h("span", { class: "edlabel", id: "piPackHead" }, `Measured with the ${pk.name} pack, version ${pk.version}`),
+            ...am.map((a) => h("label", { class: "pichoice", "data-overlay": a.id }, h("input", { type: "checkbox", checked: a.on ? true : null, onchange: (e) => {
+                const on = new Set(am.filter((x) => x.on).map((x) => x.id)); if (e.target.checked) on.add(a.id); else on.delete(a.id);
+                p.overlays = [...on]; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
+              h("span", null, h("b", null, a.name), h("span", { class: "sub" }, ` (version ${a.version}) `, a.note)))),
+            p.overlays == null ? h("span", { class: "edsub" }, "Not chosen: the pack’s usual amendments are used.") : null]; })()))),
 
     props,
     // The structures before the report and the documents: both are read for the structures listed here
     h("section", { class: "card stdbody stdmats", id: "piStructs" },
-      h("div", { class: "stdintro" }, h("h2", null, props ? "Structures" : "1. Structures"),
-        h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it. Kinds follow the Uniclass 2015 Entities table.")),
+      h("div", { class: "stdintro" }, h("h2", null, "Structures"),
+        h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it.")),
       d.structures.length ? null : h("p", { class: "sub" }, "None yet. Add each structure the bill prices separately and choose its kind. Without them, each model is one structure and its kind is taken from its title."),
       ...d.structures.map((s, i) => piStructure(s, i)),
       h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: piAddStructure }, "Add a structure"))),
     piReportCard(),
     typeof docsCard === "function" ? docsCard() : null,
 
-    h("section", { class: "card stdbody stdmats" },
-      h("div", { class: "stdintro" }, h("h2", null, `Still needed for the ${stage} bill`),
-        h("p", { class: "sub" }, "Who supplies it, and what SolvBoQ does until then. The modeller’s part is in Revit (Settings › Modelling guide, and the add-in’s issues panel).")),
-      missing.length ? h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "For"), h("th", null, "What"), h("th", null, "Who"), h("th", null, "Until then"))),
-        h("tbody", null, missing.map((m) => h("tr", null, h("td", null, m.level), h("td", null, h("b", null, m.need.what), h("div", { class: "sub" }, m.need.why)), h("td", null, ACTORS[m.need.who] || m.need.who), h("td", null, IF_MISSING[m.need.missing] || "")))))
-        : h("p", null, "Nothing missing for this stage at the project level.")));
-  if (focus && $(focus)) $(focus).focus();
+    card("piBillCard", "The bill", "What it is for, and what the contract adds to it.",
+      h("div", { class: "setgrid" },
+        h("div", null,
+          h("span", { class: "edlabel" }, "Stage of the bill"),
+          h("div", { class: "seg", role: "group", "aria-label": "Stage" }, ...STAGES.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(stage === k), onclick: () => { p.stage = k; piChanged(); } }, l))),
+          h("span", { class: "edsub" }, "What’s still needed (below) is listed for this stage."),
+          h("label", { class: "edlabel", for: "piSpec" }, "Client’s particular specification"),
+          h("input", { id: "piSpec", class: "piinput", value: p.spec, placeholder: "For example: PD particular specification, rev 2", onchange: (e) => { p.spec = e.target.value; piChanged(); } }),
+          h("label", { class: "edlabel", for: "piAmend" }, "Amendments to the method in the contract"),
+          h("textarea", { id: "piAmend", class: "lnwhy", rows: 2, placeholder: "As the pricing assumptions word them", onchange: (e) => { p.amendments = e.target.value; piChanged(); } }, p.amendments)),
+        h("div", null,
+          h("span", { class: "edlabel" }, "Provisional sums and contingencies"),
+          h("span", { class: "edsub" }, "Priced from the specification, so they’re listed here for the general bill, not generated from the model."),
+          h("label", { class: "edrow" }, "Contingencies", h("span", null, h("input", { id: "piCont", class: "edinput", inputmode: "decimal", value: p.contingency ?? "", onchange: (e) => { p.contingency = e.target.value; piChanged(); } }), h("span", { class: "eunit" }, "%"))),
+          ...p.provisional.map((x, i) => h("div", { class: "pirow" },
+            h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
+            h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
+            h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
+          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum"))))),
+
+    card("piTolCard", "Tolerances", "How far a figure may be off before SolvBoQ flags it, for everyone on this project.",
+      h("div", { class: "pifield", id: "piTols" },
+        ...PI_TOL.map(([k, label, , max, why]) => h("label", { class: "edrow", title: why }, label,
+          h("span", null, h("input", { id: `piTol_${k}`, class: "edinput", type: "number", min: "0", max: String(max), step: "any", value: String(piTol(k)), onchange: (e) => piTolSet(k, e.target.value) }), h("span", { class: "eunit" }, "%")))),
+        h("span", { class: "edsub" }, PI_TOL.map(([k]) => p.tolerances?.[k] == null ? null : k).filter(Boolean).length ? "Changed for this project." : "SolvBoQ’s defaults."))),
+
+    card("piMissing", `Still needed for the ${stage} bill`, "Who supplies it, and what SolvBoQ does until then. The modeller’s part is in Revit (Settings › Modelling guide, and the add-in’s issues panel).",
+      missing.length ? h("div", { class: "tablewrap" }, h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "For"), h("th", null, "What"), h("th", null, "Who"), h("th", null, "Until then"))),
+        h("tbody", null, missing.map((m) => h("tr", null, h("td", null, m.level), h("td", null, h("b", null, m.need.what), h("div", { class: "sub" }, m.need.why)), h("td", null, ACTORS[m.need.who] || m.need.who), h("td", null, IF_MISSING[m.need.missing] || ""))))))
+        : h("p", null, "Nothing missing for this stage at the project level.")),
+    typeof hvDeleteCard === "function" ? hvDeleteCard() : null);
+  if (focus && $(focus)) $(focus).focus({ preventScroll: true });
+  else if (focusAt >= 0) v.querySelectorAll(PI_FOCUSABLE)[focusAt]?.focus({ preventScroll: true });
 }
 
 function piAddStructure() {
@@ -15584,7 +15682,7 @@ function piProposals() {
     PI.props = {}; piChanged(); toast(`${plural(xs.filter((x) => !edit(x).skip).length, "structure")} added`);
   };
   return h("section", { class: "card stdbody stdmats" },
-    h("div", { class: "stdintro" }, h("h2", null, `1. The structures in ${cleanName(state.name)}`),
+    h("div", { class: "stdintro" }, h("h2", null, `The structures in ${cleanName(state.name)}`),
       h("p", { class: "sub" }, "Found in the model. Check each name and kind, then add them: the kind decides the earthworks rule, the standard grade and what else it needs.")),
     h("div", { class: "piprops" }, list.map((x, i) => { const e = edit(x);
       return h("div", { class: "piprop" + (e.skip ? " off" : "") },
@@ -15641,7 +15739,7 @@ async function piReadReport(file) {
 }
 function piReportCard() {
   const d = piDoc(), r = PI.read, cls = (c) => (SANS_D_CLASSES.find((x) => x[0] === c) || [, "not classified"])[1].toLowerCase();
-  const head = h("div", { class: "stdintro" }, h("h2", null, "2. The geotechnical report"),
+  const head = h("div", { class: "stdintro" }, h("h2", null, "The geotechnical report"),
     h("p", { class: "sub" }, "Give it once: Claude reads the excavation depth, the water table and every borehole log with a proposed SANS 1200 D class for each layer, all with their pages. You check it, choose the structures it’s for, and use it. The rock classes stay your call: check each one."));
   const pick = h("div", { class: "tools" },
     h("label", { class: "btn" + (sampleFn ? " dark" : ""), tabindex: "0", for: "piPdf", title: sampleFn ? "" : "Add your Claude API key under Settings › Practice and wording › Claude (your key) first" }, r ? "Read another report" : "Read the report (PDF)"),
@@ -15816,7 +15914,7 @@ function docsCard() {
   const docs = DOCS.list.slice().sort((a, b) => String(b.at).localeCompare(String(a.at))), structs = docsStructures();
   const open = docsAnswers().filter((x) => x.ans.status === "open").length;
   return h("section", { class: "card stdbody stdmats", id: "docsCard" },
-    h("div", { class: "stdintro" }, h("h2", null, "3. The project’s documents"),
+    h("div", { class: "stdintro" }, h("h2", null, "The project’s documents"),
       h("p", { class: "sub" }, "Bending schedules, drawings and specifications. Claude reads what the bill needs from them, each figure with its page and the words it comes from; SolvBoQ does the adding up and checks it against the document’s own totals. Nothing is used until you accept it, and you can type any of it yourself instead."),
       open ? h("p", { class: "edtext", id: "docsOpenCount" }, h("b", null, `${plural(open, "answer")} waiting for you.`)) : null,
       DOCS.err ? h("p", { class: "edtext warn" }, DOCS.err) : null),
@@ -15942,6 +16040,11 @@ function navMark() {
   $("subBills").hidden = sec !== "bills"; $("subSettings").hidden = sec !== "settings";
   $("tbTabs").hidden = home; $("projPick").hidden = home; $("tbName").hidden = !home; $("saveState").hidden = home;
   $("tbFirm").textContent = home && Store.firm ? Store.firm.name || "" : "";
+  // The Settings side menu names the firm and the project its two groups are about
+  if (sec === "settings") {
+    $("setFirmName").textContent = Store.firm ? Store.firm.name || Store.firm.id || "" : Store.user ? "Just you (no firm)" : "";
+    $("setProjName").textContent = CL.projects.find((x) => x.id === CL.pid)?.name || "No project open";
+  }
   $("meBtn").textContent = hvInitials();
   $("phead").hidden = home || sec === "ov";   // those two pages carry their own heading, as designed
   const p = CL.projects.find((x) => x.id === CL.pid);
@@ -16175,14 +16278,18 @@ function hvNewDialog(meta) {
       h("div", { class: "edpath" }, h("h2", { id: "npH" }, "New project"),
         h("button", { type: "button", class: "ibtn", "aria-label": "Close", title: "Close", onclick: () => finish(null) }, svg('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'))),
       h("p", { class: "sub" }, "One project per contract: its structures, bills and payment certificates are kept in it, for everyone you add."),
-      h("label", { class: "edlabel", for: "npName" }, "Name of the project"), name,
-      h("label", { class: "edlabel", for: "npContract" }, "Contract number"), contract,
-      h("span", { class: "edsub" }, "Used to check that payment certificates belong to this project. You can leave it for now."),
-      h("span", { class: "edlabel" }, "Method of measurement"), h("div", { class: "npmethods" }, ...methods),
-      h("span", { class: "edsub" }, "The one the contract’s pricing assumptions call up."),
-      h("span", { class: "edlabel" }, "First structure (you can add the others later)"),
-      h("div", { class: "nprow" }, stName, kind),
-      h("span", { class: "edsub" }, "One per structure the bill prices separately, for example a tank, a chamber or a building. The kind decides its earthworks rule, its standard grade and what else it needs."),
+      // Two columns: the project on the left, how it's measured and its first structure on the right (one column on a phone)
+      h("div", { class: "npgrid" },
+        h("div", { class: "npcol" },
+          h("label", { class: "edlabel", for: "npName" }, "Name of the project"), name,
+          h("label", { class: "edlabel", for: "npContract" }, "Contract number"), contract,
+          h("span", { class: "edsub" }, "Used to check that payment certificates belong to this project. You can leave it for now."),
+          h("span", { class: "edlabel" }, "Method of measurement"), h("div", { class: "npmethods" }, ...methods),
+          h("span", { class: "edsub" }, "The one the contract’s pricing assumptions call up.")),
+        h("div", { class: "npcol" },
+          h("label", { class: "edlabel", for: "npStName" }, "First structure"), stName,
+          h("label", { class: "edlabel", for: "npKind" }, "Its kind"), kind,
+          h("span", { class: "edsub" }, "One per structure the bill prices separately, for example a tank, a chamber or a building. The kind decides its earthworks rule, its standard grade and what else it needs. You can add the others later."))),
       err,
       h("div", { class: "tools" }, h("button", { type: "submit", class: "btn dark", id: "npCreate" }, "Create the project"), h("button", { type: "button", class: "btn", onclick: () => finish(null) }, "Cancel")));
     d.append(form);
@@ -16190,6 +16297,43 @@ function hvNewDialog(meta) {
     d.addEventListener("click", (e) => { if (e.target === d) finish(null); });
     document.body.append(d); d.showModal(); name.focus();
   });
+}
+// Deleting a project (20 Nov 2026): its owner only (the rules), after typing its name, since everything in it goes for everyone on it
+function hvDeleteCard() {
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  if (!p || !Store.user) return null;
+  const mine = p.owner === Store.user.uid;
+  return h("section", { class: "card setcard setdanger", id: "projDelete" },
+    h("h2", null, "Delete this project"),
+      h("p", { class: "sub" }, mine ? `Removes ${p.name} for everyone on it: its structures, models, bills and signed versions, certificates and your decisions on them, documents and settings. It can’t be undone.`
+        : "Only the project’s owner can delete it."),
+    mine ? h("div", { class: "tools" }, h("button", { type: "button", class: "btn danger", id: "btnDeleteProject", onclick: () => hvDeleteDialog(p) }, "Delete this project…")) : null);
+}
+function hvDeleteDialog(p) {
+  let d = $("delDlg"); if (d) d.remove();
+  d = h("dialog", { id: "delDlg", class: "mbdlg ov npdlg", "aria-labelledby": "delH" });
+  const name = h("input", { id: "delName", class: "piinput", autocomplete: "off", placeholder: p.name, oninput: () => { go.disabled = name.value.trim() !== p.name.trim(); } });
+  const err = h("div", { class: "err", role: "alert", hidden: true });
+  const close = () => { if (d.open) d.close(); d.remove(); };
+  const go = h("button", { type: "submit", class: "btn danger", id: "delGo", disabled: true }, "Delete the project");
+  const form = h("form", { class: "edbody npform", onsubmit: async (e) => {
+      e.preventDefault(); if (name.value.trim() !== p.name.trim()) return;
+      go.disabled = true; go.textContent = "Deleting…"; err.hidden = true;
+      try {
+        await Store.deleteProject(p.id);
+        CL.projects = CL.projects.filter((x) => x.id !== p.id);
+        if (CL.pid === p.id) { CL.pid = null; CL.open = null; CL.certs = []; try { localStorage.removeItem("solvboq-claims-project-v1"); } catch (x) {} }
+        HV.sum = {}; HV.ov = null; HV.ovFor = "";
+        close(); toast(`${p.name} deleted`); goHome();
+      } catch (x) { err.textContent = `It wasn’t deleted: ${x.message}`; err.hidden = false; go.disabled = false; go.textContent = "Delete the project"; }
+    } },
+    h("div", { class: "edpath" }, h("h2", { id: "delH" }, `Delete ${p.name}?`)),
+    h("p", null, "This removes the project for everyone on it: its structures, models, bills and signed versions, payment certificates and the decisions on them, documents, settings and invitations. It can’t be undone."),
+    h("label", { class: "edlabel", for: "delName" }, `Type the project’s name, ${p.name}, to confirm`), name, err,
+    h("div", { class: "tools" }, go, h("button", { type: "button", class: "btn", onclick: close }, "Cancel")));
+  d.append(form);
+  d.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  document.body.append(d); d.showModal(); name.focus();
 }
 // What the project has and what is still missing, from its inputs and documents (the journey's “project home”)
 function hvSetupState() {
