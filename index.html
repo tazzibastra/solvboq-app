@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-20T19:29:34Z">
+<meta name="solvboq-build" content="2026-11-21T08:09:54Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1283,6 +1283,11 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .edelrow.on{background:var(--indigo-s);box-shadow:inset 3px 0 0 var(--accent)}
 .isobar{position:fixed;left:8px;right:8px;bottom:72px;z-index:60;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 12px;padding:10px 12px;border-radius:14px;background:var(--night);color:#fff;box-shadow:0 8px 24px rgba(16,24,40,.3);font-size:13px}
 .isobar .btn.dark{background:var(--lime);color:var(--night);border-color:var(--lime)}
+/* The add-in download in the top bar (20 Nov 2026) */
+.tbright .addinbtn{min-height:36px;padding:0 12px;background:var(--head);box-shadow:none}
+.tbright .addinbtn:hover{background:var(--chip)}
+@media (max-width:1100px){.tbright .addinbtn small{display:none}}
+body[data-section="home"] .tbright .addinbtn{display:inline-flex}
 </style>
 </head>
 <body>
@@ -1318,6 +1323,8 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
     <button type="button" class="tbtab" id="tabSettings">Settings</button>
   </nav>
   <div class="tbright">
+    <!-- The Revit add-in, with the date of its latest change, on every page (20 Nov 2026: back in the top bar) -->
+    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span><small id="addinDate"></small></a>
     <span class="tbfirm" id="tbFirm"></span>
     <span class="savewrap">
       <button type="button" class="savestate" id="saveState" aria-expanded="false" aria-controls="savePanel">Connecting…</button>
@@ -1385,7 +1392,6 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
     <button type="button" class="subtab" id="navProj">Inputs and tolerances</button>
   </nav>
   <div class="subtools">
-    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span><small id="addinDate"></small></a>
   </div>
 </div>
 
