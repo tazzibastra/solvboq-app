@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-21T08:09:54Z">
+<meta name="solvboq-build" content="2026-11-21T13:57:25Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400..800&display=swap" rel="stylesheet">
-<style>:root{
+<style>:root{--stick-top:96px;
   /* From the Claude Design redesign: soft grey page, white rounded cards, lime and violet accents */
   --bg:#F1F1F4; --card:#FFFFFF; --ink:#111214; --ink-2:#4A4D55; --muted:#6B6F76; --line:#DADDE6; --rule:#EEF0F5; --chip:#F0F1F5; --head:#F7F7F9; --track:#EEF0F5;
   --green:#2FA36B; --green-t:#17804A; --green-s:#E7F6EE; --green-b:#35D49B; --green-bt:#053B27;
@@ -49,18 +49,10 @@ a{color:var(--ink)}a:hover{color:var(--accent)}
 /* app frame (the canvas's Web 1 and Web 2, 17 Nov 2026): a top bar over the page, 1400 px at most */
 .shell{min-height:100vh;padding:20px}
 .page{max-width:1400px;margin:0 auto;min-width:0;display:flex;flex-direction:column;gap:20px}
-.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;background:var(--card);border-radius:28px;padding:12px 20px;min-width:0}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;background:var(--card);border-radius:28px;padding:12px 20px;min-width:0;
+  position:sticky;top:12px;z-index:20;box-shadow:0 0 0 8px var(--bg),0 6px 20px rgba(17,18,20,.08)}
 .tbleft,.tbright{display:flex;flex-wrap:wrap;align-items:center;gap:12px;min-width:0}
 .tblogo{width:44px;height:44px;flex:none;border-radius:14px;border:0;background:var(--night);color:var(--lime);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;cursor:pointer}
-.tbname{font-size:16px}
-.projpick select{appearance:none;min-height:44px;max-width:min(420px,70vw);padding:0 40px 0 16px;border-radius:22px;border:1px solid var(--line);background-color:var(--card);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12' fill='none' stroke='%23111214' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 4 L6 8 L10 4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;font-weight:600;color:var(--ink);cursor:pointer;text-overflow:ellipsis}
-.projpick select:disabled{color:var(--muted);cursor:default}
-.tbtabs{display:flex;flex-wrap:wrap;gap:4px}
-.tbtab{min-height:44px;padding:0 20px;border-radius:22px;border:0;background:transparent;color:var(--ink-2);font-weight:600;display:flex;align-items:center;cursor:pointer}
-.tbtab:hover{color:var(--ink);background:var(--chip)}
-.tbtab[aria-current="page"]{background:var(--lime);color:var(--night);font-weight:700}
-.tbfirm{color:var(--ink-2)}
-.tbfirm:empty{display:none}
 .tbme{width:44px;height:44px;flex:none;border-radius:22px;border:0;background:var(--chip);font-weight:700;color:var(--ink);cursor:pointer}
 .phead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 20px;padding:12px 4px 0}
 .ptitle{display:flex;flex-direction:column;gap:4px;min-width:0}
@@ -242,7 +234,6 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 @media (max-width:760px){
   .shell{padding:12px}
   .topbar{padding:10px 12px;border-radius:22px;gap:8px}
-  .tbtab{padding:0 12px}
   .ptitle h1,.hvtitletext h1{font-size:28px}
   .grid3{grid-template-columns:minmax(0,1fr)}
 }
@@ -294,7 +285,7 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .st-parked{background:var(--chip);color:var(--ink-2)}
 .mfoot{padding:14px 28px;font-size:12px;color:var(--muted)}
 .editor{flex:1 1 360px;max-width:460px;min-width:0;background:var(--card);border-radius:28px;display:flex;flex-direction:column;align-self:flex-start;overflow:hidden}
-.editor.stick{position:sticky;top:20px}
+.editor.stick{position:sticky;top:var(--stick-top)}
 .editor .edbody{flex:none;overflow:visible}
 .edhead{padding:22px 24px 16px;border-bottom:1px solid var(--rule);display:flex;flex-direction:column;gap:8px}
 .edhead h2{margin:0;font-size:19px;line-height:1.3;font-weight:700;letter-spacing:-.01em}
@@ -679,7 +670,6 @@ button.prow:hover{background:var(--chip)}
 .cltable.clmaster td small{color:var(--muted)}
 .cltable.clmaster td:first-child{white-space:nowrap;color:var(--muted)}
 /* Header: the project, then the model */
-.projpick{display:flex;align-items:center;min-width:0}
 .pcode{min-height:24px;padding:0 9px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:11.5px;color:var(--ink-2);cursor:pointer}
 .pcode:hover{border-color:var(--accent);color:var(--accent)}
 .pmodels{display:flex;flex-direction:column;gap:6px;padding-top:12px;margin-top:4px;border-top:1px solid var(--rule)}
@@ -752,7 +742,6 @@ button.prow:hover{background:var(--chip)}
 @media (max-width:860px){.stdgrid{grid-template-columns:minmax(0,1fr)}.stdlist{padding:0 16px}.stdhead{padding:20px 16px}}
 @media print{.topbar,.subbar,.phead,.toast,.stdhead .tools,.stdbody .maphead,.stdcovs{display:none!important}.page,main{margin:0!important;padding:0!important}.stdcard{break-inside:avoid}.card{box-shadow:none!important}body{background:#fff!important}}
 /* The save status wraps under the project picker on a narrow screen, and never widens the page */
-.projpick{min-width:0;max-width:100%}
 .savewrap{min-width:0;max-width:100%}
 .savestate{max-width:min(360px,100%)}
 .stdmats{padding:24px 28px}.stdmats .stdtable td:nth-child(4){white-space:normal}
@@ -762,7 +751,7 @@ button.prow:hover{background:var(--chip)}
 .stdlabels .tools{margin:4px 0 12px}
 .stdsteps{margin:4px 0 8px;padding-left:20px;display:flex;flex-direction:column;gap:12px;font-size:14px;line-height:1.55;max-width:100ch}.stdsteps ul{margin:6px 0 0;padding-left:18px;font-size:13px}
 /* On a phone the header never widens the page: the save status shortens with an ellipsis */
-@media (max-width:640px){.phead{min-width:0;max-width:100%}.ptitle{max-width:100%}.projpick select{max-width:calc(100vw - 120px)}.savestate{max-width:calc(100vw - 120px)}.savepanel{right:auto;left:0;max-width:calc(100vw - 32px)}}
+@media (max-width:640px){.phead{min-width:0;max-width:100%}.ptitle{max-width:100%}.savestate{max-width:calc(100vw - 120px)}.savepanel{right:auto;left:0;max-width:calc(100vw - 32px)}}
 .stdlabels .stdtable td,.stdlabels .stdtable th{white-space:normal}
 @media (max-width:640px){.stdlabels .stdtable td,.stdlabels .stdtable th{overflow-wrap:anywhere}}
 .stdlabels,.stdmats{overflow-x:auto}
@@ -861,8 +850,6 @@ body.docked .topbar{padding:6px 8px;border-radius:14px;gap:6px}
 body.docked .tbleft,body.docked .tbright{gap:6px}
 body.docked .tblogo,body.docked .tbme{width:32px;height:32px;border-radius:10px;font-size:14px}
 body.docked .tbme{border-radius:16px}
-body.docked .projpick select{min-height:32px;font-size:12.5px;padding:0 30px 0 10px;background-position:right 10px center;max-width:46vw}
-body.docked .tbtab{min-height:32px;padding:0 10px;font-size:12.5px}
 body.docked .savestate,body.docked .tbright{display:none}
 body.docked .phead{padding:0;gap:6px}
 body.docked .ptitle h1{font-size:18px;margin:0}
@@ -962,7 +949,6 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
 .hvtitletext p{margin:0;color:var(--ink-2);font-size:16px}
 .hvgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:20px}
 .hvcard{display:flex;flex-direction:column;gap:16px;background:var(--card);border-radius:28px;padding:24px;text-decoration:none;color:var(--ink);min-width:0}
-a.hvcard:hover{color:var(--ink);box-shadow:0 0 0 2px var(--line)}
 .hvcard.plain p{margin:0;color:var(--ink-2)}
 .hvcard.plain .hvbtn{align-self:flex-start}
 .hvcardhead{display:flex;flex-direction:column;gap:2px;min-width:0}
@@ -1208,7 +1194,7 @@ body.docked .editor .edbody{flex:1;overflow:auto}
 @media (min-width:1000px){
   body[data-section="settings"] .page{display:grid;grid-template-columns:240px minmax(0,1fr);column-gap:24px;row-gap:20px;align-items:start;grid-auto-flow:row dense}
   body[data-section="settings"] .page>*{grid-column:1/-1;min-width:0}
-  body[data-section="settings"] .page>#subSettings{grid-column:1;position:sticky;top:20px}
+  body[data-section="settings"] .page>#subSettings{grid-column:1;position:sticky;top:var(--stick-top)}
   body[data-section="settings"] .page>main{grid-column:2}
   body[data-section="settings"] #subSettings{flex-direction:column;align-items:stretch;justify-content:flex-start;gap:12px}
   body[data-section="settings"] #subSettings .setgroups{flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:2px;padding:10px;border-radius:24px}
@@ -1240,7 +1226,7 @@ body.docked .editor .edbody{flex:1;overflow:auto}
 .tablewrap{overflow-x:auto;max-width:100%}
 .tablewrap .stdtable{min-width:640px}
 /* The top bar keeps one row: the save status shortens first */
-@media (max-width:1100px){ .savestate{max-width:200px} .tbfirm{display:none} }
+@media (max-width:1100px){ .savestate{max-width:200px} }
 /* The project's Settings: every card's heading the same, and the still-needed table's columns readable */
 #viewProj .stdintro h2{font-size:18px;font-weight:700;color:var(--ink);margin:0 0 6px}
 #viewProj .stdmats{padding:24px 28px}
@@ -1257,8 +1243,6 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 /* Projects: archiving (20 Nov 2026) */
 .hvtools{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
 .hvtools .sub{margin-right:6px}
-.hvcard.picked{outline:3px solid var(--night);outline-offset:-3px}
-.hvcard.archived{opacity:.78}
 .hvtick{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;margin-right:10px;border-radius:7px;border:2px solid var(--night);font-size:14px;vertical-align:-3px}
 .hvcard.picked .hvtick{background:var(--night);color:#fff}
 /* The item picker from the method pack, the Revit types on a line, and the element search (20 Nov 2026) */
@@ -1288,6 +1272,154 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .tbright .addinbtn:hover{background:var(--chip)}
 @media (max-width:1100px){.tbright .addinbtn small{display:none}}
 body[data-section="home"] .tbright .addinbtn{display:inline-flex}
+
+/* ===== The redesign's stage 1 (21 Nov 2026): the breadcrumb top bar, Projects, New project ===== */
+.crumbs{display:flex;flex-wrap:wrap;align-items:center;gap:2px 0;min-width:0;font-size:15px}
+.crumb{border:0;background:transparent;padding:6px 8px;border-radius:10px;font:inherit;font-weight:600;color:var(--ink-2);cursor:pointer;max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.crumb:hover{color:var(--ink);background:var(--chip)}
+.crumb.here{color:var(--ink);font-weight:800;cursor:default;background:transparent}
+.crumb+.crumb::before{content:"/";color:var(--muted);font-weight:500;margin-right:14px;margin-left:-2px}
+.crumb+.crumb{display:inline-flex;align-items:center}
+.tbfirmbtn{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.tbfirmbtn:hover{border-color:var(--ink)}
+.tbfirmbtn[aria-current="page"]{background:var(--lime);border-color:var(--lime);color:var(--night)}
+.tbme{background:var(--accent-s);color:var(--violet-t)}
+[id]{scroll-margin-top:var(--stick-top)}
+.hvtitle .hvbtn svg{margin-right:8px}
+.hvwaiting,.hvall{display:flex;flex-direction:column;gap:12px}
+.hvwaiting>h2{margin:0;padding:0 8px;font-size:15px;color:var(--ink-2)}
+.hvwaiting>.sub{padding:0 8px;margin:0}
+.hvwgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));gap:12px}
+.hvwcard{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:20px;background:var(--card);text-decoration:none;color:var(--ink);border:1px solid transparent}
+.hvwcard:hover{border-color:var(--ink);color:var(--ink)}
+.hvwcard b{display:block}
+.hvwcard b+span{color:var(--muted);font-size:13px}
+.hvwbadge{flex:none;min-width:40px;height:40px;padding:0 6px;box-sizing:border-box;border-radius:12px;display:grid;place-items:center;font-weight:800;background:var(--chip);color:var(--ink-2)}
+.hvwbadge.red{background:var(--red-s);color:var(--red-t)}
+.hvwbadge.amber{background:var(--amber-s);color:var(--amber-t)}
+.hvwbadge.violet{background:var(--accent-s);color:var(--violet-t)}
+.hvwbadge.green{background:var(--green-s);color:var(--green-t)}
+.hvallhead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px;padding:0 8px}
+.hvallhead h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.hvsearch{position:relative;width:280px;max-width:100%}
+.hvsearch svg{position:absolute;left:16px;top:14px;color:var(--muted)}
+.hvsearch input{min-height:44px;width:100%;box-sizing:border-box;padding:0 16px 0 42px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-weight:500}
+.hvsearch input:focus{outline:2px solid var(--focus);outline-offset:2px}
+.hvfilters{display:flex;gap:6px}
+.hvfilter{min-height:40px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+.hvfilter[aria-pressed="true"]{background:var(--night);border-color:var(--night);color:#fff}
+.hvnote{display:flex;align-items:center;gap:16px;justify-content:space-between;flex-wrap:wrap;background:var(--night);color:#fff;border-radius:18px;padding:12px 12px 12px 20px}
+.hvnote .tools{display:flex;gap:8px}
+.hvgrid{grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:16px}
+.hvcard{position:relative;border:1px solid transparent;gap:18px}
+.hvcard:hover{border-color:var(--ink)}
+.hvcard.plain:hover{border-color:transparent}
+.hvcardtop{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.hvcardhead{min-width:0}
+.hvplink{color:var(--ink);text-decoration:none}
+.hvplink:hover{color:var(--ink)}
+.hvplink b{font-size:19px;letter-spacing:-.02em;display:block}
+.hvplink::after{content:"";position:absolute;inset:0;border-radius:28px}
+.hvplink:focus-visible{outline:none}
+.hvplink:focus-visible::after{box-shadow:0 0 0 3px var(--focus)}
+.hvcardhead>span{color:var(--muted);font-size:13px}
+.hvabove{position:relative;z-index:2;display:flex;gap:8px;align-items:center;flex:none}
+.hvwaitpill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--night);color:var(--lime);white-space:nowrap}
+.hvmenuwrap{position:relative}
+.hvmbtn{width:40px;height:40px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.hvmbtn:hover{border-color:var(--ink)}
+.hvmenu{position:absolute;right:0;top:46px;z-index:5;min-width:240px;background:var(--card);border-radius:18px;padding:6px;box-shadow:0 12px 32px rgba(17,18,20,.16),0 0 0 1px var(--rule);display:flex;flex-direction:column}
+.hvmi{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;min-height:44px;padding:10px 12px;border:0;border-radius:12px;background:var(--card);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+.hvmi:hover{background:var(--head)}
+.hvmi small{font-weight:500;font-size:12px;color:var(--muted)}
+.hvmi.danger{color:var(--red-t)}
+.hvmi[disabled]{color:var(--muted);cursor:not-allowed;background:var(--card)}
+.hvstats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hvstat{background:var(--head);border-radius:16px;padding:12px 14px;min-width:0}
+.hvstat span{color:var(--muted);font-size:12px;display:block}
+.hvstat b{font-size:20px}
+.hvstat.red{background:var(--red-s)}
+.hvstat.red span{color:var(--red-t);font-weight:600}
+.hvrows{display:flex;flex-direction:column;gap:8px}
+.hvrows .sub{font-size:13px;color:var(--muted)}
+.hvsrow{display:flex;align-items:center;gap:10px;font-size:13px}
+.hvsname{flex:0 0 42%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hvtrack{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px}
+.hvtrack span{height:6px;border-radius:999px;background:var(--track)}
+.hvtrack span.done{background:var(--ink)}
+.hvtrack span.cur{background:var(--lime)}
+.hvsstep{flex:0 0 76px;text-align:right;color:var(--ink-2)}
+.hvfoot{padding-top:14px;font-size:13px;color:var(--muted)}
+.hvavs{display:flex;padding-left:8px}
+.hvav{width:28px;height:28px;border-radius:999px;display:grid;place-items:center;font-size:10px;font-weight:700;border:2px solid var(--card);margin-left:-8px;background:var(--chip);color:var(--ink-2)}
+.hvav.violet{background:var(--accent-s);color:var(--violet-t)}
+.hvav.green{background:var(--green-s);color:var(--green-t)}
+.hvav.amber{background:var(--amber-s);color:var(--amber-t)}
+.hvconfirm{position:absolute;inset:0;z-index:6;background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:10px;justify-content:center;border:1px solid var(--red-t);overflow:auto}
+.hvconfirm>b{font-size:18px;letter-spacing:-.01em}
+.hvconfirm>span{color:var(--ink-2)}
+.hvconfirm .piinput{width:100%;box-sizing:border-box}
+.hvarch{display:flex;flex-direction:column;gap:12px}
+.hvarow{background:var(--card);border-radius:28px;padding:24px;display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}
+.hvarow b{display:block;font-size:16px}
+.hvarow b+span{color:var(--muted);font-size:13px}
+/* New project: a dark card to start it, and how a project fills in */
+.npdlg2{border:0;padding:0;background:transparent;width:min(1080px,calc(100vw - 32px));max-height:calc(100vh - 32px);overflow:auto;color:var(--ink)}
+.npdlg2::backdrop{background:rgba(17,18,20,.55)}
+.npwrap{display:flex;flex-direction:column;gap:16px}
+.nptop{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:8px 8px 0}
+.nptop h2{margin:0;font-size:28px;line-height:1.15;letter-spacing:-.02em;font-weight:800;color:#fff}
+.npclose{width:44px;height:44px;border-radius:999px;border:0;background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.npcols{display:flex;flex-wrap:wrap;gap:20px;align-items:stretch}
+.npstart{flex:1 1 520px;min-width:0;background:var(--night);color:#fff;border-radius:28px;padding:32px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box}
+.nphead{display:flex;flex-direction:column;gap:6px}
+.npkicker{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--lime)}
+.nphead h3{margin:0;font-size:28px;line-height:1.2;letter-spacing:-.02em}
+.nphead p{margin:0;color:var(--night-sub);font-size:15px}
+.npgroup{display:flex;flex-direction:column;gap:8px;border:0;margin:0;padding:0;min-width:0}
+.npgroup>label,.npgroup>legend{font-size:13px;font-weight:600;color:var(--night-sub);padding:0}
+.npgroup>legend{margin-bottom:8px}
+.npgroup>label span{font-weight:500;color:var(--muted)}
+.npfield{width:100%;box-sizing:border-box;min-height:48px;padding:0 18px;border-radius:16px;border:1px solid var(--night-rule);background:#1E1F23;color:#fff;font:inherit;font-size:15px;font-weight:500}
+.npfield.big{min-height:52px;font-size:17px}
+.npfield::placeholder{color:#9A9DA6}
+.npfield:focus{outline:2px solid var(--lime);outline-offset:2px}
+.npmethods2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.npmethod{display:flex;align-items:center;gap:10px;min-height:56px;padding:10px 14px;border-radius:16px;box-sizing:border-box;cursor:pointer;border:1px solid var(--night-rule);background:#1E1F23}
+.npmethod:has(input:checked){border-color:var(--lime)}
+.npmethod.off{cursor:not-allowed;opacity:.6}
+.npmethod input{accent-color:var(--lime);margin:0}
+.npmethod>span{display:flex;flex-direction:column;gap:2px}
+.npmethod b{font-size:14px}
+.npmethod b+span{font-size:12px;color:#9A9DA6}
+.npams{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.nptick{display:flex;align-items:center;gap:10px;color:var(--night-sub);font-size:13px;cursor:pointer}
+.nptick input{accent-color:var(--lime);width:18px;height:18px;margin:0}
+.npnote{font-size:12px;color:#9A9DA6}
+.npstart .err{background:var(--red-s);color:var(--red-t)}
+.npgo{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.npgo span{color:#9A9DA6;font-size:13px}
+.nphow{flex:1 1 400px;min-width:0;background:var(--card);border-radius:28px;padding:32px;display:flex;flex-direction:column;gap:20px;box-sizing:border-box}
+.nphow h3{margin:0;font-size:18px;letter-spacing:-.01em}
+.npstep{display:flex;gap:16px}
+.npstepline{display:flex;flex-direction:column;align-items:center}
+.npnum{width:36px;height:36px;border-radius:999px;background:var(--accent-s);color:var(--violet-t);display:grid;place-items:center;font-weight:800}
+.npnum.lime{background:var(--lime);color:var(--night)}
+.nprule{flex:1;width:2px;background:var(--rule);margin:6px 0}
+.npstep>div:last-child{padding-bottom:18px}
+.npsteptitle{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.npsteptitle b{font-size:15px}
+.nptag{font-size:12px;font-weight:600;padding:2px 10px;border-radius:999px;background:var(--chip);color:var(--ink-2)}
+.npstep p{margin:4px 0 0;color:var(--ink-2)}
+@media (max-width:640px){
+  .npstart,.nphow{padding:22px}
+  .hvsearch{width:100%}
+  .hvallhead .hvtools{width:100%}
+  .crumb{max-width:22ch}
+  .tbfirmbtn{padding:0 12px}
+  .topbar{position:relative;top:auto}   /* two rows on a phone: pinned, it would take a fifth of the screen */
+  :root{--stick-top:16px}
+}
 </style>
 </head>
 <body>
@@ -1305,31 +1437,20 @@ body[data-section="home"] .tbright .addinbtn{display:inline-flex}
   <button type="button" id="dockTabBill">Bill</button>
   <button type="button" id="dockTabParts">Parts</button>
 </nav>
-<!-- The top bar (the canvas's Web 1 and Web 2): the logo goes to all projects; the project switcher, three tabs and Settings;
-     the account. On the Projects page only the logo, the firm and the account. (homeview.js) -->
+<!-- The top bar on every page (the redesign's stage 1, 21 Nov 2026): the logo goes to Projects, then where you are
+     (Projects / project / structure / page), the Revit add-in, Your firm (Settings) and the account. Sticky. (homeview.js) -->
 <header class="topbar" id="topbar">
   <div class="tbleft">
     <button type="button" class="tblogo" id="navHome" aria-label="SolvBoQ, all projects">S</button>
-    <b class="tbname" id="tbName">SolvBoQ</b>
-    <div class="projpick" id="projPick">
-      <label class="sr" for="projSel">Project</label>
-      <select id="projSel"><option>Connecting…</option></select>
-    </div>
+    <nav class="crumbs" id="crumbs" aria-label="Where you are"></nav>
   </div>
-  <nav class="tbtabs" id="tbTabs" aria-label="Project">
-    <button type="button" class="tbtab" id="tabOverview">Overview</button>
-    <button type="button" class="tbtab" id="tabBills">Bills</button>
-    <button type="button" class="tbtab" id="tabClaims">Claims</button>
-    <button type="button" class="tbtab" id="tabSettings">Settings</button>
-  </nav>
   <div class="tbright">
-    <!-- The Revit add-in, with the date of its latest change, on every page (20 Nov 2026: back in the top bar) -->
-    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span><small id="addinDate"></small></a>
-    <span class="tbfirm" id="tbFirm"></span>
     <span class="savewrap">
       <button type="button" class="savestate" id="saveState" aria-expanded="false" aria-controls="savePanel">Connecting…</button>
       <div class="savepanel" id="savePanel" hidden></div>
     </span>
+    <a class="addinbtn" id="addinBtn" href="https://tazzibastra.github.io/solvboq-app/SolvBoQ-Revit2025.zip" download="SolvBoQ-Revit2025.zip"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"></path></svg><span>Revit add-in</span></a>
+    <button type="button" class="tbfirmbtn" id="tbFirmBtn">Your firm</button>
     <button type="button" class="tbme" id="meBtn" aria-label="Your account" aria-expanded="false" aria-controls="savePanel">·</button>
   </div>
 </header>
@@ -10886,6 +11007,8 @@ const Store = (() => {
       if (canManage) invites = (await F.getDocs(F.query(F.collection(db, "invites"), F.where("project", "==", pid)))).docs.map((d) => d.data());
       return { project: { id: pid, ...p }, firm: p.firm ? (inFirm ? firm : { id: p.firm }) : null, canManage, members, firmPeople, invites };
     }),
+    // Who a uid is ({ email, name }, or {} when unknown): the avatars on a project's card
+    userInfo: (uid) => wrap(async () => { need(); const d = await F.getDoc(F.doc(db, "users", uid)); return d.exists() ? d.data() : {}; }),
     // Invite someone by email with a role; SolvBoQ emails them a sign-in link (they can also be told to just sign in)
     invite: (pid, email, role) => wrap(async () => {
       need();
@@ -13838,7 +13961,7 @@ async function newProject(meta) {
   if (!got) return;
   try {
     const p = await Store.createProject({ name: got.name, contract: got.contract });
-    await piSetUp(p.id, got);
+    await piSetUp(p.id, { method: got.method, overlays: got.overlays });
     CL.projects.push(p); chooseProject(p.id);
   } catch (e) { CL.err = e.message; toast(e.message); if (state.view === "claims") renderClaims(); }
 }
@@ -14221,7 +14344,6 @@ function clKeepCheck(cid, check) {
   Store.saveCertCheck(CL.pid, cid, doc).catch(() => {});
 }
 function goClaims() { state.view = "claims"; render(); window.scrollTo(0, 0); if (!MB.saved?.length) mbList(); }
-$("tabClaims").addEventListener("click", goClaims);
 // Drop a certificate anywhere on the Claims page
 document.addEventListener("dragover", (e) => { if (state.view === "claims") { e.preventDefault(); document.body.classList.add("dropping"); } });
 document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dropping"); });
@@ -15123,34 +15245,20 @@ $("navStd").addEventListener("click", goStandards);
   if (!a) return;
   a.href = ADDIN_URL;
   const d = info?.at ? new Date(info.at) : null, ok = d && !isNaN(d);
-  if (ok) $("addinDate").textContent = d.toLocaleDateString("en-ZA", { day: "numeric", month: "short" });
   a.title = `${ok ? `Latest add-in: ${d.toLocaleString("en-ZA", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}. ${info.note ? `What changed: ${info.note}. ` : ""}` : ""}Close Revit, unzip it and run install.cmd. You only need to reinstall when this date is newer than your last install.`;
   a.setAttribute("aria-label", `Download the Revit add-in${ok ? `, latest ${d.toLocaleDateString("en-ZA", { day: "numeric", month: "long", year: "numeric" })}` : ""}`);
 })();
 
-// ===== Projects in the header: choose or start one (yours, and every project of your firm); the project's saved models, by date =====
+// ===== A project's saved models, by date =====
 // A project holds its models, master BoQs and certificates. The project list and the current project are CL.projects and
-// CL.pid (claimsview.js); choosing one here is the same as choosing it on the Claims page.
+// CL.pid (claimsview.js); a project is chosen on Projects (homeview.js).
 const PV = { models: [], pending: null, saving: "", loadingModels: false };
 const pvDate = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }); };
 const pvSlug = (s) => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) || "model";
 
-function renderProjects() {
-  const sel = $("projSel");
-  if (!sel) return;
-  const opt = (value, text, selected) => { const o = document.createElement("option"); o.value = value; o.textContent = text; if (selected) o.selected = true; return o; };
-  if (!Store.available) { sel.replaceChildren(opt("", "Not saved (no cloud)", true)); sel.disabled = true; return; }
-  if (!Store.user) { sel.replaceChildren(opt("", Store.ready ? "Not signed in" : "Connecting…", true)); sel.disabled = true; return; }
-  sel.disabled = false;
-  sel.replaceChildren(
-    ...(liveProjects(CL.pid).length ? liveProjects(CL.pid).map((p) => opt(p.id, p.name + (p.contract ? ` (${p.contract})` : "") + (p.archived ? " (archived)" : ""), p.id === CL.pid)) : [opt("", CL.loaded ? "No project yet" : "Loading projects…", true)]),
-    opt("+new", "New project…"));
-}
-$("projSel").addEventListener("change", async (e) => {
-  const v = e.target.value;
-  if (v === "+new") { await newProject(state.fromSample ? null : { project: $("fProject").value.trim() }); renderProjects(); return; }
-  if (v) chooseProject(v);
-});
+// The project list or the current project changed: the top bar's breadcrumb names it (homeview.js). The switcher that was here
+// went with the redesign's top bar (21 Nov 2026): projects are chosen on Projects.
+function renderProjects() { if (typeof hvCrumbs === "function") hvCrumbs(); }
 
 // Called when the project list loads or the project changes (claimsview.js)
 function pvAfterProjects() { if (typeof frCheck === "function" && frCheck()) return; renderProjects(); pvListModels(); pvTrySave(); if (typeof piLoad === "function") piLoad(); if (typeof docsLoad === "function") docsLoad(); if (typeof decLoad === "function") decLoad(); if (typeof ovLoad === "function") ovLoad(); if (typeof signLoad === "function") signLoad(); if (typeof homeAfter === "function") homeAfter(); }
@@ -15236,8 +15344,6 @@ async function pvTrySave() {
     await pvListModels();
   } catch (e) { PV.saving = `Not saved: ${e.message}`; renderProjModels(); }
 }
-Store.onUser(() => renderProjects());
-renderProjects();
 
 // ----- What's saved: always visible in the header, with the details and a check behind it -----
 // "Saved to Paarl GT · 1 model · 1 BoQ · 13 certificates", or in red why not. Nothing saves silently or fails silently.
@@ -15639,13 +15745,13 @@ async function piSave() {
   } else { piLocal(doc); PI.saving = "Saved in this browser. Open a project so it’s kept with the project."; }
   if (state.view === "proj") { const s = $("piSaveLine"); if (s) s.textContent = PI.err || PI.saving; }
 }
-// A new project's inputs, from the New project dialog: its method and first structure, saved before the project is opened so
+// A new project's inputs, from the New project dialog: its method and the method's amendments (structures come in with their
+// models since 21 Nov 2026), saved before the project is opened so
 // piLoad finds them there (and doesn't take inputs left in this browser for it)
 async function piSetUp(pid, got) {
   const at = new Date().toISOString(), who = piWho(), doc = inputsBlank();
   doc.project.method = got.method || ""; doc.project.by = who; doc.project.at = at;
-  if (got.structure?.name) doc.structures.push({ id: "s" + Date.now().toString(36), name: got.structure.name, kind: got.structure.kind || "", models: [], grade: "", rebarKg: null, earthworks: {},
-    geotech: { report: {}, method: "average", limitations: "", holes: [] }, src: got.structure.kind ? { kind: { from: "judgement", why: "Chosen when the project was made", by: who, at } } : {}, by: who, at });
+  if (Array.isArray(got.overlays)) doc.project.overlays = got.overlays;
   const d = normInputs(doc);
   if (piOnCloud() || Store.user) await Store.saveInputs(pid, d).catch((e) => toast(`The project’s set-up wasn’t saved: ${e.message}`));
   PI.pid = pid; PI.doc = d; PI.loaded = true; PI.err = "";
@@ -16176,8 +16282,9 @@ function docsQueueItem() {
 Store.onUser(() => docsLoad());
 
 // ===== Projects, the project overview and the top bar (the canvas's “Web 1: Projects” and “Web 2: Project overview”) =====
-// Built 17 Nov 2026. The rail of seven destinations and the model picker gave way to a top bar: the logo goes to all projects,
-// then the project switcher, three tabs (Overview, Bills, Claims), Settings and the account. Bills holds a structure's bill and
+// Built 17 Nov 2026; the top bar reworked 21 Nov 2026 (the UI redesign's stage 1): the logo goes to Projects, a breadcrumb says
+// where you are (Projects / project / structure / page), then the Revit add-in, Your firm (Settings) and the account. The tabs
+// (Overview, Bills, Claims, Settings) and the project switcher went: a project is chosen on Projects, its crumb is its overview. Bills holds a structure's bill and
 // the views it is made from (The bill, Readiness, Parts, Sign off, Master BoQ) until T-026 replaces them; Settings holds the
 // project's inputs, the conventions and the modelling standard. From sign-in: a project's card, then a structure's row, is its bill.
 //
@@ -16188,9 +16295,10 @@ Store.onUser(() => docsLoad());
 // signoff has always filed the signed bills (signStructure).
 // “Next for you” is made from what is kept: the newest certificate's check (claimsview.js clKeepCheck) and each structure's step.
 // The one queue of questions line by line is T-012.
-// Top-level names: HV, hv*, st*, navMark, renderHome, renderOv, goHome, goOv, goBills, goSettings, homeAfter.
+// Top-level names: HV, hv*, st*, navMark, renderHome, renderOv, goHome, goOv, goBills, goFirmSettings, homeAfter.
 
-const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "proj", stTimer: null, stSaved: {} };
+const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "conv", stTimer: null, stSaved: {},
+  q: "", show: "active", menu: null, confirm: null, note: null, who: {} };
 const HV_SECTION = { home: "home", ov: "ov", claims: "claims", proj: "settings", conv: "settings", std: "settings", firm: "settings", next: "bills" };
 const hvSection = () => HV_SECTION[state.view] || "bills";
 const hvDay = (iso) => { const d = new Date(iso); return iso && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""; };
@@ -16204,20 +16312,19 @@ function hvInitials() {
   const name = String(u.displayName || "").trim(), words = name ? name.split(/\s+/) : String(u.email || "").split("@")[0].split(/[._\-+]+/);
   return words.filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase() || "·";
 }
-// The tab and sub-tab that are current, which bar shows, and the heading (render() calls it for every view)
+// The sub-tab that is current, which bar shows, and the heading (render() calls it for every view)
 function navMark() {
   const sec = hvSection(), home = sec === "home";
   document.body.dataset.section = sec;
-  for (const [id, s] of [["tabOverview", "ov"], ["tabBills", "bills"], ["tabClaims", "claims"], ["tabSettings", "settings"]]) $(id).setAttribute("aria-current", sec === s ? "page" : "false");
   for (const [id, vs] of [["navMap", ["map"]], ["navReady", ["overview", "detail"]], ["navMaster", ["master"]], ["navProj", ["proj"]], ["btnConv", ["conv"]], ["navStd", ["std"]], ["navFirm", ["firm"]]])
     $(id).setAttribute("aria-current", vs.includes(state.view) ? "page" : "false");
+  $("tbFirmBtn").setAttribute("aria-current", sec === "settings" && state.view !== "proj" ? "page" : "false");
   $("billSteps").hidden = sec !== "bills"; $("btnGoSign").hidden = sec !== "bills" || state.view === "sign" || !state.records;
   if (sec === "bills" && state.view !== "map") billSteps();   // the bill draws them itself, with its lines (renderTree › billHeadNow)
   if (sec === "bills") HV.billView = state.view === "detail" ? "overview" : state.view;
-  if (sec === "settings") HV.setView = state.view;
+  if (sec === "settings" && state.view !== "proj") HV.setView = state.view;
   $("subBills").hidden = sec !== "bills"; $("subSettings").hidden = sec !== "settings";
-  $("tbTabs").hidden = home; $("projPick").hidden = home; $("tbName").hidden = !home; $("saveState").hidden = home;
-  $("tbFirm").textContent = home && Store.firm ? Store.firm.name || "" : "";
+  $("saveState").hidden = home;
   // The Settings side menu names the firm and the project its two groups are about
   if (sec === "settings") {
     $("setFirmName").textContent = Store.firm ? Store.firm.name || Store.firm.id || "" : Store.user ? "Just you (no firm)" : "";
@@ -16227,14 +16334,35 @@ function navMark() {
   $("phead").hidden = home || sec === "ov";   // those two pages carry their own heading, as designed
   const p = CL.projects.find((x) => x.id === CL.pid);
   const head = sec === "claims" ? ["Claims", p ? `${p.name}: payment certificates, checked against the signed bills` : "Payment certificates, checked against the bill"]
-    : sec === "settings" ? (state.view === "proj" ? ["Settings", p ? `${p.name}: the method of measurement, its structures, documents and tolerances` : "This project: open one at the top to keep its settings with it"]
+    : sec === "settings" ? (state.view === "proj" ? ["Settings", p ? `${p.name}: the method of measurement, its structures, documents and tolerances` : "This project: open one from Projects to keep its settings with it"]
       : ["Settings", `${Store.firm ? Store.firm.name || "Your firm" : "Your"}${Store.firm ? "’s" : ""} practice, modelling guide and people: every project ${Store.firm ? "of the firm" : "of yours"} uses them`])
     : sec === "bills" ? hvBillHead() : ["", ""];
   $("pageTitle").textContent = head[0]; $("pageSub").textContent = head[1];
   if (sec === "bills" && state.view === "map" && state.mapLines?.length) billHeadNow(state.mapLines);   // (navMark alone, after the bill drew: keep its count)
   document.querySelector("main").classList.toggle("opening", !!HV.opening && sec === "bills");
+  hvCrumbs();
   stTouch();
   if (typeof dockMark === "function") dockMark();
+}
+// Where you are, as a breadcrumb in the top bar: Projects / project / structure / page. Each crumb but the last goes there.
+const HV_PAGE = { overview: "Model checks", detail: "Model checks", parts: "Parts", sign: "Sign off", master: "Your bill (Master BoQ)", claims: "Claims",
+  proj: "Project settings", conv: "Practice and wording", std: "Modelling guide", firm: "People" };
+function hvCrumbs() {
+  const box = $("crumbs"); if (!box) return;
+  const sec = hvSection(), view = state.view, p = CL.projects.find((x) => x.id === CL.pid), list = [];
+  const add = (id, text, go) => list.push({ id, text, go });
+  add("crHome", "Projects", goHome);
+  if (sec === "settings" && view !== "proj") { add("crFirm", Store.firm?.name || "Your firm", goFirmSettings); add("crPage", HV_PAGE[view] || "Settings", null); }
+  else if (sec !== "home") {
+    const sample = sec === "bills" && state.fromSample;
+    if (p && !sample) add("crProject", p.name, goOv);
+    if (sec === "bills" && (state.records || HV.opening)) add("crStructure", hvBillHead()[0] || "The bill", () => { state.view = "map"; render(); window.scrollTo(0, 0); });
+    if (sec === "bills" && !state.records && !HV.opening) add("crStructure", "The bill", null);
+    if (HV_PAGE[view] && (sec !== "bills" || view !== "map")) add("crPage", HV_PAGE[view], null);
+  }
+  box.replaceChildren(...list.map((c, i) => i === list.length - 1
+    ? h("span", { class: "crumb here", id: c.id, "aria-current": "page" }, c.text)
+    : h("button", { type: "button", class: "crumb", id: c.id, onclick: c.go }, c.text)));
 }
 // Under Bills: the structure the open model is, and its run
 function hvBillHead() {
@@ -16293,14 +16421,13 @@ $("stepAsks").addEventListener("click", () => stepGo("asks"));
 $("stepReview").addEventListener("click", () => stepGo("review"));
 $("btnGoSign").addEventListener("click", () => { state.view = "sign"; render(); window.scrollTo(0, 0); });
 
-function goHome() { HV.sum = {}; state.view = "home"; render(); window.scrollTo(0, 0); }
+function goHome() { HV.sum = {}; HV.menu = null; HV.confirm = null; state.view = "home"; render(); window.scrollTo(0, 0); }
 function goOv() { state.view = "ov"; render(); window.scrollTo(0, 0); }
 function goBills() { state.view = HV.billView || "map"; render(); window.scrollTo(0, 0); }
-function goSettings() { const v = HV.setView; if (v === "conv") return goConventions(); if (v === "std") return goStandards(); if (v === "firm") return goFirm(); goProj(); }
+// Your firm: the firm's settings page last open (practice and wording at first)
+function goFirmSettings() { const v = HV.setView; if (v === "std") return goStandards(); if (v === "firm") return goFirm(); goConventions(); }
 $("navHome").addEventListener("click", goHome);
-$("tabOverview").addEventListener("click", goOv);
-$("tabBills").addEventListener("click", goBills);
-$("tabSettings").addEventListener("click", goSettings);
+$("tbFirmBtn").addEventListener("click", goFirmSettings);
 // The account: who you are, your firm, what's saved, sign out (the save panel, projectview.js)
 $("meBtn").addEventListener("click", (e) => {
   e.stopPropagation(); const box = $("savePanel"); box.hidden = !box.hidden;
@@ -16378,7 +16505,25 @@ async function stOpen(s, where) {
   if (state.pmid !== run.id) toast(`${s.name} didn’t open: ${PV.saving || "try again"}`);
 }
 
-// ----- Projects (Web 1) -----
+// ----- Projects (Web 1; reworked 21 Nov 2026, the redesign's stage 1) -----
+// What is waiting on you across your projects, biggest value first; then a card per project: its contract and method, its
+// structures, bills signed and what has been claimed over them, its first three structures with where each stands, its people
+// and when it last moved. A card's ⋯ menu archives it (with Undo) or, for its owner, deletes it after its name is typed.
+const HV_METHOD_SHORT = { sans1200: "SANS 1200 Clause 8", cesmm3sa: "CESMM3-SA", asaqs7: "ASAQS 7th edition" };
+const HV_METHOD_NOTE = { sans1200: "Civil works", cesmm3sa: "Not built yet", asaqs7: "Buildings · not built yet" };
+const hvMethodFull = (inp) => { const id = inp?.project?.method || "sans1200"; return HV_METHOD_SHORT[id] || (MEASUREMENT_METHODS.find((m) => m.id === id)?.title || id).replace(/\s*\(.*$/, ""); };
+const hvRandShort = (v) => (v >= 1e6 ? `R ${(v / 1e6).toFixed(2)} m` : v >= 1e4 ? `R ${Math.round(v / 1e3)} k` : hvRand(v));
+const hvIso = (t) => (!t ? "" : typeof t === "string" ? t : typeof t.toDate === "function" ? t.toDate().toISOString() : t.seconds ? new Date(t.seconds * 1000).toISOString() : "");
+const HV_TRACK = ["Model", "Parts", "Questions", "Review", "Signed"];
+// A structure's place on the five-step track (Model, Parts, Questions, Review, Signed) from where its bill stands
+function hvTrackOf(d) {
+  const st = d.step, runs = Object.keys(d.runs || {}).length, signed = Object.keys(d.signed || {}).length;
+  if (st?.kind === "signed" || (!runs && signed)) return { at: 5, label: "Signed" };
+  if (st?.kind === "revision") return { at: 3, label: "Changed" };
+  if (!runs) return { at: 0, label: "Model" };
+  if (!st || !st.n) return { at: 1, label: "Not opened" };
+  return st.n <= 3 ? { at: 1, label: "Parts" } : st.n === 4 ? { at: 2, label: "Questions" } : st.n === 5 ? { at: 3, label: "Review" } : { at: 4, label: "To sign" };
+}
 function hvPeople(p) {
   const ids = new Set(p.memberIds || Object.keys(p.members || {}));
   if (Store.firm && p.firm === Store.firm.id) for (const u of Object.keys(Store.firm.members || {})) ids.add(u);
@@ -16386,54 +16531,124 @@ function hvPeople(p) {
   return ids.size ? `You and ${plural(ids.size, "other")}` : "Only you";
 }
 const hvMethod = (inp) => { const id = inp?.project?.method || "sans1200"; return id === "sans1200" ? "SANS 1200" : (MEASUREMENT_METHODS.find((m) => m.id === id)?.title || id).replace(/\s*\(.*$/, ""); };
-// What a project's card says: its structures, bills signed, and what is waiting, from what is kept (no model is read)
+// What a project's card says, and what is waiting on you in it, from what is kept (no model is read)
 async function hvSum(p) {
   const [docs, certs, raw] = await Promise.all([Store.listStructures(p.id), Store.listCertificates(p.id), Store.loadInputs(p.id).catch(() => null)]);
   const inp = normInputs(raw || inputsBlank());
-  let structures = docs.filter((d) => !d.id.startsWith("m-") || Object.keys(d.runs || {}).length || Object.keys(d.signed || {}).length).length;
-  for (const s of inp.structures) if (!docs.some((d) => d.id === String(s.id))) structures++;
-  let firstModel = docs.some((d) => Object.keys(d.runs || {}).length);
+  const kept = docs.filter((d) => !d.id.startsWith("m-") || Object.keys(d.runs || {}).length || Object.keys(d.signed || {}).length);
+  const rows = kept.map((d) => ({ name: d.name || d.id, ...hvTrackOf(d), d }));
+  for (const s of inp.structures) if (!docs.some((d) => d.id === String(s.id))) rows.push({ name: s.name || "Unnamed structure", at: 0, label: "Model", d: {} });
+  let structures = rows.length, firstModel = docs.some((d) => Object.keys(d.runs || {}).length), dates = [];
   if (!docs.length) {   // not opened since structures were kept: its models stand in
     const models = await Store.listModels(p.id);
     structures = Math.max(inp.structures.length, new Set(models.map((m) => modelKey(m.fileName || m.title))).size);
-    firstModel = models.length > 0;
+    firstModel = models.length > 0; dates.push(...models.map((m) => m.dated));
   }
+  rows.sort((a, b) => a.name.localeCompare(b.name, "en", { numeric: true }));
   const signed = docs.filter((d) => Object.keys(d.signed || {}).length).length;
-  const asks = docs.reduce((t, d) => t + (d.step && d.step.n >= 3 && d.step.n <= 6 ? d.step.open || 0 : 0) + (d.step?.kind === "revision" ? d.step.moved || 0 : 0), 0);
-  const chips = [];
-  if (asks) chips.push([`${plural(asks, "question")} waiting`, "amber"]);
-  const c = certs[0], k = c?.check, num = c?.meta?.number ?? "";
-  if (c && k?.signed && k.lines > 0) chips.push([`Certificate ${num}: ${plural(k.lines, "claim")} to check`, "red"]);
-  else if (c && k && k.toQuery > 0) chips.push([`Certificate ${num}: ${k.toQuery} to query`, "red"]);
-  else if (c && !k) chips.push([`Certificate ${num}: not checked yet`, "red"]);
-  if (!firstModel && !signed) chips.push(["Waiting for the first model", "violet"]);
-  else if (!chips.length && docs.length && docs.every((d) => !Object.keys(d.runs || {}).length || d.step)) chips.push(["Nothing waiting", "green"]);
-  return { structures, signed, chips, method: hvMethod(inp) };
+  // Waiting on you: rands first (claims over a signed bill), then by how many lines or elements
+  const waiting = [], c = certs[0], k = c?.check, num = c?.meta?.number ?? "";
+  if (c && k?.signed && k.lines > 0) waiting.push({ rands: k.over || 0, badge: "R", tone: "red", t: `${hvRand(k.over)} claimed over a signed bill`, s: `Certificate ${num}: ${plural(k.lines, "line")}`, cert: c.id });
+  else if (c && k && k.toQuery > 0) waiting.push({ rands: k.atStake || 0, badge: "R", tone: "red", t: `Certificate ${num}: ${k.toQuery} to query`, s: `${hvRand(k.atStake)} at stake`, cert: c.id });
+  else if (c && !k) waiting.push({ n: 1, badge: "!", tone: "red", t: `Certificate ${num}: not checked yet`, s: "Check it against the bill", cert: c.id });
+  for (const r of rows) {
+    const st = r.d.step || {};
+    if (st.kind === "revision" && (st.moved || st.changed)) waiting.push({ n: st.moved || st.changed, tone: "violet", t: "Lines changed since the signed bill", s: r.name });
+    else if (st.n === 3 && st.unsure) waiting.push({ n: st.unsure, tone: "amber", t: `${plural(st.unsure, "element")} to place in a part`, s: r.name });
+    else if ((st.n === 4 || st.n === 5) && st.open) waiting.push({ n: st.open, tone: "amber", t: `${plural(st.open, "line")} need${st.open === 1 ? "s" : ""} you`, s: r.name });
+    else if (st.n === 6) waiting.push({ n: 1, badge: "✓", tone: "green", t: "Ready to sign", s: r.name });
+  }
+  if (!firstModel && !signed) waiting.push({ n: 0, badge: "+", tone: "violet", t: "Bring the first model", s: "Link it from the Revit panel, or upload model data" });
+  for (const w of waiting) { w.pid = p.id; w.project = p.name; w.badge ||= String(w.n); }
+  // When it last moved: a bill's step, a model read, a bill signed, a certificate
+  for (const d of docs) { dates.push(d.step?.at); for (const r of Object.values(d.runs || {})) dates.push(r.dated); for (const x of Object.values(d.signed || {})) dates.push(x.at); }
+  for (const x of certs) dates.push(x.dated || x.info?.dated);
+  const when = dates.filter(Boolean).map(hvIso).filter(Boolean).sort().pop() || "";
+  return { structures, signed, rows, waiting, over: c && k?.signed ? k.over || 0 : null, method: hvMethodFull(inp), when };
 }
 function hvSums() {
   for (const p of CL.projects) if (!HV.sum[p.id]) {
     HV.sum[p.id] = { loading: true };
-    hvSum(p).then((s) => { HV.sum[p.id] = s; }, (e) => { HV.sum[p.id] = { err: e.message, structures: 0, signed: 0, chips: [], method: "" }; })
+    hvSum(p).then((s) => { HV.sum[p.id] = s; }, (e) => { HV.sum[p.id] = { err: e.message, structures: 0, signed: 0, rows: [], waiting: [], method: "" }; })
       .then(() => { if (state.view === "home") renderHome(); });
   }
 }
 function hvBar(pct, fill, track) {
   return h("div", { class: "hvbar " + track, "aria-hidden": "true" }, pct > 0 ? h("div", { class: "hvfill " + fill, style: `width:${Math.max(0, Math.min(100, Math.round(pct)))}%` }) : null);
 }
-function hvCard(p) {
-  const s = HV.sum[p.id] || { loading: true }, picking = !!HV.pick, picked = picking && HV.pick.has(p.id);
-  const click = (e) => { e.preventDefault(); if (picking) { picked ? HV.pick.delete(p.id) : HV.pick.add(p.id); renderHome(); } else if (!p.archived) hvOpenProject(p.id); };
-  return h("a", { class: "hvcard" + (picked ? " picked" : "") + (p.archived ? " archived" : ""), href: "#", "data-pid": p.id, "aria-pressed": picking ? String(picked) : null, onclick: click },
-    h("div", { class: "hvcardhead" }, h("b", null, picking ? h("span", { class: "hvtick", "aria-hidden": "true" }, picked ? "✓" : "") : null, p.name),
-      h("span", null, s.loading ? "…" : s.err ? s.err : `${s.method} · ${plural(s.structures, "structure")}`)),
-    h("div", { class: "hvsigned" }, h("div", { class: "hvrow" }, h("span", null, "Bills signed"), h("b", null, s.loading || s.err ? "–" : `${s.signed} of ${s.structures}`)),
-      hvBar(s.structures ? (100 * s.signed) / s.structures : 0, "green", "light")),
-    !p.archived && (s.chips || []).length ? h("div", { class: "hvchips" }, s.chips.map(([t, tone]) => h("span", { class: "hvchip " + tone }, t))) : null,
-    h("div", { class: "hvfoot" }, h("span", null, p.archived ? `Archived ${hvDay(p.archived.at)}${p.archived.by ? ` by ${p.archived.by}` : ""}` : hvPeople(p)),
-      p.archived ? h("button", { type: "button", class: "hvbtn outline", "data-restore": p.id, onclick: (e) => { e.preventDefault(); e.stopPropagation(); hvArchive([p.id], false); } }, "Restore")
-        : h("span", { class: "hvopen" }, picking ? (picked ? "Selected" : "Select") : "Open")));
+// The people on a project as initials (who a uid is is read once per page)
+function hvWho(uid) {
+  if (uid === Store.user?.uid) return { name: Store.user.displayName || "", email: Store.user.email || "" };
+  if (!(uid in HV.who)) {
+    HV.who[uid] = null;
+    Promise.resolve().then(() => Store.userInfo(uid)).then((x) => { HV.who[uid] = x || {}; }, () => { HV.who[uid] = {}; }).then(() => { if (state.view === "home") { clearTimeout(HV.whoT); HV.whoT = setTimeout(renderHome, 60); } });
+  }
+  return HV.who[uid] || {};
 }
-// Archiving (20 Nov 2026): projects leave the lists for everyone and keep everything in them; Restore brings one back
+const hvInitialsOf = (x) => { const n = String(x.name || "").trim(), w = n ? n.split(/\s+/) : String(x.email || "").split("@")[0].split(/[._\-+]+/); return w.filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase() || "·"; };
+function hvAvatars(p) {
+  const ids = [...new Set(p.memberIds || Object.keys(p.members || {}))], shown = ids.slice(0, 4), tones = ["violet", "green", "amber"];
+  return h("span", { class: "hvavs", "aria-label": hvPeople(p) },
+    shown.map((uid, i) => { const x = hvWho(uid); return h("span", { class: "hvav " + tones[i % 3], title: x.name || x.email || "" }, hvInitialsOf(x)); }),
+    ids.length > shown.length ? h("span", { class: "hvav more" }, `+${ids.length - shown.length}`) : null);
+}
+function hvWhenText(s, p) {
+  const iso = s.when || hvIso(p.createdAt), d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d)) return "";
+  const today = new Date().toDateString() === d.toDateString();
+  return `${s.when ? "Updated" : "Created"} ${today ? "today" : hvDay(iso)}`;
+}
+function hvTrack(at, aria) {
+  return h("span", { class: "hvtrack", role: "img", "aria-label": aria }, HV_TRACK.map((_, i) => h("span", { class: i < at ? "done" : i === at ? "cur" : "" })));
+}
+function hvCard(p) {
+  const s = HV.sum[p.id] || { loading: true }, mine = p.owner === Store.user?.uid, open = HV.menu === p.id, conf = HV.confirm === p.id;
+  const n = (s.waiting || []).filter((w) => w.n !== 0).length;
+  const menu = h("div", { class: "hvmenuwrap" },
+    h("button", { type: "button", class: "hvmbtn", "aria-label": `Options for ${p.name}`, "aria-haspopup": "menu", "aria-expanded": String(open), "data-menu": p.id,
+      onclick: (e) => { e.stopPropagation(); HV.menu = open ? null : p.id; HV.confirm = null; renderHome(); } }, svg('<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>')),
+    open ? h("div", { class: "hvmenu", role: "menu" },
+      h("button", { type: "button", class: "hvmi", role: "menuitem", "data-archive": p.id, onclick: (e) => { e.stopPropagation(); HV.menu = null; hvArchive([p.id], true); } }, "Archive", h("small", null, "Out of the list for everyone, everything kept")),
+      h("button", { type: "button", class: "hvmi danger", role: "menuitem", "data-delete": p.id, disabled: mine ? null : true, onclick: (e) => { e.stopPropagation(); HV.menu = null; HV.confirm = p.id; renderHome(); setTimeout(() => $(`hvDel-${p.id}`)?.focus(), 0); } },
+        "Delete…", h("small", null, mine ? "For everyone, and it can’t be undone" : "Only the project’s owner can delete it"))) : null);
+  const stat = (label, value, tone) => h("div", { class: "hvstat" + (tone ? " " + tone : "") }, h("span", null, label), h("b", null, value));
+  const busy = s.loading || s.err;
+  const rows = (s.rows || []).slice(0, 3);
+  const del = conf ? (() => {
+    const go = h("button", { type: "submit", class: "btn danger", "data-del-go": p.id, disabled: true }, "Delete the project");
+    const err = h("div", { class: "err", role: "alert", hidden: true });
+    const inp = h("input", { id: `hvDel-${p.id}`, class: "piinput", autocomplete: "off", placeholder: p.name, oninput: () => { go.disabled = inp.value.trim() !== p.name.trim(); } });
+    return h("form", { class: "hvconfirm", role: "alertdialog", "aria-label": `Delete ${p.name}?`, onsubmit: async (e) => {
+        e.preventDefault(); if (inp.value.trim() !== p.name.trim()) return;
+        go.disabled = true; go.textContent = "Deleting…"; err.hidden = true;
+        try { await hvDoDelete(p); HV.confirm = null; HV.note = { text: `${p.name} deleted.` }; renderHome(); }
+        catch (x) { err.textContent = `It wasn’t deleted: ${x.message}`; err.hidden = false; go.disabled = false; go.textContent = "Delete the project"; }
+      } },
+      h("b", null, `Delete ${p.name}?`),
+      h("span", null, "It removes the project for everyone on it: its structures, models, bills and signed versions, certificates and the decisions on them. It can’t be undone. Archive it instead to keep everything."),
+      h("label", { class: "edlabel", for: `hvDel-${p.id}` }, "Type the project’s name to confirm"), inp, err,
+      h("div", { class: "tools" }, go,
+        h("button", { type: "button", class: "btn", onclick: () => { HV.confirm = null; renderHome(); } }, "Cancel"),
+        h("button", { type: "button", class: "btn", onclick: () => { HV.confirm = null; hvArchive([p.id], true); } }, "Archive instead")));
+  })() : null;
+  return h("div", { class: "hvcard", "data-pid": p.id },
+    h("div", { class: "hvcardtop" },
+      h("div", { class: "hvcardhead" },
+        h("a", { class: "hvplink", href: "#", onclick: (e) => { e.preventDefault(); hvOpenProject(p.id); } }, h("b", null, p.name)),
+        h("span", null, [p.contract || "Contract no. not added yet", busy ? "" : s.method].filter(Boolean).join(" · "))),
+      h("div", { class: "hvabove" }, n ? h("span", { class: "hvwaitpill" }, `${n} waiting on you`) : null, menu)),
+    h("div", { class: "hvstats" }, stat("Structures", busy ? "–" : String(s.structures)), stat("Bills signed", busy ? "–" : String(s.signed)),
+      stat("Over signed bills", busy || s.over == null ? "—" : hvRandShort(s.over), s.over > 0 ? "red" : "")),
+    h("div", { class: "hvrows" },
+      s.loading ? h("span", { class: "sub" }, "…") : s.err ? h("span", { class: "sub" }, s.err)
+        : rows.length ? rows.map((r) => h("div", { class: "hvsrow" }, h("span", { class: "hvsname" }, r.name), hvTrack(r.at, `${r.name}: ${r.label}`), h("span", { class: "hvsstep" }, r.label)))
+        : h("span", { class: "sub" }, "No structures yet: link the first model from Revit or upload it."),
+      (s.rows || []).length > 3 ? h("span", { class: "sub" }, `+${plural(s.rows.length - 3, "more structure")}`) : null),
+    h("div", { class: "hvfoot" }, hvAvatars(p), h("span", null, hvWhenText(s, p))),
+    del);
+}
+// Archiving (20 Nov 2026): projects leave the lists for everyone and keep everything in them; Restore brings one back.
+// Archived from a card, the note under the search offers Undo.
 async function hvArchive(ids, on) {
   const done = [], failed = [];
   for (const id of ids) {
@@ -16441,52 +16656,65 @@ async function hvArchive(ids, on) {
     catch (e) { failed.push(`${CL.projects.find((x) => x.id === id)?.name || id}: ${e.message}`); }
   }
   if (on && done.includes(CL.pid)) { const next = liveProjects()[0]; if (next) chooseProject(next.id); else { CL.pid = null; if (typeof pvAfterProjects === "function") pvAfterProjects(); } }
-  HV.pick = null; HV.sum = {};
-  if (typeof renderProjects === "function") renderProjects();   // the switcher in the top bar
-  toast(failed.length ? `${done.length ? `${plural(done.length, "project")} ${on ? "archived" : "restored"}; ` : ""}not done: ${failed.join("; ")}` : `${plural(done.length, "project")} ${on ? "archived: they’re under Archived, with everything in them" : "restored"}`);
-  if (state.view === "home") renderHome(); else navMark();
+  HV.sum = {};
+  if (typeof renderProjects === "function") renderProjects();
+  const name = done.length === 1 ? CL.projects.find((x) => x.id === done[0])?.name || "The project" : plural(done.length, "project");
+  const text = failed.length ? `${done.length ? `${name} ${on ? "archived" : "restored"}; ` : ""}not done: ${failed.join("; ")}`
+    : on ? `${name} archived. Everything in it is kept.` : `${name} restored.`;
+  if (state.view === "home") { HV.note = { text, undo: on && done.length === 1 && !failed.length ? done[0] : null }; if (!on) HV.show = "active"; renderHome(); }
+  else { toast(text); navMark(); }
 }
-// ----- Set up, the journey's step 1 (the canvas's “Target user journey”): name the project, pick the method and the kind of structure -----
-// One dialog in place of the browser's prompts. Resolves { name, contract, method, structure: { name, kind } | null }, or null on Cancel.
+// Deleting a project: its owner only (the rules), everything in it for everyone on it
+async function hvDoDelete(p) {
+  await Store.deleteProject(p.id);
+  CL.projects = CL.projects.filter((x) => x.id !== p.id);
+  if (CL.pid === p.id) { CL.pid = null; CL.open = null; CL.certs = []; try { localStorage.removeItem("solvboq-claims-project-v1"); } catch (x) {} }
+  HV.sum = {}; HV.ov = null; HV.ovFor = "";
+  if (typeof renderProjects === "function") renderProjects();
+}
+// ----- New project (the redesign's Main board, 21 Nov 2026): what the contract is called and how it's measured -----
+// Structures come in with their models, so the dialog asks for none. Resolves { name, contract, method, overlays }, or null.
 function hvNewDialog(meta) {
   return new Promise((resolve) => {
     let d = $("npDlg"); if (d) d.remove();
-    d = h("dialog", { id: "npDlg", class: "mbdlg ov npdlg", "aria-labelledby": "npH" });
-    let done = false, kindSet = false;
+    d = h("dialog", { id: "npDlg", class: "npdlg2", "aria-labelledby": "npH" });
+    let done = false, method = "sans1200";
     const finish = (v) => { if (done) return; done = true; if (d.open) d.close(); d.remove(); resolve(v); };
-    const name = h("input", { id: "npName", class: "piinput", "aria-required": "true", autocomplete: "off", value: meta?.project || "", placeholder: "For example: Paarl WWTW upgrade" });
-    const contract = h("input", { id: "npContract", class: "piinput", autocomplete: "off", value: meta?.contract || "", placeholder: "For example: CES11/2024" });
-    const kind = h("select", { id: "npKind", class: "piinput", onchange: () => { kindSet = true; } },
-      h("option", { value: "" }, "Choose the kind…"), ...STRUCTURE_KINDS.map((k) => h("option", { value: k.id }, k.title)));
-    const stName = h("input", { id: "npStName", class: "piinput", autocomplete: "off", placeholder: "For example: Gravity Thickeners",
-      oninput: () => { if (!kindSet) kind.value = guessKind(stName.value) || ""; } });
-    const methods = MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" },
-      h("input", { type: "radio", name: "npMethod", value: m.id, checked: m.id === "sans1200" ? true : null, disabled: m.built ? null : true }),
-      h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"))));
+    const name = h("input", { id: "npName", class: "npfield big", "aria-required": "true", autocomplete: "off", value: meta?.project || "", placeholder: "For example: Paarl WWTW upgrade" });
+    const contract = h("input", { id: "npContract", class: "npfield", autocomplete: "off", value: meta?.contract || "", placeholder: "For example: CES11/2024" });
+    const amBox = h("div", { class: "npams" });
+    const drawAms = () => amBox.replaceChildren(...packAmendments(method, null).map((a) => h("label", { class: "nptick", "data-overlay": a.id },
+      h("input", { type: "checkbox", checked: a.on ? true : null }), `With your ${a.name.replace(/^His /, "").replace(/'/g, "’")}`)));
+    const methods = MEASUREMENT_METHODS.map((m) => h("label", { class: "npmethod" + (m.built ? "" : " off") },
+      h("input", { type: "radio", name: "npMethod", value: m.id, checked: m.id === method ? true : null, disabled: m.built ? null : true, onchange: () => { method = m.id; drawAms(); } }),
+      h("span", null, h("b", null, HV_METHOD_SHORT[m.id] || m.title), h("span", null, m.built ? HV_METHOD_NOTE[m.id] || "" : HV_METHOD_NOTE[m.id] || "Not built yet"))));
+    drawAms();
     const err = h("div", { class: "err", role: "alert", hidden: true });
-    const form = h("form", { class: "edbody npform", onsubmit: (e) => {
+    const step = (n, title, tag, text, last) => h("div", { class: "npstep" },
+      h("div", { class: "npstepline" }, h("span", { class: "npnum" + (n === 1 ? " lime" : "") }, String(n)), last ? null : h("span", { class: "nprule" })),
+      h("div", null, h("div", { class: "npsteptitle" }, h("b", null, title), h("span", { class: "nptag" }, tag)), h("p", null, text)));
+    const form = h("form", { class: "npwrap", onsubmit: (e) => {
         e.preventDefault();
         const n = name.value.trim(); if (!n) { err.textContent = "Give the project a name."; err.hidden = false; name.focus(); return; }
-        const st = stName.value.trim();
-        finish({ name: n, contract: contract.value.trim(), method: d.querySelector('input[name="npMethod"]:checked')?.value || "sans1200", structure: st ? { name: st, kind: kind.value } : null });
+        const overlays = [...amBox.querySelectorAll("[data-overlay]")].filter((l) => l.querySelector("input").checked).map((l) => l.dataset.overlay);
+        finish({ name: n, contract: contract.value.trim(), method, overlays });
       } },
-      h("div", { class: "edpath" }, h("h2", { id: "npH" }, "New project"),
-        h("button", { type: "button", class: "ibtn", "aria-label": "Close", title: "Close", onclick: () => finish(null) }, svg('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'))),
-      h("p", { class: "sub" }, "One project per contract: its structures, bills and payment certificates are kept in it, for everyone you add."),
-      // Two columns: the project on the left, how it's measured and its first structure on the right (one column on a phone)
-      h("div", { class: "npgrid" },
-        h("div", { class: "npcol" },
-          h("label", { class: "edlabel", for: "npName" }, "Name of the project"), name,
-          h("label", { class: "edlabel", for: "npContract" }, "Contract number"), contract,
-          h("span", { class: "edsub" }, "Used to check that payment certificates belong to this project. You can leave it for now."),
-          h("span", { class: "edlabel" }, "Method of measurement"), h("div", { class: "npmethods" }, ...methods),
-          h("span", { class: "edsub" }, "The one the contract’s pricing assumptions call up.")),
-        h("div", { class: "npcol" },
-          h("label", { class: "edlabel", for: "npStName" }, "First structure"), stName,
-          h("label", { class: "edlabel", for: "npKind" }, "Its kind"), kind,
-          h("span", { class: "edsub" }, "One per structure the bill prices separately, for example a tank, a chamber or a building. The kind decides its earthworks rule, its standard grade and what else it needs. You can add the others later."))),
-      err,
-      h("div", { class: "tools" }, h("button", { type: "submit", class: "btn dark", id: "npCreate" }, "Create the project"), h("button", { type: "button", class: "btn", onclick: () => finish(null) }, "Cancel")));
+      h("div", { class: "nptop" }, h("h2", { id: "npH" }, "New project"),
+        h("button", { type: "button", class: "npclose", "aria-label": "Close", title: "Close", onclick: () => finish(null) }, svg('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'))),
+      h("div", { class: "npcols" },
+        h("section", { class: "npstart", "aria-labelledby": "npStartH" },
+          h("div", { class: "nphead" }, h("span", { class: "npkicker" }, "Start a project"), h("h3", { id: "npStartH" }, "What’s the contract called?"),
+            h("p", null, "That’s all we need to start. Structures come in with their models.")),
+          h("div", { class: "npgroup" }, h("label", { for: "npName" }, "Project name"), name),
+          h("div", { class: "npgroup" }, h("label", { for: "npContract" }, "Contract number ", h("span", null, "(optional)")), contract),
+          h("fieldset", { class: "npgroup" }, h("legend", null, "Method of measurement"), h("div", { class: "npmethods2" }, ...methods), amBox,
+            h("span", { class: "npnote" }, "The one the contract’s pricing assumptions call up. You can change it in the project until a bill is signed.")),
+          err,
+          h("div", { class: "npgo" }, h("button", { type: "submit", class: "hvbtn lime big", id: "npCreate" }, "Create the project"), h("span", null, "Press Enter to create"))),
+        h("section", { class: "nphow", "aria-labelledby": "npHowH" }, h("h3", { id: "npHowH" }, "How a project fills in"),
+          step(1, "Name it", "now", "Give it a name and choose how it’s measured. Invite the people on it when you’re ready."),
+          step(2, "Link each structure’s model", "from Revit or a file", "A valve chamber, a tank, a building: each model you link appears in the project as a structure, and its bill is worked out from it."),
+          step(3, "Sign the bills, then check claims", "later", "Each payment certificate is checked against the signed bills of the structures it claims on.", true))));
     d.append(form);
     d.addEventListener("cancel", (e) => { e.preventDefault(); finish(null); });
     d.addEventListener("click", (e) => { if (e.target === d) finish(null); });
@@ -16525,10 +16753,7 @@ function hvDeleteDialog(p) {
       e.preventDefault(); if (name.value.trim() !== p.name.trim()) return;
       go.disabled = true; go.textContent = "Deleting…"; err.hidden = true;
       try {
-        await Store.deleteProject(p.id);
-        CL.projects = CL.projects.filter((x) => x.id !== p.id);
-        if (CL.pid === p.id) { CL.pid = null; CL.open = null; CL.certs = []; try { localStorage.removeItem("solvboq-claims-project-v1"); } catch (x) {} }
-        HV.sum = {}; HV.ov = null; HV.ovFor = "";
+        await hvDoDelete(p);
         close(); toast(`${p.name} deleted`); goHome();
       } catch (x) { err.textContent = `It wasn’t deleted: ${x.message}`; err.hidden = false; go.disabled = false; go.textContent = "Delete the project"; }
     } },
@@ -16574,34 +16799,61 @@ function hvSetupCard() {
 function hvOpenProject(pid) { if (pid !== CL.pid) chooseProject(pid); goOv(); }
 async function hvNewProject() { const was = CL.pid; await newProject(null); if (CL.pid && CL.pid !== was) goOv(); }
 function renderHome() {
-  const v = $("viewHome"), u = Store.user, live = CL.projects.filter((p) => !p.archived), arch = CL.projects.filter((p) => p.archived);
-  if (HV.showArchived && !arch.length) HV.showArchived = false;
-  const shown = HV.showArchived ? arch : live, picking = !!HV.pick;
-  const tools = !u || !CL.loaded ? null
-    : picking ? h("div", { class: "hvtools" },
-        h("span", { class: "sub" }, HV.pick.size ? `${plural(HV.pick.size, "project")} selected` : "Click the projects to archive"),
-        h("button", { type: "button", class: "hvbtn outline", onclick: () => { HV.pick = new Set(live.map((p) => p.id)); renderHome(); } }, "Select all"),
-        h("button", { type: "button", class: "hvbtn night", id: "hvArchiveGo", disabled: HV.pick.size ? null : true, onclick: () => hvArchive([...HV.pick], true) }, `Archive${HV.pick.size ? ` ${HV.pick.size}` : ""}`),
-        h("button", { type: "button", class: "hvbtn outline", onclick: () => { HV.pick = null; renderHome(); } }, "Cancel"))
-    : h("div", { class: "hvtools" },
-        arch.length ? h("button", { type: "button", class: "hvbtn outline", id: "hvShowArchived", "aria-pressed": String(!!HV.showArchived), onclick: () => { HV.showArchived = !HV.showArchived; renderHome(); } }, HV.showArchived ? "Back to projects" : `Archived (${arch.length})`) : null,
-        !HV.showArchived && live.length ? h("button", { type: "button", class: "hvbtn outline", id: "hvArchivePick", onclick: () => { HV.pick = new Set(); renderHome(); } }, "Archive projects…") : null,
-        !HV.showArchived ? h("button", { type: "button", class: "hvbtn night big", id: "hvNew", onclick: hvNewProject }, "New project") : null);
+  const v = $("viewHome"), u = Store.user, act = document.activeElement, keep = act && v.contains(act) && act.id ? { id: act.id, at: act.selectionStart } : null;
+  const live = CL.projects.filter((p) => !p.archived), arch = CL.projects.filter((p) => p.archived);
+  const q = HV.q.trim().toLowerCase(), hit = (p) => !q || `${p.name} ${p.contract || ""}`.toLowerCase().includes(q);
   const head = h("div", { class: "hvtitle" },
-    h("div", { class: "hvtitletext" }, h("h1", null, HV.showArchived ? "Archived projects" : "Projects"),
-      h("p", null, HV.showArchived ? "Kept with everything in them, out of the lists. Restore one to bring it back for everyone on it."
-        : Store.firm ? "Everyone at your firm sees the firm’s projects. Add outside people by email." : "Your projects, and the ones you were invited to. Add people by email.")),
-    tools);
+    h("div", { class: "hvtitletext" }, h("h1", null, "Projects"),
+      h("p", null, Store.firm ? "Here’s what’s waiting on you across your projects. Everyone at your firm sees the firm’s projects." : "Here’s what’s waiting on you across your projects.")),
+    u && CL.loaded ? h("button", { type: "button", class: "hvbtn night big", id: "hvNew", onclick: hvNewProject },
+      svg('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" aria-hidden="true"><path d="M12 5v14M5 12h14"></path></svg>'), "New project") : null);
   const note = (text, btn) => h("section", { class: "hvcard plain" }, h("p", null, text), btn || null);
-  let body;
-  if (!Store.available) body = note(`Projects are kept in the cloud, and it’s off in this copy of the page. ${Store.why || ""}`, h("button", { type: "button", class: "hvbtn night", onclick: goBills }, "Open the bill"));
-  else if (!u) body = note(Store.ready ? "Sign in to see your projects." : "Connecting…");
-  else if (!CL.loaded) body = note("Loading your projects…");
-  else if (CL.err && !CL.projects.length) body = note(`Your projects couldn’t be read: ${CL.err}`);
-  else if (!shown.length) body = note(arch.length ? `No projects open: ${plural(arch.length, "project")} archived. Start one for the contract, or restore one under Archived.` : "No projects yet. Start one for the contract: its structures, bills and payment certificates are kept in it, for everyone you add.");
-  else { hvSums(); body = h("div", { class: "hvgrid" }, shown.map(hvCard)); }
-  v.replaceChildren(head, body);
+  let body = [];
+  if (!Store.available) body = [note(`Projects are kept in the cloud, and it’s off in this copy of the page. ${Store.why || ""}`, h("button", { type: "button", class: "hvbtn night", id: "hvOpenBill", onclick: goBills }, "Open the bill"))];
+  else if (!u) body = [note(Store.ready ? "Sign in to see your projects." : "Connecting…")];
+  else if (!CL.loaded) body = [note("Loading your projects…")];
+  else if (CL.err && !CL.projects.length) body = [note(`Your projects couldn’t be read: ${CL.err}`)];
+  else if (!CL.projects.length) body = [note("No projects yet. Start one for the contract: its structures, bills and payment certificates are kept in it, for everyone you add.")];
+  else {
+    hvSums();
+    // Waiting on you, across the active projects: rands first, then by how much
+    const items = live.flatMap((p) => HV.sum[p.id]?.waiting || [])
+      .sort((a, b) => (b.rands || 0) - (a.rands || 0) || (b.n || 0) - (a.n || 0));
+    const reading = live.some((p) => HV.sum[p.id]?.loading);
+    const waiting = h("section", { class: "hvwaiting", id: "hvWaiting", "aria-labelledby": "hvWaitH" },
+      h("h2", { id: "hvWaitH" }, "Waiting on you · biggest value first"),
+      items.length ? h("div", { class: "hvwgrid" }, items.slice(0, 6).map((w) => h("a", { class: "hvwcard", href: "#", "data-pid": w.pid, onclick: (e) => { e.preventDefault(); hvWaitGo(w); } },
+        h("span", { class: "hvwbadge " + w.tone }, w.badge), h("span", null, h("b", null, w.t), h("span", null, `${w.project} · ${w.s}`)))))
+        : h("p", { class: "sub" }, reading ? "Reading your projects…" : "Nothing is waiting on you."));
+    const showArch = HV.show === "archived" && arch.length, shown = (showArch ? arch : live).filter(hit);
+    const filter = (id, label, n) => h("button", { type: "button", class: "hvfilter", id, "aria-pressed": String((id === "hvShowArchived") === !!showArch),
+      onclick: () => { HV.show = id === "hvShowArchived" ? "archived" : "active"; HV.menu = null; HV.confirm = null; renderHome(); } }, `${label} ${n}`);
+    const tools = h("div", { class: "hvtools" },
+      h("div", { class: "hvsearch" }, svg('<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.5-3.5"></path></svg>'),
+        h("label", { class: "sr", for: "hvSearch" }, "Search projects"),
+        h("input", { id: "hvSearch", type: "search", value: HV.q, placeholder: "Search by name or contract no.", oninput: (e) => { HV.q = e.target.value; renderHome(); } })),
+      h("div", { class: "hvfilters", role: "group", "aria-label": "Show" }, filter("hvShowActive", "Active", live.length), arch.length ? filter("hvShowArchived", "Archived", arch.length) : null));
+    const noteBox = HV.note ? h("div", { class: "hvnote", role: "status", id: "hvNote" }, h("span", null, HV.note.text),
+      h("span", { class: "tools" }, HV.note.undo ? h("button", { type: "button", class: "btn sm", id: "hvUndo", onclick: () => { const id = HV.note.undo; HV.note = null; hvArchive([id], false); } }, "Undo") : null,
+        h("button", { type: "button", class: "btn sm", "aria-label": "Dismiss", onclick: () => { HV.note = null; renderHome(); } }, "OK"))) : null;
+    const list = !shown.length ? note(q ? `No project matches “${HV.q.trim()}”.` : showArch ? "No archived projects." : `No projects open: ${plural(arch.length, "project")} archived. Start one for the contract, or restore one under Archived.`)
+      : showArch ? h("div", { class: "hvarch" }, shown.map((p) => h("div", { class: "hvarow", "data-pid": p.id },
+          h("div", null, h("b", null, p.name), h("span", null, `Archived ${hvDay(p.archived.at)}${p.archived.by ? ` by ${p.archived.by}` : ""} · everything in it kept`)),
+          h("button", { type: "button", class: "btn", "data-restore": p.id, onclick: () => hvArchive([p.id], false) }, "Restore"))))
+      : h("div", { class: "hvgrid" }, shown.map(hvCard));
+    body = [waiting, h("section", { class: "hvall", "aria-labelledby": "hvAllH" }, h("div", { class: "hvallhead" }, h("h2", { id: "hvAllH" }, showArch ? "Archived projects" : "Your projects"), tools), noteBox, list)];
+  }
+  v.replaceChildren(head, ...body);
+  if (keep) { const el = $(keep.id); if (el) { el.focus(); if (keep.at != null && el.setSelectionRange) try { el.setSelectionRange(keep.at, keep.at); } catch (e) {} } }
 }
+// An item waiting on you: its project, and the certificate when it is one
+function hvWaitGo(w) {
+  hvOpenProject(w.pid);
+  if (w.cert) { goClaims(); if (CL.pid === w.pid && CL.certs.some((c) => c.id === w.cert)) openCertificate(w.cert); }
+}
+// A click outside an open card menu closes it; Escape closes the menu or the delete confirmation
+document.addEventListener("click", (e) => { if (HV.menu && state.view === "home" && !e.target.closest?.(".hvmenuwrap")) { HV.menu = null; renderHome(); } });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && state.view === "home" && (HV.menu || HV.confirm)) { HV.menu = null; HV.confirm = null; renderHome(); } });
 
 // ----- The project overview (Web 2) -----
 async function hvLoad(force) {
@@ -16711,7 +16963,8 @@ function renderOv() {
       : list.length ? list.map(hvRowEl)
       : h("p", { class: "sub" }, "No structures yet. Add them under Set up, or open a model of this project in Revit and read it with the SolvBoQ add-in (or upload model data under Bills): each model is a structure until you name them."));
   v.replaceChildren(
-    h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, p.name), h("p", null, sub))),
+    h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, p.name), h("p", null, sub)),
+      h("div", { class: "hvtools" }, h("button", { type: "button", class: "hvbtn outline", id: "ovClaims", onclick: goClaims }, "Claims"))),
     h("div", { class: "hvov" }, h("div", { class: "hvmain" }, hvSetupCard(), structs), h("div", { class: "hvside" }, hvNext(list), typeof pplCard === "function" ? pplCard() : null)));
 }
 
