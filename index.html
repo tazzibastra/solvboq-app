@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-21T13:57:25Z">
+<meta name="solvboq-build" content="2026-11-21T14:31:44Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -953,7 +953,7 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
 .hvcard.plain .hvbtn{align-self:flex-start}
 .hvcardhead{display:flex;flex-direction:column;gap:2px;min-width:0}
 .hvcardhead b{font-size:20px;line-height:1.3;overflow-wrap:anywhere}
-.hvcardhead span,.hvstname span{color:var(--ink-2)}
+.hvcardhead span{color:var(--ink-2)}
 .hvsigned{display:flex;flex-direction:column;gap:8px}
 .hvrow{display:flex;justify-content:space-between;gap:12px}
 .hvbar{height:8px;border-radius:4px;display:flex}
@@ -976,32 +976,16 @@ button.pplchip:hover,.pplchip.on{box-shadow:inset 0 0 0 1px var(--ink-2)}
 .hvbtn.outline{background:var(--card);border:1px solid var(--line);color:var(--ink)}
 .hvbtn.lime{background:var(--lime);color:var(--night);font-weight:700}
 .hvbtn.ghost{background:transparent;border:1px solid var(--night-line);color:#fff}
-.hvov{display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start}
-.hvstructs{flex:999 1 560px;min-width:0;background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px}
-.hvstructshead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px;padding-bottom:8px}
-.hvstructs h2,.hvnext h2,#viewOv #pplCard h2{margin:0;font-size:20px;line-height:1.3;font-weight:700;color:inherit}
-.hvst{display:flex;flex-wrap:wrap;align-items:center;gap:8px 16px;padding:16px;border-radius:18px;background:var(--head);text-decoration:none;color:var(--ink)}
-.hvst:hover{color:var(--ink);box-shadow:inset 0 0 0 1px var(--line)}
-.hvstname{flex:1 1 240px;min-width:0;display:flex;flex-direction:column}
-.hvstname b{font-size:16px;overflow-wrap:anywhere}
-.hvststep{flex:1 1 200px;display:flex;flex-direction:column;gap:6px}
-.hvside{flex:1 1 360px;min-width:0;display:flex;flex-direction:column;gap:20px}
-.hvnext{background:var(--night);color:#fff;border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
-.hvnextitem{display:flex;flex-direction:column;gap:4px;border-top:1px solid var(--night-rule);padding-top:16px}
-.hvnextitem b{font-size:16px}
-.hvnextitem span{color:var(--night-sub)}
-.hvnextitem .hvbtn{align-self:flex-start;margin-top:8px}
-#viewOv #pplCard{border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
-#viewOv #pplCard .ppllist{margin-top:0}
-#viewOv #pplCard .pplchip{padding:6px 14px;border-radius:16px;line-height:1.5}
-#viewOv #pplCard .pplinvite{margin-top:0}
-#viewOv #pplCard .pplinvite input{min-height:44px;border-radius:22px}
-#viewOv #pplCard .pplinvite .btn{min-height:44px;border-radius:22px;padding:0 20px;font-weight:600}
+#pplDlg #pplCard{border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
+#pplDlg #pplCard .ppllist{margin-top:0}
+#pplDlg #pplCard .pplchip{padding:6px 14px;border-radius:16px;line-height:1.5}
+#pplDlg #pplCard .pplinvite{margin-top:0}
+#pplDlg #pplCard .pplinvite input{min-height:44px;border-radius:22px}
+#pplDlg #pplCard .pplinvite .btn{min-height:44px;border-radius:22px;padding:0 20px;font-weight:600}
 body.docked .hvtitletext h1{font-size:20px}
-body.docked .hvcard,body.docked .hvstructs,body.docked .hvnext,body.docked #viewOv #pplCard{border-radius:14px;padding:14px}
 #loadErr:empty{display:none}
 #viewHome,#viewOv{display:flex;flex-direction:column;gap:20px;min-width:0}
-#viewOv #pplCard .pplinvite input{flex:1 1 100px}
+#pplDlg #pplCard .pplinvite input{flex:1 1 100px}
 
 /* ===== The bill, one screen per structure (the canvas's “Web 3: The bill”, 17 Nov 2026): the steps, the table, the line's panel ===== */
 #phead #btnGoSign{align-self:flex-end}
@@ -1141,18 +1125,6 @@ body.docked .toast{top:12px;bottom:auto}
 .calc.docsrc{display:flex;flex-direction:column;gap:4px}
 .docfor{min-width:min(240px,100%);max-width:100%}
 /* Set up (the journey's step 1): the overview's Set up card and the New project dialog */
-.hvmain{flex:999 1 560px;min-width:0;display:flex;flex-direction:column;gap:20px}
-.hvmain .hvstructs{flex:none}
-.hvsetup{background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:8px}
-.hvsetup h2{margin:0;font-size:20px;line-height:1.3;font-weight:700}
-.hvsetrow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px 16px;padding:12px 16px;border-radius:14px;background:var(--head)}
-.hvsetrow span{color:var(--muted)}
-.hvsetrow b{font-weight:600;text-align:right;overflow-wrap:anywhere}
-.hvsetrow b.warn{color:var(--amber-t)}
-.hvsetmiss{display:flex;flex-direction:column;gap:4px;padding:8px 16px 0}
-.hvsetmiss>span:first-child{font-weight:600}
-.hvsetmiss ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;line-height:1.45}
-.hvsetup .tools{padding-top:8px}
 .npdlg .npform{display:flex;flex-direction:column;gap:6px}
 .npdlg .npform .edlabel{margin-top:10px}
 .npdlg .npform .tools{margin-top:16px}
@@ -1420,6 +1392,129 @@ body[data-section="home"] .tbright .addinbtn{display:inline-flex}
   .topbar{position:relative;top:auto}   /* two rows on a phone: pinned, it would take a fifth of the screen */
   :root{--stick-top:16px}
 }
+
+/* ===== The redesign's stages 2 and 3 (21 Nov 2026): the project home and the structure page ===== */
+body.docked .hvcard{border-radius:14px;padding:14px}
+.hvphead{background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:16px}
+.hvphtop{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+.hvphtop h1{margin:0;font-size:36px;line-height:1.1;letter-spacing:-.03em;font-weight:800;overflow-wrap:anywhere}
+.hvphtop .sub{margin:4px 0 0}
+.hvphtop .tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hvfacts{display:flex;flex-wrap:wrap;gap:8px}
+.hvfact{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;cursor:pointer;max-width:100%}
+.hvfact:hover{border-color:var(--ink)}
+.hvfact .k{color:var(--muted);font-size:13px}
+.hvfact b{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hvfactppl{display:inline-flex;align-items:center;gap:8px;color:var(--ink-2)}
+.hvjumps{display:flex;flex-wrap:wrap;gap:6px;border-top:1px solid var(--rule);padding-top:14px}
+.hvjump{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:999px;background:var(--head);color:var(--ink);text-decoration:none;font-weight:600;font-size:13px}
+.hvjump:hover{color:var(--ink);background:var(--chip)}
+.hvjump b{color:var(--muted)}
+.hvsec{background:var(--card);border-radius:28px;padding:24px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.hvsec h2{margin:0;font-size:20px;letter-spacing:-.01em}
+.hvsechead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px 16px}
+.hvsechead>span,.hvsechead p{color:var(--muted);margin:2px 0 0;font-size:14px}
+.hvsechead .tools{display:flex;gap:8px;flex-wrap:wrap}
+.hvcount{color:var(--muted);font-weight:600}
+.hvsec>.sub{margin:0}
+.hvnextitem{display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:20px;background:var(--head)}
+.hvnextitem.first{background:var(--night);color:#fff}
+.hvnextitem.first>span{color:var(--night-sub)}
+.hvnextitem .hvkick{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.hvnextitem.first .hvkick{color:var(--lime)}
+.hvnextitem b{font-size:16px}
+.hvnextitem>span{color:var(--ink-2)}
+.hvnextitem .hvbtn{align-self:flex-start;margin-top:auto}
+#hvNext .hvwgrid{grid-template-columns:repeat(auto-fit,minmax(min(280px,100%),1fr))}
+.hvstgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:12px}
+.hvst{display:flex;flex-direction:column;gap:12px;padding:18px;border-radius:20px;background:var(--head);text-decoration:none;color:var(--ink);border:1px solid transparent;text-align:left;font:inherit;cursor:pointer}
+.hvst:hover{color:var(--ink);border-color:var(--ink)}
+.hvst.add{background:transparent;border:2px dashed var(--line);align-items:flex-start}
+.hvst.add>span:not(.btn){color:var(--muted)}
+.hvsttop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}
+.hvstname{display:flex;flex-direction:column;min-width:0}
+.hvstname b{font-size:16px;overflow-wrap:anywhere}
+.hvstname span{color:var(--muted);font-size:13px}
+.hvst .hvtrack span{height:8px}
+.hvststep{display:flex;justify-content:space-between;gap:8px;font-size:13px}
+.hvststep span{color:var(--ink-2);text-align:right}
+.hvtable{width:100%;border-collapse:collapse;font-size:14px}
+.hvtable th{text-align:left;font-size:12px;font-weight:600;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+.hvtable td{padding:10px;border-bottom:1px solid var(--rule);vertical-align:middle}
+.hvtable .r{text-align:right}
+.hvbill{display:block;font-weight:600}
+.hvsub{display:block;color:var(--muted);font-size:12px}
+.hvstats4{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(180px,100%),1fr));gap:8px}
+.hvtol{margin:0;color:var(--ink-2)}
+.hvbring{gap:20px}
+.hvbring p{color:var(--ink-2);margin:4px 0 0}
+.hvbringgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:16px}
+.hvfromrevit{display:flex;flex-direction:column;gap:12px;padding:20px;border-radius:20px;background:var(--head)}
+.hvfromrevit ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px}
+.hvfromrevit .btn{align-self:flex-start}
+.hvbringtitle{display:flex;flex-direction:column}
+.hvbringtitle span{color:var(--muted);font-size:13px}
+.hvlive{display:flex;align-items:center;gap:10px;color:var(--violet-t);font-weight:600;font-size:13px}
+.hvlive .live{width:10px;height:10px;border-radius:999px;background:var(--accent);animation:hvpulse 1.6s ease-in-out infinite}
+@keyframes hvpulse{0%,100%{opacity:1}50%{opacity:.3}}
+@media (prefers-reduced-motion:reduce){.hvlive .live{animation:none}}
+.hvdrop{display:flex;flex-direction:column;gap:6px;justify-content:center;align-items:flex-start;text-align:left;padding:24px;border-radius:20px;border:2px dashed var(--line);background:transparent;color:var(--ink);font:inherit;cursor:pointer}
+.hvdrop:hover{border-color:var(--ink)}
+.hvdrop span{color:var(--ink-2)}
+.hvdrop small{color:var(--muted)}
+.hvlater{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:12px}
+.hvlater>div{display:flex;flex-direction:column;gap:6px;align-items:flex-start;padding:16px;border-radius:18px;background:var(--head)}
+.hvlater>div>span:not(.hvchip){color:var(--ink-2)}
+.hvdlg #pplCard{padding:0;background:transparent}
+/* The structure page */
+.sthead{display:flex;gap:14px;align-items:center;min-width:0}
+.sticon{flex:none;width:48px;height:48px;border-radius:14px;background:var(--lime);color:var(--night);display:grid;place-items:center;font-weight:800;font-size:20px}
+.ststeps{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.ststep{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:12px 14px;border-radius:18px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;text-align:left;cursor:pointer;min-width:0}
+.ststep.cur{border-color:var(--ink)}
+.ststep[aria-selected="true"]{background:var(--night);border-color:var(--night);color:#fff}
+.ststephead{display:flex;align-items:center;gap:8px}
+.stdot{width:24px;height:24px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:800;flex:none;background:var(--chip);color:var(--ink-2)}
+.ststep.done .stdot{background:var(--green-s);color:var(--green-t)}
+.ststep.cur .stdot{background:var(--lime);color:var(--night)}
+.ststepsub{font-size:13px;color:var(--muted)}
+.ststep.cur .ststepsub{color:var(--violet-t);font-weight:700}
+.ststep[aria-selected="true"] .ststepsub{color:var(--night-sub)}
+.ststepbox{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:12px 20px;padding:18px 20px;border-radius:20px;background:var(--head)}
+.ststepbox.cur{background:var(--night);color:#fff}
+.ststepbox>div{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1 1 320px}
+.ststepbox>div span{color:var(--ink-2)}
+.ststepbox.cur>div span{color:var(--night-sub)}
+.stgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,380px);gap:20px;align-items:start}
+.stmain,.stside{display:flex;flex-direction:column;gap:20px;min-width:0}
+@media (max-width:1000px){.stgrid{grid-template-columns:minmax(0,1fr)}}
+@media (max-width:760px){.ststeps{grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}}
+.stpreview .sthead td{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;background:var(--head)}
+.lstate.s-moved{background:var(--accent-s);color:var(--violet-t)}
+#stAllLines{align-self:flex-start}
+.stvers{display:flex;flex-direction:column;gap:8px}
+.stver{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px 16px;padding:14px 16px;border-radius:16px;background:var(--head)}
+.stver>div:first-child{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1 1 280px}
+.stver>div:first-child>span{color:var(--ink-2);font-size:13px}
+.stver .tools{display:flex;gap:8px;flex-wrap:wrap}
+.stclaims{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin:0;color:var(--ink-2)}
+.strest{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:12px 0;border-top:1px solid var(--rule)}
+.strest>div{display:flex;flex-direction:column;gap:2px;min-width:0}
+.strest>div>span{color:var(--muted);font-size:12px}
+.strest .link{align-self:flex-start;padding:0;font-size:13px}
+.strest .src{flex:none;font-size:12px;font-weight:700;padding:4px 10px;border-radius:999px;background:var(--chip);color:var(--ink-2);white-space:nowrap}
+.strest .src.amber{background:var(--amber-s);color:var(--amber-t)}
+#stStage{align-self:flex-start}
+.stneeds{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;line-height:1.45}
+.struns{display:flex;flex-direction:column;gap:10px}
+.strun{display:flex;gap:12px;align-items:flex-start}
+.strun>div{display:flex;flex-direction:column}
+.strun>div span{color:var(--muted);font-size:13px}
+.strundot{width:12px;height:12px;border-radius:999px;margin-top:5px;background:var(--track);flex:none}
+.strun.newest .strundot{background:var(--lime)}
+#stGround .stdcard{margin:0}
+@media (max-width:640px){.hvphtop h1{font-size:28px}.hvsec,.hvphead{padding:18px}}
+.hvtable td.r{white-space:nowrap}
 </style>
 </head>
 <body>
@@ -1479,6 +1574,7 @@ body[data-section="home"] .tbright .addinbtn{display:inline-flex}
     <button type="button" class="subtab" id="navReady">Model checks</button>
   </nav>
   <div class="subtools">
+    <button type="button" class="btn" id="navProj">Stage and specification</button>
     <button type="button" class="btn" id="navMaster">Your bill (Master BoQ)</button>
     <div class="modelpick">
       <button type="button" class="mbtn" id="modelBtn" aria-expanded="false" aria-controls="modelMenu"><b id="modelName">Model</b><span id="modelRev"></span><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 9l6 6 6-6"></path></svg></button>
@@ -1502,15 +1598,13 @@ body[data-section="home"] .tbright .addinbtn{display:inline-flex}
   </div>
 </div>
 <div class="subbar" id="subSettings">
-  <!-- Two levels (T-025): the firm's (its practice and wording, the modelling guide, its people; your Claude key) and this
-       project's (method, structures, documents, tolerances) -->
+  <!-- Your firm only since 21 Nov 2026 (the redesign's stage 2): its practice and wording, the modelling guide, its people, your
+       Claude key. The project's settings moved onto the project: its header, its structures, its claims and its bill -->
   <nav class="subtabs setgroups" aria-label="Settings">
     <span class="subgroup" id="setFirmLabel">Your firm</span><span class="subname" id="setFirmName"></span>
     <button type="button" class="subtab" id="btnConv">Practice and wording</button>
     <button type="button" class="subtab" id="navStd">Modelling guide</button>
     <button type="button" class="subtab" id="navFirm">People</button>
-    <span class="subgroup" id="setProjLabel">This project</span><span class="subname" id="setProjName"></span>
-    <button type="button" class="subtab" id="navProj">Inputs and tolerances</button>
   </nav>
   <div class="subtools">
   </div>
@@ -1531,6 +1625,8 @@ body[data-section="home"] .tbright .addinbtn{display:inline-flex}
   <div id="viewNext" hidden></div>
   <div id="viewHome" hidden></div>
   <div id="viewOv" hidden></div>
+  <!-- A structure: its steps, its bill, its versions and claims, what its bill rests on (the redesign's stage 3; structview.js) -->
+  <div id="viewSt" hidden></div>
   <!-- Settings › Firm › People: who is in the firm (everyone signed in with its email domain), the firm's name (homeview.js) -->
   <div id="viewFirm" hidden></div>
 
@@ -10976,6 +11072,8 @@ const Store = (() => {
       await F.updateDoc(F.doc(db, "projects", pid), { archived: v ?? F.deleteField() });
       return v;
     }),
+    // The contract number, from the project header (anyone who can edit the project)
+    saveProjectContract: (pid, contract) => wrap(async () => { need(); await F.updateDoc(F.doc(db, "projects", pid), { contract: String(contract || "").trim().slice(0, 80) }); }, "saveProject"),
     // A new project belongs to the firm (when there is one); its id is a readable start and 20 random characters
     createProject: ({ name, contract }) => wrap(async () => {
       need();
@@ -11258,7 +11356,7 @@ const Store = (() => {
     }),
   };
   // Saving: every save says it worked, or why not (the header shows it, never hidden in a corner)
-  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", deleteProject: "deleting the project", setArchived: "archiving the project", linkModel: "model’s project" };
+  const NAMES = { saveCertificate: "certificate", saveMaster: "BoQ", saveModel: "model", saveReview: "decision", saveNote: "note", saveInputs: "project inputs", saveDocument: "project document", saveDecisions: "bill decisions", saveOverlay: "corrections kept in SolvBoQ", signBill: "signed bill", lockBill: "imported bill", createProject: "project", saveProject: "project details", deleteProject: "deleting the project", setArchived: "archiving the project", linkModel: "model’s project" };
   for (const [k, what] of Object.entries(NAMES)) {
     const f = api[k];
     api[k] = async (...a) => {
@@ -11368,7 +11466,7 @@ const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decid
 function load(records, name, meta = {}) {
   if (typeof decFlush === "function") decFlush();   // the model being left: its decisions saved, none carried into the next
   if (typeof ovFlush === "function") ovFlush();     // and its corrections kept in SolvBoQ: never laid on the next model
-  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "map", "conv", "next"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "st", "map", "conv", "next", "firm"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   engineRunOn(records);
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -11466,12 +11564,14 @@ function render() {
   $("viewSign").hidden = state.view !== "sign";
   $("viewHome").hidden = state.view !== "home";
   $("viewOv").hidden = state.view !== "ov";
+  $("viewSt").hidden = state.view !== "st";
   $("viewFirm").hidden = state.view !== "firm";
   $("viewNext").hidden = state.view !== "next";
   // The top bar's tab, the sub-bar under Bills or Settings, and the page heading (homeview.js)
   navMark();
   if (state.view === "home") return renderHome();
   if (state.view === "ov") return renderOv();
+  if (state.view === "st") return renderSt();
   if (state.view === "next") return renderNext();
   if (state.view === "firm") return renderFirm();
   // The master BoQ needs the model; the fix list is the model's
@@ -12638,19 +12738,19 @@ function mapEvidence(a) {
     rows.push(`${a.civil ? "Replacement depth" : "Excavation depth"} ${fmt2(a[k])} m: ${a.srcText?.[k] || word[a.src?.[k]] || "assumed"}.`);
   }
   if (a.geo) rows.push(`Rock: ${SANS_D_CLASSES.filter(([c]) => a.geo.shares[c] > 0).map(([c, l]) => `${l.toLowerCase()} ${Math.round(a.geo.shares[c] * 100)}%`).join(", ") || "none"} over ${fmt2(a.geo.depth)} m, from ${a.geo.where}${a.src?.rockShare === "model" ? " (hard rock set for this model instead)" : ""}.`);
-  else if (!a.manhole) rows.push(`Hard rock ${Math.round((a.rockShare || 0) * 100)}%: ${a.src?.rockShare === "model" ? "set for this model" : "his provisional allowance; classify the borehole logs under Project to bill it from them"}.`);
+  else if (!a.manhole) rows.push(`Hard rock ${Math.round((a.rockShare || 0) * 100)}%: ${a.src?.rockShare === "model" ? "set for this model" : "his provisional allowance; classify the borehole logs on the structure’s page to bill it from them"}.`);
   return h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Where these figures come from"),
     ...rows.map((t) => h("p", { class: "edtext" }, t)),
     a.geo?.check ? h("p", { class: "edtext warn" }, a.geo.check + ".") : null,
     S ? h("span", { class: "edsub" }, `This model is ${S.name || "a structure"} in the project: ${(S.kindTitle || "kind not set").toLowerCase()}.`)
-      : h("span", { class: "edsub" }, "This model isn’t linked to a structure in the project, so these are assumed. ", h("button", { type: "button", class: "link accent", onclick: () => goProj() }, "Set it up under Project")));
+      : h("span", { class: "edsub" }, "This model isn’t linked to a structure in the project, so these are assumed. ", h("button", { type: "button", class: "link accent", onclick: () => stGoHere("stRests") }, "Open the structure’s page")));
 }
 // A banner over the bill when the project's inputs change how to read it
 function mapInputsBanner() {
   const I = state.result?.inputs, out = [];
   if (I?.methodSet && I.method !== "sans1200") out.push(`The project calls up ${MEASUREMENT_METHODS.find((m) => m.id === I.method)?.title || I.method}. SolvBoQ bills to SANS 1200 Clause 8 so far: these items and clause numbers are SANS 1200’s.`);
   if (I && !I.structure && I.count) out.push("This model isn’t linked to one of the project’s structures, so its kind, grade and geotech are guessed or assumed.");
-  return out.length ? h("div", { class: "banner" }, h("span", null, out.join(" "), " ", h("button", { type: "button", class: "link accent", onclick: () => goProj() }, "Open Project"))) : null;
+  return out.length ? h("div", { class: "banner" }, h("span", null, out.join(" "), " ", h("button", { type: "button", class: "link accent", onclick: () => stGoHere("stRests") }, "Open the structure’s page"))) : null;
 }
 
 // ----- The item editor -----
@@ -12932,7 +13032,7 @@ function editorFor(L, lines) {
     const kgShown = Number.isFinite(e.rebarKg) ? e.rebarKg : sKg != null ? sKg : kg;
     chg.push(h("div", { class: "edbox" }, h("span", { class: "edlabel" }, "Reinforcement estimate ", h("span", { class: "edsub" }, `· ${fmtN(rc, 1)} m³ reinforced concrete`)),
       num("rebarKg", "Steel per m³", "kg", kgShown), num("rebarMild", "Mild steel share", "%", mild, 100),
-      h("span", { class: "edsub" }, Number.isFinite(e.rebarKg) ? "Steel per m³: set for this model." : sKg != null ? `Steel per m³: the rate for ${St.name || "the structure"} in the project, ${srcWords(St.srcOf("rebarKg"))}.` : `Steel per m³: assumed (${kg} kg/m³ for ${state.result.structure === "civil" ? "tanks" : "buildings"}). Set the structure’s rate under Project.`)));
+      h("span", { class: "edsub" }, Number.isFinite(e.rebarKg) ? "Steel per m³: set for this model." : sKg != null ? `Steel per m³: the rate for ${St.name || "the structure"} in the project, ${srcWords(St.srcOf("rebarKg"))}.` : `Steel per m³: assumed (${kg} kg/m³ for ${state.result.structure === "civil" ? "tanks" : "buildings"}). Set the structure’s rate on its page.`)));
   }
   // Why a built-in rule chose this item (said above when the line is his to confirm)
   if (ruleWhy.length && L.status !== "confirm") chg.push(h("div", { class: "edfield" }, h("span", { class: "edlabel" }, "Why this item"), ...ruleWhy.map((t) => h("p", { class: "edtext" }, t))));
@@ -13203,7 +13303,7 @@ function docSourceBox(L) {
     h("span", { class: "edsub" }, docLineSource(L) + "."),
     d.quote ? h("p", { class: "edtext" }, `The schedule says: “${d.quote}”`) : null,
     d.check ? h("p", { class: "edtext" + (/don’t agree/.test(d.check) ? " warn" : "") }, `The figures were added up by SolvBoQ, not by Claude: the total ${d.check}.`) : null,
-    h("button", { type: "button", class: "link accent", onclick: () => { state.view = "proj"; render(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "See the document under Project"));
+    h("button", { type: "button", class: "link accent", onclick: () => { goOv(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 50); } }, "See the document on the project"));
 }
 // ----- Explain this figure (the bill reviewer, journey step 5; assist.js): Claude puts SolvBoQ's own working into plain words. It is
 // given the working and nothing else, and any figure it writes that isn't in the working is pointed out: it explains, never calculates.
@@ -15220,7 +15320,7 @@ function stdWorked(w) {
 function stdKinds() {
   return h("section", { class: "card stdbody stdmats" },
     h("div", { class: "stdintro" }, h("h2", null, "Structures and what each needs"),
-      h("p", { class: "sub" }, "Set per structure under Project, by the engineer. The kinds follow the Uniclass 2015 Entities table (a manhole is a system under a pipeline there). Tables of April 2022: check the codes against NBS before relying on them.")),
+      h("p", { class: "sub" }, "Set per structure on the structure’s page, by the engineer. The kinds follow the Uniclass 2015 Entities table (a manhole is a system under a pipeline there). Tables of April 2022: check the codes against NBS before relying on them.")),
     h("table", { class: "stdtable stdneeds" }, h("thead", null, h("tr", null, h("th", null, "Kind"), h("th", null, "Uniclass"), h("th", null, "How it’s billed"), h("th", null, "The engineer supplies"))),
       h("tbody", null, STRUCTURE_KINDS.map((k) => h("tr", null, h("td", null, h("b", null, k.title), k.grade ? h("div", { class: "sub" }, `Standard grade ${k.grade}`) : null),
         h("td", null, k.uniclass.map(([c, t]) => h("div", null, h("span", { class: "stduni" }, c), " ", t))), h("td", null, k.rule),
@@ -15555,8 +15655,11 @@ async function pplLoad(force) {
   PPL.busy = "";
   pplRedraw();
 }
-// The card is on the project overview (homeview.js)
-function pplRedraw() { if (state.view === "ov" && typeof renderOv === "function") renderOv(); }
+// The card opens from the project header’s people (homeview.js hvPeopleDialog); Settings › People is the firm’s
+function pplRedraw() {
+  const box = $("pplDlgBody"); if (box) box.replaceChildren(pplCard() || "");   // Invite, from the project header (homeview.js)
+  if (state.view === "ov" && typeof renderOv === "function") renderOv();
+}
 async function pplDo(what, fn, done) {
   PPL.busy = what; PPL.err = ""; pplRedraw();
   try { const r = await fn(); if (done) toast(typeof done === "function" ? done(r) : done); } catch (e) { PPL.err = e.message; }
@@ -15646,7 +15749,7 @@ function renderFirm() {
       h("tr", null, h("td", null, h("b", null, "Practice and wording")), h("td", null, typeof Profiles !== "undefined" ? Profiles.where() : "")),
       h("tr", null, h("td", null, h("b", null, "Modelling guide")), h("td", null, "The cards, the codes for Revit, the add-in and the files for outside designers: the same for everyone.")),
       h("tr", null, h("td", null, h("b", null, "Your Claude key")), h("td", null, u ? "Kept with your account, readable by you alone (Practice and wording › Claude)." : "Kept in this browser until you sign in.")),
-      h("tr", null, h("td", null, h("b", null, "Project settings")), h("td", null, "Method of measurement, structures, documents and tolerances: under Project, kept with the project.")),
+      h("tr", null, h("td", null, h("b", null, "Project settings")), h("td", null, "Method of measurement (the project header), structures (the project home, each with its own page), documents and tolerances (the project home): kept with the project.")),
       h("tr", null, h("td", null, h("b", null, "Outside people")), h("td", null, "Invited to one project at a time, on its Overview’s People card.")))));
   if (!u) { v.replaceChildren(h("section", { class: "card stdhead" }, h("div", { class: "stdintro" }, h("h2", null, "Your firm"), h("p", null, "Sign in to see your firm. Everyone signed in with your firm’s email address is in it."))), kept); return; }
   if (!f) {
@@ -15676,6 +15779,9 @@ function renderFirm() {
 Store.onUser(() => { FIRM.data = null; FIRM.for = ""; if (state.view === "firm") renderFirm(); });
 
 // ===== Project: the top of the bill's information, entered once by the engineer =====
+// Since 21 Nov 2026 (the UI redesign) there is no project settings page: the method is on the project header (piMethodBody), the
+// tolerances on its Claims (piTolBox), each structure's figures and ground on its own page (piStructure, piReportCard, structview.js),
+// and the bill's stage and specification on their own page under the bill (renderProj) until the bill page has them.
 // The project's method of measurement, stage, particular specification and policy items; then each structure: its kind
 // (Uniclass), the models it covers, its grade and reinforcement rate, and its geotech as he works it out from the report
 // (boreholes, layers and his SANS 1200 D reading of each). The data and its rules are in inputs.js; the engine reads it
@@ -15722,20 +15828,27 @@ function piTolSet(k, v) {
   const d = PI_TOL.find((x) => x[0] === k), x = inNum(v, 0, d[3]);
   if (x == null) return toast(`Give a figure from 0 to ${d[3]}%.`);
   const p = piDoc().project; p.tolerances = { ...(p.tolerances || {}), [k]: x === d[2] ? null : x }; p.by = piWho(); p.at = new Date().toISOString();
-  piChanged(state.view === "proj"); piTolApply();
+  piChanged(["proj", "ov", "st"].includes(state.view)); piTolApply();
 }
 // After the inputs change: the model is checked again with them, and the page shown again
 function piAfter() {
   piTolApply();
   if (state.records && typeof rerunChecks === "function") rerunChecks();
-  if (state.view === "proj") renderProj(); else if (["overview", "detail", "map", "ov"].includes(state.view)) render();
+  if (["proj", "st"].includes(state.view)) piRedraw(); else if (["overview", "detail", "map", "ov"].includes(state.view)) render();
+}
+// The inputs are shown on the project home (method, tolerances), the structure page (its figures and ground) and the bill's stage
+// and specification page: whichever is open is drawn again
+function piRedraw() {
+  if (state.view === "st" && typeof renderSt === "function") return renderSt();
+  if (state.view === "ov" && typeof renderOv === "function") return renderOv();
+  if (state.view === "proj") return renderProj();
 }
 function piChanged(rerender = true) {
   PI.doc = normInputs(PI.doc);
   clearTimeout(PI.timer);
   PI.timer = setTimeout(piSave, 500);
   if (state.records && typeof rerunChecks === "function") rerunChecks();
-  if (rerender) renderProj();
+  if (rerender) piRedraw();
 }
 async function piSave() {
   const doc = normInputs(PI.doc);
@@ -15743,7 +15856,7 @@ async function piSave() {
     try { PI.saving = "Saving…"; await Store.saveInputs(CL.pid, doc); PI.pid = CL.pid; PI.saving = `Saved to ${CL.projects.find((p) => p.id === CL.pid)?.name || "the project"}`; PI.err = ""; }
     catch (e) { piLocal(doc); PI.err = `Saved in this browser only: ${e.message}`; PI.saving = ""; }
   } else { piLocal(doc); PI.saving = "Saved in this browser. Open a project so it’s kept with the project."; }
-  if (state.view === "proj") { const s = $("piSaveLine"); if (s) s.textContent = PI.err || PI.saving; }
+  const line = $("piSaveLine"); if (line) line.textContent = PI.err || PI.saving;
 }
 // A new project's inputs, from the New project dialog: its method and the method's amendments (structures come in with their
 // models since 21 Nov 2026), saved before the project is opened so
@@ -15759,88 +15872,83 @@ async function piSetUp(pid, got) {
 // A value changed: keep who changed it and when, with the source he gave
 function piStamp(s, field) { s.src ||= {}; const cur = s.src[field] || {}; s.src[field] = { ...cur, by: piWho(), at: new Date().toISOString() }; s.by = piWho(); s.at = new Date().toISOString(); }
 
-// ----- The page -----
-// The project's settings (reworked 20 Nov 2026): plain cards in the order he sets a project up, nothing folded away. The method of
-// measurement, the structures, the ground report, the documents, the bill (stage, specification, policy), the tolerances, what is still
-// needed, and deleting the project. Every change redraws the page; the field he was in keeps the focus, by id or by its place.
+// ----- The pieces other pages show (the redesign's stage 2, 21 Nov 2026: the project's settings left Settings) -----
+// The method of measurement and its amendments: the project header's “Measured under” opens it in a dialog
+function piMethodBody() {
+  const p = piDoc().project;
+  return h("div", { class: "setgrid", id: "piMethodCard" },
+    h("div", null,
+      ...MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" }, h("input", { type: "radio", name: "piMethod", checked: (p.method || "sans1200") === m.id ? true : null, disabled: m.built ? null : true, onchange: () => { p.method = m.id; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); piMethodDlgRedraw(); } }),
+        h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"), h("span", { class: "sub" }, m.note)))),
+      p.method && !MEASUREMENT_METHODS.find((m) => m.id === p.method)?.built ? h("div", { class: "edprob" }, "SolvBoQ bills to SANS 1200 Clause 8 so far: the items and clause numbers in the bill are SANS 1200’s, not this method’s.") : null,
+      !p.method ? h("span", { class: "edsub" }, "Not chosen yet: SANS 1200 Clause 8 is assumed.") : null),
+    // The contract's amendments laid on the method's pack (methods/pack.js), each with its version; the signed bill records them
+    h("div", null, ...(() => { const pk = packFind(p.method || "sans1200"); if (!pk) return [];
+      const am = packAmendments(pk.id, p.overlays);
+      return [h("span", { class: "edlabel", id: "piPackHead" }, `Measured with the ${pk.name} pack, version ${pk.version}`),
+        ...am.map((a) => h("label", { class: "pichoice", "data-overlay": a.id }, h("input", { type: "checkbox", checked: a.on ? true : null, onchange: (e) => {
+            const on = new Set(am.filter((x) => x.on).map((x) => x.id)); if (e.target.checked) on.add(a.id); else on.delete(a.id);
+            p.overlays = [...on]; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); piMethodDlgRedraw(); } }),
+          h("span", null, h("b", null, a.name), h("span", { class: "sub" }, ` (version ${a.version}) `, a.note)))),
+        p.overlays == null ? h("span", { class: "edsub" }, "Not chosen: the pack’s usual amendments are used.") : null]; })()));
+}
+// “Measured under …” in a few words: the method and whether his numbering is on
+function piMethodText() {
+  const p = piDoc().project, id = p.method || "sans1200", pk = packFind(id);
+  const short = (typeof HV_METHOD_SHORT !== "undefined" && HV_METHOD_SHORT[id]) || (MEASUREMENT_METHODS.find((m) => m.id === id)?.title || id).replace(/\s*\(.*$/, "");
+  const on = pk ? packAmendments(pk.id, p.overlays).filter((a) => a.on) : [];
+  return `${short}${on.length ? ` · ${on.some((a) => /particular specification/i.test(a.name)) ? "your PS numbering" : plural(on.length, "amendment")}` : ""}${p.method ? "" : " (assumed)"}`;
+}
+function piMethodDlgRedraw() { const box = $("piMethodDlgBody"); if (box) box.replaceChildren(piMethodBody()); }
+// The tolerances, as one sentence with Change (on the project home's Claims) or as the boxes to change them
+function piTolText() {
+  return h("span", { id: "piTolText" }, "Flagging lines claimed more than ", h("b", null, `${piTol("overYours")}%`), " over the signed quantity, and more than ",
+    h("b", null, `${piTol("overBill")}%`), " over the certificate’s own bill quantity. Your bill’s comparison counts the model as matching your figure within ", h("b", null, `${piTol("matches")}%`), ".");
+}
+function piTolBox() {
+  const p = piDoc().project;
+  return h("div", { class: "pifield", id: "piTols" },
+    ...PI_TOL.map(([k, label, , max, why]) => h("label", { class: "edrow", title: why }, label,
+      h("span", null, h("input", { id: `piTol_${k}`, class: "edinput", type: "number", min: "0", max: String(max), step: "any", value: String(piTol(k)), onchange: (e) => piTolSet(k, e.target.value) }), h("span", { class: "eunit" }, "%")))),
+    h("span", { class: "edsub" }, PI_TOL.map(([k]) => p.tolerances?.[k] == null ? null : k).filter(Boolean).length ? "Changed for this project." : "SolvBoQ’s defaults."));
+}
+
+// ----- The bill's stage and specification (until the bill page has them, the redesign's stage 4) -----
+// Every change redraws the page; the field he was in keeps the focus, by id or by its place.
 const PI_FOCUSABLE = "input,select,textarea,button,summary,a[href],[tabindex]";
-function renderProj() {
-  const v = $("viewProj"); if (!v) return;
-  const d = piDoc(), p = d.project, act = document.activeElement, focus = act?.id;
+function piKeepFocus(v, draw) {
+  const act = document.activeElement, focus = act && v.contains(act) ? act.id : "";
   const focusAt = !focus && act && v.contains(act) ? [...v.querySelectorAll(PI_FOCUSABLE)].indexOf(act) : -1;
-  const proj = CL.projects?.find((x) => x.id === CL.pid);
-  const stage = p.stage || "tender";
-  const missing = inputsMissing(d, stage), props = piProposals();
-  const card = (id, title, sub, ...kids) => h("section", { class: "card setcard", id }, h("h2", null, title), sub ? h("p", { class: "sub" }, sub) : null, ...kids);
-  v.replaceChildren(
-    card("piIntro", proj ? `Setting up ${proj.name}` : "Setting up this project",
-      state.records && !state.fromSample
-        ? "A few minutes, mostly checking: the structures SolvBoQ found in the model, the geotechnical report once, and what Claude read from it. Everything else has a default, marked as assumed in the bill until you change it."
-        : "A few minutes, once per project: the method of measurement, the structures the bill prices separately with their kind, then the geotechnical report and the drawings and schedules. Everything else has a default, marked as assumed in the bill until you change it.",
-      h("p", { class: "sub", id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open (choose one at the top)."))),
-
-    card("piMethodCard", "Method of measurement", "The one the contract’s pricing assumptions call up, and the contract’s amendments laid on it. A signed bill records both.",
-      h("div", { class: "setgrid" },
-        h("div", null,
-          ...MEASUREMENT_METHODS.map((m) => h("label", { class: "pichoice" }, h("input", { type: "radio", name: "piMethod", checked: (p.method || "sans1200") === m.id ? true : null, onchange: () => { p.method = m.id; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
-            h("span", null, h("b", null, m.title), m.built ? null : h("span", { class: "pitag" }, "not built yet"), h("span", { class: "sub" }, m.note)))),
-          p.method && !MEASUREMENT_METHODS.find((m) => m.id === p.method)?.built ? h("div", { class: "edprob" }, "SolvBoQ bills to SANS 1200 Clause 8 so far: the items and clause numbers in the bill are SANS 1200’s, not this method’s.") : null,
-          !p.method ? h("span", { class: "edsub" }, "Not chosen yet: SANS 1200 Clause 8 is assumed.") : null),
-        // The contract's amendments laid on the method's pack (methods/pack.js), each with its version; the signed bill records them
-        h("div", null, ...(() => { const pk = packFind(p.method || "sans1200"); if (!pk) return [];
-          const am = packAmendments(pk.id, p.overlays);
-          return [h("span", { class: "edlabel", id: "piPackHead" }, `Measured with the ${pk.name} pack, version ${pk.version}`),
-            ...am.map((a) => h("label", { class: "pichoice", "data-overlay": a.id }, h("input", { type: "checkbox", checked: a.on ? true : null, onchange: (e) => {
-                const on = new Set(am.filter((x) => x.on).map((x) => x.id)); if (e.target.checked) on.add(a.id); else on.delete(a.id);
-                p.overlays = [...on]; p.by = piWho(); p.at = new Date().toISOString(); piChanged(); } }),
-              h("span", null, h("b", null, a.name), h("span", { class: "sub" }, ` (version ${a.version}) `, a.note)))),
-            p.overlays == null ? h("span", { class: "edsub" }, "Not chosen: the pack’s usual amendments are used.") : null]; })()))),
-
-    props,
-    // The structures before the report and the documents: both are read for the structures listed here
-    h("section", { class: "card stdbody stdmats", id: "piStructs" },
-      h("div", { class: "stdintro" }, h("h2", null, "Structures"),
-        h("p", { class: "sub" }, "One per structure the bill prices separately (SANS 1200 D: separate items for separate structures). Its name is the SolvBoQ Structure label on its elements; a model with no labels belongs to the structure that lists it.")),
-      d.structures.length ? null : h("p", { class: "sub" }, "None yet. Add each structure the bill prices separately and choose its kind. Without them, each model is one structure and its kind is taken from its title."),
-      ...d.structures.map((s, i) => piStructure(s, i)),
-      h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", onclick: piAddStructure }, "Add a structure"))),
-    piReportCard(),
-    typeof docsCard === "function" ? docsCard() : null,
-
-    card("piBillCard", "The bill", "What it is for, and what the contract adds to it.",
-      h("div", { class: "setgrid" },
-        h("div", null,
-          h("span", { class: "edlabel" }, "Stage of the bill"),
-          h("div", { class: "seg", role: "group", "aria-label": "Stage" }, ...STAGES.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(stage === k), onclick: () => { p.stage = k; piChanged(); } }, l))),
-          h("span", { class: "edsub" }, "What’s still needed (below) is listed for this stage."),
-          h("label", { class: "edlabel", for: "piSpec" }, "Client’s particular specification"),
-          h("input", { id: "piSpec", class: "piinput", value: p.spec, placeholder: "For example: PD particular specification, rev 2", onchange: (e) => { p.spec = e.target.value; piChanged(); } }),
-          h("label", { class: "edlabel", for: "piAmend" }, "Amendments to the method in the contract"),
-          h("textarea", { id: "piAmend", class: "lnwhy", rows: 2, placeholder: "As the pricing assumptions word them", onchange: (e) => { p.amendments = e.target.value; piChanged(); } }, p.amendments)),
-        h("div", null,
-          h("span", { class: "edlabel" }, "Provisional sums and contingencies"),
-          h("span", { class: "edsub" }, "Priced from the specification, so they’re listed here for the general bill, not generated from the model."),
-          h("label", { class: "edrow" }, "Contingencies", h("span", null, h("input", { id: "piCont", class: "edinput", inputmode: "decimal", value: p.contingency ?? "", onchange: (e) => { p.contingency = e.target.value; piChanged(); } }), h("span", { class: "eunit" }, "%"))),
-          ...p.provisional.map((x, i) => h("div", { class: "pirow" },
-            h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
-            h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
-            h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
-          h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; renderProj(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum"))))),
-
-    card("piTolCard", "Tolerances", "How far a figure may be off before SolvBoQ flags it, for everyone on this project.",
-      h("div", { class: "pifield", id: "piTols" },
-        ...PI_TOL.map(([k, label, , max, why]) => h("label", { class: "edrow", title: why }, label,
-          h("span", null, h("input", { id: `piTol_${k}`, class: "edinput", type: "number", min: "0", max: String(max), step: "any", value: String(piTol(k)), onchange: (e) => piTolSet(k, e.target.value) }), h("span", { class: "eunit" }, "%")))),
-        h("span", { class: "edsub" }, PI_TOL.map(([k]) => p.tolerances?.[k] == null ? null : k).filter(Boolean).length ? "Changed for this project." : "SolvBoQ’s defaults."))),
-
-    card("piMissing", `Still needed for the ${stage} bill`, "Who supplies it, and what SolvBoQ does until then. The modeller’s part is in Revit (Settings › Modelling guide, and the add-in’s issues panel).",
-      missing.length ? h("div", { class: "tablewrap" }, h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "For"), h("th", null, "What"), h("th", null, "Who"), h("th", null, "Until then"))),
-        h("tbody", null, missing.map((m) => h("tr", null, h("td", null, m.level), h("td", null, h("b", null, m.need.what), h("div", { class: "sub" }, m.need.why)), h("td", null, ACTORS[m.need.who] || m.need.who), h("td", null, IF_MISSING[m.need.missing] || ""))))))
-        : h("p", null, "Nothing missing for this stage at the project level.")),
-    typeof hvArchiveCard === "function" ? hvArchiveCard() : null,
-    typeof hvDeleteCard === "function" ? hvDeleteCard() : null);
+  draw();
   if (focus && $(focus)) $(focus).focus({ preventScroll: true });
   else if (focusAt >= 0) v.querySelectorAll(PI_FOCUSABLE)[focusAt]?.focus({ preventScroll: true });
+}
+function renderProj() {
+  const v = $("viewProj"); if (!v) return;
+  piKeepFocus(v, () => v.replaceChildren(piBillCard()));
+}
+function piBillCard() {
+  const p = piDoc().project, stage = p.stage || "tender", proj = CL.projects?.find((x) => x.id === CL.pid);
+  return h("section", { class: "card setcard", id: "piBillCard" }, h("h2", null, "The bill’s stage and specification"),
+    h("p", { class: "sub" }, "What the bills of this project are for, and what the contract adds to them. ", h("span", { id: "piSaveLine" }, PI.err || PI.saving || (piOnCloud() ? `Kept with ${proj ? proj.name : "the project"}.` : "Kept in this browser until a project is open."))),
+    h("div", { class: "setgrid" },
+      h("div", null,
+        h("span", { class: "edlabel" }, "Stage of the bill"),
+        h("div", { class: "seg", role: "group", "aria-label": "Stage" }, ...STAGES.map(([k, l]) => h("button", { type: "button", "aria-pressed": String(stage === k), onclick: () => { p.stage = k; piChanged(); } }, l))),
+        h("span", { class: "edsub" }, "What’s still needed is listed for this stage under Waiting on you."),
+        h("label", { class: "edlabel", for: "piSpec" }, "Client’s particular specification"),
+        h("input", { id: "piSpec", class: "piinput", value: p.spec, placeholder: "For example: PD particular specification, rev 2", onchange: (e) => { p.spec = e.target.value; piChanged(); } }),
+        h("label", { class: "edlabel", for: "piAmend" }, "Amendments to the method in the contract"),
+        h("textarea", { id: "piAmend", class: "lnwhy", rows: 2, placeholder: "As the pricing assumptions word them", onchange: (e) => { p.amendments = e.target.value; piChanged(); } }, p.amendments)),
+      h("div", null,
+        h("span", { class: "edlabel" }, "Provisional sums and contingencies"),
+        h("span", { class: "edsub" }, "Priced from the specification, so they’re listed here for the general bill, not generated from the model."),
+        h("label", { class: "edrow" }, "Contingencies", h("span", null, h("input", { id: "piCont", class: "edinput", inputmode: "decimal", value: p.contingency ?? "", onchange: (e) => { p.contingency = e.target.value; piChanged(); } }), h("span", { class: "eunit" }, "%"))),
+        ...p.provisional.map((x, i) => h("div", { class: "pirow" },
+          h("input", { id: `piPsD${i}`, class: "piinput", value: x.description, "aria-label": "Provisional sum", onchange: (e) => { x.description = e.target.value; piChanged(); } }),
+          h("input", { id: `piPsA${i}`, class: "edinput", inputmode: "decimal", value: x.amount ?? "", "aria-label": "Amount in rand", onchange: (e) => { x.amount = e.target.value; piChanged(); } }),
+          h("button", { type: "button", class: "link", onclick: () => { p.provisional.splice(i, 1); piChanged(); } }, "Remove"))),
+        h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", onclick: () => { p.provisional.push({ description: "New provisional sum", amount: null }); PI.doc.project = p; piRedraw(); setTimeout(() => $(`piPsD${p.provisional.length - 1}`)?.select(), 0); } }, "Add a provisional sum")))));
 }
 
 function piAddStructure() {
@@ -15970,7 +16078,7 @@ function piProposals() {
       h("p", { class: "sub" }, "Found in the model. Check each name and kind, then add them: the kind decides the earthworks rule, the standard grade and what else it needs.")),
     h("div", { class: "piprops" }, list.map((x, i) => { const e = edit(x);
       return h("div", { class: "piprop" + (e.skip ? " off" : "") },
-        h("label", { class: "edcheck" }, h("input", { type: "checkbox", id: `ppOn${i}`, checked: e.skip ? null : true, onchange: (ev) => { e.skip = !ev.target.checked; renderProj(); } }), h("span", { class: "sr" }, "Add this one")),
+        h("label", { class: "edcheck" }, h("input", { type: "checkbox", id: `ppOn${i}`, checked: e.skip ? null : true, onchange: (ev) => { e.skip = !ev.target.checked; piRedraw(); } }), h("span", { class: "sr" }, "Add this one")),
         h("input", { id: `ppName${i}`, class: "piinput", value: e.name, "aria-label": "Name", onchange: (ev) => { e.name = ev.target.value.trim() || x.name; } }),
         h("select", { id: `ppKind${i}`, class: "piinput", "aria-label": "Kind", onchange: (ev) => { e.kind = ev.target.value; } }, STRUCTURE_KINDS.map((k) => h("option", { value: k.id, selected: k.id === e.kind ? true : null }, k.title))),
         h("span", { class: "edsub" }, x.why)); })),
@@ -15988,7 +16096,7 @@ const PI_REPORT_SCHEMA = { type: "object", additionalProperties: false, required
 async function piReadReport(file) {
   if (!sampleFn) return toast("Add your Claude API key under Settings › Practice and wording › Claude (your key) first.");
   if (!globalThis.pdfjsLib) return toast("The PDF reader isn’t in this copy of the page.");
-  const say = (m) => { PI.reading = m; renderProj(); };
+  const say = (m) => { PI.reading = m; piRedraw(); };
   try {
     say("Reading the report…");
     const doc = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()), verbosity: 0, isEvalSupported: false }).promise;
@@ -16011,15 +16119,15 @@ async function piReadReport(file) {
       { schema: PI_REPORT_SCHEMA, effort: "high", maxTokens: 16000 });
     const it = out?.items?.[0];
     PI.reading = "";
-    if (!it) { toast("Claude couldn’t read that report. Enter the depth and logs by hand under each structure."); return renderProj(); }
+    if (!it) { toast("Claude couldn’t read that report. Enter the depth and logs by hand under each structure."); return piRedraw(); }
     const logs = (it.logs || []).map((x) => { const hole = normInputs({ structures: [{ name: "x", geotech: { holes: [x] } }] }).structures[0]?.geotech.holes[0]; return hole && hole.strata.length ? { ...hole, near: inStr(x.near, 80) } : null; }).filter(Boolean);
     const num = (v, lo, hi) => (typeof v === "number" && v >= lo && v <= hi ? Math.round(v * 100) / 100 : null);
     PI.read = { file: file.name, depth: num(it.depth, 0.1, 30), depthKind: it.depthKind || "", depthPage: inStr(it.depthPage, 40), depthQuote: inStr(it.depthQuote, 300), water: num(it.water, 0, 100), waterPage: inStr(it.waterPage, 40), logs };
     PI.keep = new Set(logs.map((l, i) => i));
     if (typeof docsNoteGround === "function") docsNoteGround(file, PI.read);
     PI.to = new Set(piDoc().structures.filter((s) => s.kind !== "linear").map((s) => s.id));
-    renderProj();
-  } catch (e) { PI.reading = ""; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
+    piRedraw();
+  } catch (e) { PI.reading = ""; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); piRedraw(); }
 }
 function piReportCard() {
   const d = piDoc(), r = PI.read, cls = (c) => (SANS_D_CLASSES.find((x) => x[0] === c) || [, "not classified"])[1].toLowerCase();
@@ -16057,7 +16165,7 @@ function piReportCard() {
         : h("p", { class: "edtext warn" }, "Add the structures first (step 1, or Add a structure below), then use the report for them."),
       h("div", { class: "tools" },
         h("button", { type: "button", class: "btn sm dark", disabled: !targets.length ? true : null, onclick: use }, "Use it"),
-        h("button", { type: "button", class: "btn sm", onclick: () => { PI.read = null; renderProj(); } }, "Discard"))),
+        h("button", { type: "button", class: "btn sm", onclick: () => { PI.read = null; piRedraw(); } }, "Discard"))),
     pick);
 }
 
@@ -16092,7 +16200,7 @@ async function docsLoad() {
   } catch (e) { DOCS.err = e.message; }
   docsAfter();
 }
-function docsAfter() { if (state.view === "proj" && typeof renderProj === "function") renderProj(); else if (state.view === "ov" && typeof renderOv === "function") renderOv(); }
+function docsAfter() { if (["proj", "ov", "st"].includes(state.view) && typeof piRedraw === "function") piRedraw(); }
 async function docsSave(d, quiet) {
   const doc = docNorm(d);
   const i = DOCS.list.findIndex((x) => x.id === doc.id); if (i >= 0) DOCS.list[i] = doc; else DOCS.list.push(doc);
@@ -16130,7 +16238,7 @@ function docsUndo(d, a) {
   docsDecide(d, a, "open"); docsSave(d, true); toast("Back to waiting for you"); docsRefresh();
 }
 function docsSetStructure(d, a, sid) { d.decided ||= {}; d.decided[a.id] = { ...(d.decided[a.id] || {}), status: d.decided[a.id]?.status || "open", structure: sid }; docsSave(d); }
-function docsRefresh() { if (state.view === "proj") renderProj(); else if (state.view === "next" && typeof renderNext === "function") renderNext(); else if (typeof render === "function") render(); }
+function docsRefresh() { if (["proj", "ov", "st"].includes(state.view)) piRedraw(); else if (state.view === "next" && typeof renderNext === "function") renderNext(); else if (typeof render === "function") render(); }
 
 // ----- Adding and reading a document -----
 async function docsPdfPages(file) {
@@ -16145,7 +16253,7 @@ async function docsPdfPages(file) {
 }
 async function docsAdd(file) {
   const id = "d" + Date.now().toString(36);
-  DOCS.busy[id] = "Reading the PDF…"; renderProj();
+  DOCS.busy[id] = "Reading the PDF…"; piRedraw();
   try {
     const pages = await docsPdfPages(file), text = docText(pages);
     const structs = docsStructures(), model = docsModelStructure();
@@ -16154,7 +16262,7 @@ async function docsAdd(file) {
     delete DOCS.busy[id];
     await docsSave(d);
     if (text.replace(/--- page \d+ ---/g, "").trim().length < 100) toast("This PDF has no readable text (a scan?): Claude can’t read it. Type its figures under the structure instead.");
-  } catch (e) { delete DOCS.busy[id]; toast(e.message); renderProj(); }
+  } catch (e) { delete DOCS.busy[id]; toast(e.message); piRedraw(); }
 }
 async function docsRead(d) {
   const f = DOCS.files[d.id];
@@ -16162,7 +16270,7 @@ async function docsRead(d) {
   if (!sampleFn) return toast("Add your Claude API key under Settings › Practice and wording › Claude (your key) first.");
   if (d.kind === "ground") { DOCS.groundDoc = d.id; return piReadReport(f.file); }
   const names = docsStructures().map((s) => s.name).filter(Boolean), chunks = docChunks(f.pages);
-  const say = (m) => { DOCS.busy[d.id] = m; renderProj(); };
+  const say = (m) => { DOCS.busy[d.id] = m; piRedraw(); };
   try {
     const outs = [];
     for (let i = 0; i < chunks.length; i++) {
@@ -16174,7 +16282,7 @@ async function docsRead(d) {
       outs.push(out?.items?.[0] || null);
     }
     delete DOCS.busy[d.id];
-    if (!outs.some(Boolean)) { toast("Claude couldn’t read it. Type its figures under the structure instead."); return renderProj(); }
+    if (!outs.some(Boolean)) { toast("Claude couldn’t read it. Type its figures under the structure instead."); return piRedraw(); }
     const read = { at: new Date().toISOString(), by: docsWho() };
     if (d.kind === "bending") read.bending = docBendingCheck(docMerge(outs, ["rows", "totals"]));
     else read.notes = docNotesCheck(docMerge(outs, ["values"]));
@@ -16182,7 +16290,7 @@ async function docsRead(d) {
     await docsSave(d);
     const n = docAnswers(docNorm(d), docsStructures()).length;
     toast(n ? `${plural(n, "answer")} read from ${d.name}: check each one` : `Nothing the bill needs was found in ${d.name}`);
-  } catch (e) { delete DOCS.busy[d.id]; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); renderProj(); }
+  } catch (e) { delete DOCS.busy[d.id]; toast(typeof claudeErrorText === "function" && e.code ? claudeErrorText(e) : e.message); piRedraw(); }
 }
 // The ground report is read by the report card above (inputsview.js): kept as a document too, so the project lists it
 function docsNoteGround(file, read, used) {
@@ -16219,7 +16327,7 @@ function docsRow(d, structs) {
       h("select", { class: "piinput sm", "aria-label": "What it is", id: `docKind_${d.id}`, onchange: (e) => { d.kind = e.target.value; d.read = null; d.decided = {}; docsSave(d); } },
         ...DOC_KINDS.map((x) => h("option", { value: x.id, selected: x.id === d.kind ? true : null }, x.title))),
       h("button", { type: "button", class: "btn sm" + (d.read ? "" : " dark"), id: `docRead_${d.id}`, disabled: busy || !sampleFn ? true : null, title: have ? "" : "Add the PDF again to read it", onclick: () => docsRead(d) }, d.read ? "Read it again" : "Read it with Claude"),
-      h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${d.name}? What was accepted from it stays in the structures until you undo it there.`)) { DOCS.list = DOCS.list.filter((x) => x.id !== d.id); if (docsOnCloud()) Store.deleteDocument(CL.pid, d.id).catch((e) => toast(e.message)); else docsLocal(DOCS.list); renderProj(); } } }, "Remove")),
+      h("button", { type: "button", class: "link", onclick: () => { if (confirm(`Remove ${d.name}? What was accepted from it stays in the structures until you undo it there.`)) { DOCS.list = DOCS.list.filter((x) => x.id !== d.id); if (docsOnCloud()) Store.deleteDocument(CL.pid, d.id).catch((e) => toast(e.message)); else docsLocal(DOCS.list); piRedraw(); } } }, "Remove")),
     h("p", { class: "edsub" }, `${k?.title || "Document"}: gives ${k?.gives || "values for the bill"}.`,
       structs.length ? h("span", { class: "pichecks" }, " For: ", ...structs.map((s) => h("label", { class: "edcheck" }, h("input", { type: "checkbox", checked: d.structures.includes(s.id) ? true : null,
         onchange: (e) => { d.structures = e.target.checked ? [...new Set([...d.structures, s.id])] : d.structures.filter((x) => x !== s.id); docsSave(d); } }), s.name))) : null),
@@ -16241,7 +16349,7 @@ function docsAnswerRow(d, a, structs) {
     rb ? h("p", { class: "edtext" + (rb.agree ? "" : " warn") }, rb.checks.length ? (rb.agree ? `SolvBoQ added up ${plural(rb.n, "figure")} and they agree with the schedule’s own totals (${rb.checks.length} checked).`
       : `SolvBoQ’s adding up doesn’t agree with the schedule’s own totals: ${rb.checks.filter((c) => !c.ok).map((c) => `${c.what} ${Math.round(c.sum).toLocaleString("en-GB")} kg read, ${Math.round(c.printed).toLocaleString("en-GB")} kg printed (${c.page})`).join("; ")}. Check those rows before using it.`)
       : "The schedule prints no totals, so SolvBoQ’s adding up can’t be checked against it.", rb.worked ? ` ${plural(rb.worked, "row")} worked out from the number and length of bars (SANS 920 masses).` : "", rb.shared.length ? " The same table lists steel for another structure, so its overall total isn’t a check on this one." : "") : null,
-    rb ? h("button", { type: "button", class: "link accent", "aria-expanded": String(showRows), onclick: () => { showRows ? DOCS.rows.delete(key) : DOCS.rows.add(key); renderProj(); } }, showRows ? "Hide the rows" : `Show the ${plural(rb.n, "row")} it was read from`) : null,
+    rb ? h("button", { type: "button", class: "link accent", "aria-expanded": String(showRows), onclick: () => { showRows ? DOCS.rows.delete(key) : DOCS.rows.add(key); piRedraw(); } }, showRows ? "Hide the rows" : `Show the ${plural(rb.n, "row")} it was read from`) : null,
     rb && showRows ? h("table", { class: "stdtable" }, h("thead", null, h("tr", null, h("th", null, "Schedule"), h("th", null, "Member"), h("th", null, "Size"), h("th", null, "kg"), h("th", null, "Page"))),
       h("tbody", null, d.read.bending.rows.filter((r) => docKey(r.near) === docKey(a.near)).map((r) => h("tr", null, h("td", null, r.ref), h("td", null, r.member), h("td", null, r.type === "fabric" ? "Fabric" : `${r.type === "mild" ? "R" : "Y"}${r.dia}`),
         h("td", { title: r.how === "printed" ? "As printed" : r.how }, Math.round(r.kg).toLocaleString("en-GB")), h("td", null, r.page))))) : null,
@@ -16299,7 +16407,7 @@ Store.onUser(() => docsLoad());
 
 const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "conv", stTimer: null, stSaved: {},
   q: "", show: "active", menu: null, confirm: null, note: null, who: {} };
-const HV_SECTION = { home: "home", ov: "ov", claims: "claims", proj: "settings", conv: "settings", std: "settings", firm: "settings", next: "bills" };
+const HV_SECTION = { home: "home", ov: "ov", st: "st", claims: "claims", conv: "settings", std: "settings", firm: "settings", next: "bills" };
 const hvSection = () => HV_SECTION[state.view] || "bills";
 const hvDay = (iso) => { const d = new Date(iso); return iso && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""; };
 const hvRand = (v) => `R ${Math.round(v || 0).toLocaleString("en-GB")}`;
@@ -16318,25 +16426,21 @@ function navMark() {
   document.body.dataset.section = sec;
   for (const [id, vs] of [["navMap", ["map"]], ["navReady", ["overview", "detail"]], ["navMaster", ["master"]], ["navProj", ["proj"]], ["btnConv", ["conv"]], ["navStd", ["std"]], ["navFirm", ["firm"]]])
     $(id).setAttribute("aria-current", vs.includes(state.view) ? "page" : "false");
-  $("tbFirmBtn").setAttribute("aria-current", sec === "settings" && state.view !== "proj" ? "page" : "false");
+  $("tbFirmBtn").setAttribute("aria-current", sec === "settings" ? "page" : "false");
   $("billSteps").hidden = sec !== "bills"; $("btnGoSign").hidden = sec !== "bills" || state.view === "sign" || !state.records;
   if (sec === "bills" && state.view !== "map") billSteps();   // the bill draws them itself, with its lines (renderTree › billHeadNow)
   if (sec === "bills") HV.billView = state.view === "detail" ? "overview" : state.view;
-  if (sec === "settings" && state.view !== "proj") HV.setView = state.view;
+  if (sec === "settings") HV.setView = state.view;
   $("subBills").hidden = sec !== "bills"; $("subSettings").hidden = sec !== "settings";
   $("saveState").hidden = home;
-  // The Settings side menu names the firm and the project its two groups are about
-  if (sec === "settings") {
-    $("setFirmName").textContent = Store.firm ? Store.firm.name || Store.firm.id || "" : Store.user ? "Just you (no firm)" : "";
-    $("setProjName").textContent = CL.projects.find((x) => x.id === CL.pid)?.name || "No project open";
-  }
+  // The Settings side menu names the firm (Settings is only the firm's since the redesign's stage 2)
+  if (sec === "settings") $("setFirmName").textContent = Store.firm ? Store.firm.name || Store.firm.id || "" : Store.user ? "Just you (no firm)" : "";
   $("meBtn").textContent = hvInitials();
-  $("phead").hidden = home || sec === "ov";   // those two pages carry their own heading, as designed
+  $("phead").hidden = home || sec === "ov" || sec === "st";   // those pages carry their own heading, as designed
   const p = CL.projects.find((x) => x.id === CL.pid);
   const head = sec === "claims" ? ["Claims", p ? `${p.name}: payment certificates, checked against the signed bills` : "Payment certificates, checked against the bill"]
-    : sec === "settings" ? (state.view === "proj" ? ["Settings", p ? `${p.name}: the method of measurement, its structures, documents and tolerances` : "This project: open one from Projects to keep its settings with it"]
-      : ["Settings", `${Store.firm ? Store.firm.name || "Your firm" : "Your"}${Store.firm ? "’s" : ""} practice, modelling guide and people: every project ${Store.firm ? "of the firm" : "of yours"} uses them`])
-    : sec === "bills" ? hvBillHead() : ["", ""];
+    : sec === "settings" ? ["Settings", `${Store.firm ? Store.firm.name || "Your firm" : "Your"}${Store.firm ? "’s" : ""} practice, modelling guide and people: every project ${Store.firm ? "of the firm" : "of yours"} uses them`]
+    : sec === "bills" ? (state.view === "proj" ? [hvBillHead()[0], "The stage and specification of this project’s bills, until the bill page has them"] : hvBillHead()) : ["", ""];
   $("pageTitle").textContent = head[0]; $("pageSub").textContent = head[1];
   if (sec === "bills" && state.view === "map" && state.mapLines?.length) billHeadNow(state.mapLines);   // (navMark alone, after the bill drew: keep its count)
   document.querySelector("main").classList.toggle("opening", !!HV.opening && sec === "bills");
@@ -16345,20 +16449,22 @@ function navMark() {
   if (typeof dockMark === "function") dockMark();
 }
 // Where you are, as a breadcrumb in the top bar: Projects / project / structure / page. Each crumb but the last goes there.
-const HV_PAGE = { overview: "Model checks", detail: "Model checks", parts: "Parts", sign: "Sign off", master: "Your bill (Master BoQ)", claims: "Claims",
-  proj: "Project settings", conv: "Practice and wording", std: "Modelling guide", firm: "People" };
+const HV_PAGE = { map: "The bill", overview: "Model checks", detail: "Model checks", parts: "Parts", sign: "Sign off", master: "Your bill (Master BoQ)", claims: "Claims",
+  proj: "Stage and specification", conv: "Practice and wording", std: "Modelling guide", firm: "People" };
 function hvCrumbs() {
   const box = $("crumbs"); if (!box) return;
   const sec = hvSection(), view = state.view, p = CL.projects.find((x) => x.id === CL.pid), list = [];
   const add = (id, text, go) => list.push({ id, text, go });
   add("crHome", "Projects", goHome);
-  if (sec === "settings" && view !== "proj") { add("crFirm", Store.firm?.name || "Your firm", goFirmSettings); add("crPage", HV_PAGE[view] || "Settings", null); }
+  if (sec === "settings") { add("crFirm", Store.firm?.name || "Your firm", goFirmSettings); add("crPage", HV_PAGE[view] || "Settings", null); }
+  else if (sec === "st") { if (p) add("crProject", p.name, goOv); add("crStructure", (typeof stCurrent === "function" && stCurrent()?.name) || "Structure", null); }
   else if (sec !== "home") {
-    const sample = sec === "bills" && state.fromSample;
+    const sample = sec === "bills" && state.fromSample, inProject = !!(p && !sample && state.pmid && PV.models.some((x) => x.id === state.pmid));
     if (p && !sample) add("crProject", p.name, goOv);
-    if (sec === "bills" && (state.records || HV.opening)) add("crStructure", hvBillHead()[0] || "The bill", () => { state.view = "map"; render(); window.scrollTo(0, 0); });
+    // A structure of the project: its crumb is its page; a sample or a model in no project: its crumb is its bill
+    if (sec === "bills" && (state.records || HV.opening)) add("crStructure", hvBillHead()[0] || "The bill", inProject ? () => stGoHere() : () => { state.view = "map"; render(); window.scrollTo(0, 0); });
     if (sec === "bills" && !state.records && !HV.opening) add("crStructure", "The bill", null);
-    if (HV_PAGE[view] && (sec !== "bills" || view !== "map")) add("crPage", HV_PAGE[view], null);
+    if (HV_PAGE[view] && (sec !== "bills" || view !== "map" || inProject)) add("crPage", HV_PAGE[view], null);
   }
   box.replaceChildren(...list.map((c, i) => i === list.length - 1
     ? h("span", { class: "crumb here", id: c.id, "aria-current": "page" }, c.text)
@@ -16409,7 +16515,7 @@ function billHeadNow(lines) {
 // A step: where it is done
 function stepGo(where) {
   const lines = state.mapLines || [], first = (sts) => lines.find((L) => sts.includes(L.status));
-  if (where === "setup") { goProj(); setTimeout(() => $("piStructs")?.scrollIntoView({ block: "start" }), 50); return; }
+  if (where === "setup") return stGoHere("stRests");
   if (where === "model") { const m = $("modelMenu"); m.hidden = false; $("modelBtn").setAttribute("aria-expanded", "true"); $("modelBtn").focus(); return; }
   state.view = "map"; state.mFilter2 = "need"; render();
   const L = first(where === "asks" ? ["flag", "unmapped", "measure"] : ["moved", "claude", "confirm"]);
@@ -16721,27 +16827,6 @@ function hvNewDialog(meta) {
     document.body.append(d); d.showModal(); name.focus();
   });
 }
-// Archiving this project (20 Nov 2026), from its Settings: anyone who can edit it; it keeps everything and can be restored
-function hvArchiveCard() {
-  const p = CL.projects.find((x) => x.id === CL.pid);
-  if (!p || !Store.user) return null;
-  return h("section", { class: "card setcard", id: "projArchive" },
-    h("h2", null, p.archived ? "This project is archived" : "Archive this project"),
-    h("p", { class: "sub" }, p.archived ? `Archived ${hvDay(p.archived.at)}${p.archived.by ? ` by ${p.archived.by}` : ""}: it’s out of the project lists for everyone, with everything in it kept.`
-      : `Takes ${p.name} out of the project lists for everyone on it, and keeps everything in it: models, bills, signed versions, certificates and decisions. Restore it any time from Projects › Archived.`),
-    h("div", { class: "tools" }, h("button", { type: "button", class: "btn", id: "btnArchiveProject", onclick: () => hvArchive([p.id], !p.archived) }, p.archived ? "Restore this project" : "Archive this project")));
-}
-// Deleting a project (20 Nov 2026): its owner only (the rules), after typing its name, since everything in it goes for everyone on it
-function hvDeleteCard() {
-  const p = CL.projects.find((x) => x.id === CL.pid);
-  if (!p || !Store.user) return null;
-  const mine = p.owner === Store.user.uid;
-  return h("section", { class: "card setcard setdanger", id: "projDelete" },
-    h("h2", null, "Delete this project"),
-      h("p", { class: "sub" }, mine ? `Removes ${p.name} for everyone on it: its structures, models, bills and signed versions, certificates and your decisions on them, documents and settings. It can’t be undone.`
-        : "Only the project’s owner can delete it."),
-    mine ? h("div", { class: "tools" }, h("button", { type: "button", class: "btn danger", id: "btnDeleteProject", onclick: () => hvDeleteDialog(p) }, "Delete this project…")) : null);
-}
 function hvDeleteDialog(p) {
   let d = $("delDlg"); if (d) d.remove();
   d = h("dialog", { id: "delDlg", class: "mbdlg ov npdlg", "aria-labelledby": "delH" });
@@ -16765,37 +16850,6 @@ function hvDeleteDialog(p) {
   d.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
   document.body.append(d); d.showModal(); name.focus();
 }
-// What the project has and what is still missing, from its inputs and documents (the journey's “project home”)
-function hvSetupState() {
-  if (!hvInputsHere(CL.pid)) return null;
-  const d = piDoc(), p = d.project, stage = p.stage || "tender", docsHere = typeof DOCS !== "undefined" && DOCS.loaded && DOCS.pid === CL.pid;
-  const method = MEASUREMENT_METHODS.find((m) => m.id === (p.method || "sans1200"));
-  const kinds = d.structures.filter((s) => KIND_BY_ID.get(s.kind));
-  const docs = docsHere ? DOCS.list : null, waiting = docsHere && typeof docsAnswers === "function" ? docsAnswers().filter((x) => x.ans.status === "open").length : 0;
-  const missing = inputsMissing(d, stage);
-  return { p, stage, method, structures: d.structures, kinds: kinds.length, docs, waiting, missing };
-}
-function hvSetupCard() {
-  const s = hvSetupState();
-  const row = (label, text, tone) => h("div", { class: "hvsetrow" }, h("span", null, label), h("b", { class: tone || "" }, text));
-  const go = () => goProj();
-  if (!s) return h("section", { class: "hvsetup", id: "hvSetup" }, h("div", { class: "hvstructshead" }, h("h2", null, "Set up")), h("p", { class: "sub" }, "Loading the project’s set-up…"));
-  const todo = s.missing.length;
-  const methodText = `${s.method.id === "sans1200" ? "SANS 1200 Clause 8" : s.method.title.replace(/\s*\(.*$/, "")}${s.p.method ? "" : " (assumed: not chosen yet)"}`;
-  const stText = s.structures.length ? s.structures.map((x) => `${x.name || "Unnamed"}${KIND_BY_ID.get(x.kind) ? "" : " (kind not set)"}`).join(", ") : "None yet";
-  const docText = !s.docs ? "…" : s.docs.length ? `${plural(s.docs.length, "document")}${s.waiting ? `, ${plural(s.waiting, "answer")} waiting for you` : ""}` : "None yet: the ground report, drawings and schedules";
-  return h("section", { class: "hvsetup", id: "hvSetup" },
-    h("div", { class: "hvstructshead" }, h("h2", null, "Set up"),
-      h("span", { class: "hvchip " + (todo ? "amber" : "green") }, todo ? `${plural(todo, "thing")} still needed` : "Done for the " + s.stage + " bill")),
-    row("Method of measurement", methodText, s.p.method ? "" : "warn"),
-    row("Structures", stText, !s.structures.length || s.kinds < s.structures.length ? "warn" : ""),
-    row("Documents", docText, s.docs && !s.docs.length ? "warn" : ""),
-    todo ? h("div", { class: "hvsetmiss" }, h("span", null, `Still needed for the ${s.stage} bill`),
-      h("ul", null, s.missing.slice(0, 4).map((m) => h("li", null, h("b", null, m.need.what), m.level !== "Project" ? ` (${m.level})` : "", ": ", IF_MISSING[m.need.missing] || ""))),
-      s.missing.length > 4 ? h("span", { class: "sub" }, `and ${s.missing.length - 4} more`) : null) : null,
-    h("div", { class: "tools" }, h("button", { type: "button", class: "hvbtn " + (todo ? "night" : "outline"), id: "hvSetupGo", onclick: go }, todo ? "Set up the project" : "Change the set-up")));
-}
-
 function hvOpenProject(pid) { if (pid !== CL.pid) chooseProject(pid); goOv(); }
 async function hvNewProject() { const was = CL.pid; await newProject(null); if (CL.pid && CL.pid !== was) goOv(); }
 function renderHome() {
@@ -16866,7 +16920,7 @@ async function hvLoad(force) {
     HV.ov = { docs, models, signed };
   } catch (e) { HV.ov = null; HV.ovErr = e.message; }
   HV.ovBusy = false;
-  if (state.view === "ov") renderOv();
+  if (state.view === "ov") renderOv(); else if (state.view === "st") renderSt();
 }
 // Every structure of the project: the kept ones, the inputs' ones, the ones its models and signed bills belong to
 function hvStructures() {
@@ -16904,48 +16958,188 @@ function hvBackfill(pid, list) {
     for (const b of s.signed) if (!d?.signed?.[String(b.n)]) Store.noteSigned(pid, s.id, b).catch(() => {});
   }
 }
-function hvRowEl(s) {
-  const st = s.step, run = s.runs[0];
-  const sub = run ? [`Model of ${hvDay(run.dated)}`, s.last && s.last.kind !== "imported" ? `signed ${hvDay(s.last.at)}` : st.lines ? plural(st.lines, "line") : ""]
-    : [s.last ? `${s.last.kind === "imported" ? "Imported" : "Signed"} ${hvDay(s.last.at)}` : "No model read yet"];
-  return h("a", { class: "hvst", href: "#", "data-sid": s.id, onclick: (e) => { e.preventDefault(); stOpen(s, st.kind === "revision" || (st.n >= 4 && st.n <= 5) ? "need" : st.n === 3 ? "parts" : st.n === 6 ? "sign" : "map"); } },
-    h("div", { class: "hvstname" }, h("b", null, s.name), h("span", null, sub.filter(Boolean).join(" · "))),
-    h("div", { class: "hvststep" }, h("span", null, st.label), hvBar(st.pct, st.bar === "green" ? "green" : "ink", "mid")),
-    h("span", { class: "hvchip " + st.tone }, st.chip));
+// ----- The project home (the redesign's stage 2, 21 Nov 2026; the canvas's Home and Empty boards) -----
+// The header (the contract, the method, the people, ⋯), what is waiting on you in this project, its structures, every bill, the claims
+// by bill and the documents. Things in the project live here; Settings is only the firm's.
+function hvDialog(id, title, body, opts = {}) {
+  let d = $(id); if (d) d.remove();
+  d = h("dialog", { id, class: "mbdlg ov npdlg hvdlg", "aria-labelledby": id + "H" });
+  const close = () => { if (d.open) d.close(); d.remove(); if (opts.onclose) opts.onclose(); };
+  d.append(h("div", { class: "edbody npform" },
+    h("div", { class: "edpath" }, h("h2", { id: id + "H" }, title),
+      h("button", { type: "button", class: "ibtn", "aria-label": "Close", title: "Close", onclick: close }, svg('<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg>'))),
+    body, opts.foot || h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", id: id + "Done", onclick: close }, "Done"))));
+  d.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  d.addEventListener("click", (e) => { if (e.target === d) close(); });
+  document.body.append(d); d.showModal();
+  return { d, close };
 }
-function hvNext(list) {
+function hvMethodDialog() {
+  hvDialog("hvMethodDlg", "Measured under", h("div", null,
+    h("p", { class: "sub" }, "The method the contract’s pricing assumptions call up, and the contract’s amendments laid on it. A signed bill records both."),
+    h("div", { id: "piMethodDlgBody" }, piMethodBody())), { onclose: () => { if (state.view === "ov") renderOv(); } });
+}
+function hvContractDialog(p) {
+  const inp = h("input", { id: "hvContractIn", class: "piinput", autocomplete: "off", value: p.contract || "", placeholder: "For example: CES11/2024" });
+  const err = h("div", { class: "err", role: "alert", hidden: true });
+  let dlg = null;
+  const save = async (e) => {
+    e?.preventDefault?.();
+    try { await Store.saveProjectContract(p.id, inp.value); p.contract = inp.value.trim(); HV.sum = {}; dlg.close(); toast("Contract number kept with the project"); renderOv(); }
+    catch (x) { err.textContent = `It wasn’t kept: ${x.message}`; err.hidden = false; }
+  };
+  dlg = hvDialog("hvContractDlg", "Contract number", h("form", { onsubmit: save }, h("p", { class: "sub" }, "Used to check that payment certificates belong to this project."), inp, err),
+    { foot: h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", id: "hvContractSave", onclick: save }, "Keep it"), h("button", { type: "button", class: "btn", onclick: () => dlg.close() }, "Cancel")) });
+  inp.focus();
+}
+function hvPeopleDialog() {
+  hvDialog("pplDlg", "People on this project", h("div", { id: "pplDlgBody" }, (typeof pplCard === "function" ? pplCard() : null) || ""));
+}
+function hvProjectMenu(p) {
+  const open = HV.menu === "ov:" + p.id, mine = p.owner === Store.user?.uid;
+  return h("div", { class: "hvmenuwrap" },
+    h("button", { type: "button", class: "hvmbtn", id: "hvOvMenu", "aria-label": "Project options: archive or delete", "aria-haspopup": "menu", "aria-expanded": String(open),
+      onclick: (e) => { e.stopPropagation(); HV.menu = open ? null : "ov:" + p.id; renderOv(); } }, svg('<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>')),
+    open ? h("div", { class: "hvmenu", role: "menu" },
+      h("button", { type: "button", class: "hvmi", role: "menuitem", id: "hvOvArchive", onclick: (e) => { e.stopPropagation(); HV.menu = null; hvArchive([p.id], !p.archived); } }, p.archived ? "Restore" : "Archive", h("small", null, p.archived ? "Back in the project lists" : "Out of the list for everyone, everything kept")),
+      h("button", { type: "button", class: "hvmi danger", role: "menuitem", id: "hvOvDelete", disabled: mine ? null : true, onclick: (e) => { e.stopPropagation(); HV.menu = null; renderOv(); hvDeleteDialog(p); } },
+        "Delete…", h("small", null, mine ? "For everyone, and it can’t be undone" : "Only the project’s owner can delete it"))) : null);
+}
+// Waiting on you in this project: the claims first (in rands), then each structure by how much it needs, then what the bills still need
+function hvWaitingItems(list) {
   const items = [], c = CL.certs[0];
   if (c) {
     const k = c.check, num = c.meta?.number ?? "", go = () => { goClaims(); openCertificate(c.id); };
-    if (k?.signed && k.lines > 0) items.push({ t: `Certificate ${num}: ${plural(k.lines, "claim")} over the signed bill`, s: `${hvRand(k.over)} claimed above your quantities`, b: "Check the claims", go, lime: true });
-    else if (k && k.toQuery > 0) items.push({ t: `Certificate ${num}: ${k.toQuery} to query`, s: `${hvRand(k.atStake)} at stake`, b: "Check the claims", go, lime: true });
-    else if (!k) items.push({ t: `Certificate ${num}: not checked yet`, s: "Open it to check it against the bill", b: "Check the claims", go, lime: true });
+    if (k?.signed && k.lines > 0) items.push({ v: k.over || 0, kick: `Claims · certificate ${num}`, t: `${hvRand(k.over)} claimed over the signed bill`, s: `${plural(k.lines, "line")} over the signed quantities${k.twice ? `, ${plural(k.twice, "item")} claimed twice` : ""}.`, b: "Open the claims", go });
+    else if (k && k.toQuery > 0) items.push({ v: k.atStake || 0, kick: `Claims · certificate ${num}`, t: `${k.toQuery} to query`, s: `${hvRand(k.atStake)} at stake.`, b: "Open the claims", go });
+    else if (!k) items.push({ v: 0, n: 1, kick: `Claims · certificate ${num}`, t: "Not checked yet", s: "Open it to check it against the bill.", b: "Open the claims", go });
   }
-  const open = (s) => (s.step.kind === "revision" ? s.step.moved || 0 : s.step.open || 0);
-  for (const s of (list || []).slice().sort((a, b) => open(b) - open(a))) {
+  for (const s of list || []) {
     const st = s.step;
-    if (st.kind === "revision") items.push({ t: `${s.name}: the model changed`, s: `${plural(st.changed || 0, "line")} moved since the signed bill`, b: "See what changed", go: () => stOpen(s, "need") });
-    else if (st.n === 3) items.push({ t: `${s.name}: ${plural(st.unsure, "element")} to place`, s: "SolvBoQ wasn’t sure which part they are", b: "Confirm the parts", go: () => stOpen(s, "parts") });
-    else if (st.n === 4 || st.n === 5) items.push({ t: `${s.name}: ${plural(st.open, "line")} need${st.open === 1 ? "s" : ""} you`, s: st.est ? `${plural(st.est, "line")} still estimated` : st.label.replace(/^Step \d of 6: /, "Next: "), b: "Review the bill", go: () => stOpen(s, "need") });
-    else if (st.n === 6) items.push({ t: `${s.name}: ready to sign`, s: "Every line is confirmed", b: "Sign it off", go: () => stOpen(s, "sign") });
+    if (st.kind === "revision") items.push({ n: st.changed || st.moved || 0, kick: `${s.name} · new run`, t: `${plural(st.changed || 0, "line")} changed since you signed version ${st.v || ""}`.trim(), s: "The other lines stay confirmed. Each changed line says which elements moved it.", b: "Open the bill", go: () => stOpen(s, "need") });
+    else if (st.n === 3) items.push({ n: st.unsure || 0, kick: `${s.name} · parts`, t: `${plural(st.unsure, "element")} to place`, s: "SolvBoQ wasn’t sure which part they are.", b: "Confirm the parts", go: () => stOpen(s, "parts") });
+    else if (st.n === 4 || st.n === 5) items.push({ n: st.open || 0, kick: `${s.name} · ${st.n === 4 ? "questions" : "review"}`, t: `${plural(st.open, "line")} need${st.open === 1 ? "s" : ""} you`, s: st.est ? `${plural(st.est, "line")} still estimated.` : st.label.replace(/^Step \d of 6: /, "Next: ") + ".", b: "Review the bill", go: () => stOpen(s, "need") });
+    else if (st.n === 6) items.push({ n: 1, kick: `${s.name} · sign off`, t: "Ready to sign", s: "Every line is confirmed.", b: "Sign it off", go: () => stOpen(s, "sign") });
+    else if (st.n === 2) items.push({ n: 0, kick: `${s.name} · model`, t: "Bring the model", s: "Open it in Revit and read it with the SolvBoQ add-in, or upload its model data.", b: "Open the structure", go: () => stPage(s.id) });
   }
-  // A project just made, or one whose structures have no model yet: set it up, then bring the model
-  const set = hvSetupState();
-  if (list && set && (!set.structures.length || set.kinds < set.structures.length))
-    items.push({ t: "Set up the project", s: set.structures.length ? "Choose the kind of each structure: it decides its earthworks rule, grade and questions" : "Name its structures and their kind, and add the ground report, drawings and schedules", b: "Set it up", go: goProj, lime: !items.length });
-  const noModel = (list || []).filter((s) => s.step.n === 2);
-  if (noModel.length) items.push({ t: noModel.length === 1 ? `${noModel[0].name}: bring the model` : `Bring the models of ${plural(noModel.length, "structure")}`,
-    s: "Open the model in Revit and read it with the SolvBoQ add-in (Settings › Modelling guide has the add-in), or upload model data under Bills", b: "Get the Revit add-in", go: () => goStandards(), lime: !items.length });
-  const unknown = (list || []).some((s) => s.step.n === 0);
-  return h("section", { class: "hvnext", id: "hvNext" }, h("h2", null, "Next for you"),
-    items.length ? items.slice(0, 4).map((it) => h("div", { class: "hvnextitem" }, h("b", null, it.t), h("span", null, it.s),
-      h("button", { type: "button", class: "hvbtn " + (it.lime ? "lime" : "ghost"), onclick: it.go }, it.b)))
-      : h("div", { class: "hvnextitem" }, h("b", null, list ? "Nothing waiting for you" : "…"), list ? h("span", null, unknown ? "Open a structure to see where its bill stands." : list.length ? "Every structure is signed or up to date." : "") : null));
+  // What the bills still need from you (the project's inputs): one card per structure, then the project's own
+  const need = hvInputsHere(CL.pid) ? inputsMissing(piDoc(), piDoc().project.stage || "tender") : [];
+  const byLevel = new Map(); for (const m of need) { if (!byLevel.has(m.level)) byLevel.set(m.level, []); byLevel.get(m.level).push(m); }
+  for (const [level, ms] of byLevel) {
+    if (level === "Project") {
+      const own = ms.filter((m) => m.need.id !== "structures"); if (!own.length) continue;
+      items.push({ n: own.length, kick: "The bills · stage and specification", t: own.length === 1 ? own[0].need.what : `${own[0].need.what} and ${own.slice(1).map((m) => m.need.what.charAt(0).toLowerCase() + m.need.what.slice(1)).join(" and ")}`, s: `Until then: ${(IF_MISSING[own[0].need.missing] || "").toLowerCase()}.`, b: "Set them",
+        go: () => { if (state.records && !state.fromSample) goProj(); else toast("Open a structure’s bill first: the stage and specification are under the bill."); } });
+      continue;
+    }
+    const s = (list || []).find((x) => x.name === level), n0 = ms[0].need;
+    if (s && !s.runs.length) continue;   // no model yet: bringing it comes first (its card above)
+    const ground = /ground|geotech|rock|depth|boreh|log/i.test(ms.map((m) => m.need.what).join(" "));
+    items.push({ n: ms.length, kick: `${level} · what the bill rests on`, t: ms.length === 1 ? n0.what : `${plural(ms.length, "thing")} the bill still needs from you`, s: `${ms.length > 1 ? `${n0.what}, and more. ` : ""}Until then: ${(IF_MISSING[n0.missing] || "").toLowerCase()}.`,
+      b: ground ? "Add the ground report" : "Open the structure", go: () => (s ? stPage(s.id, ground ? "stGround" : "stRests") : toast(`${level} has no model in the project yet.`)) });
+  }
+  return items.sort((a, b) => (b.v || 0) - (a.v || 0) || (b.n || 0) - (a.n || 0));
+}
+function hvNext(list) {
+  const items = hvWaitingItems(list);
+  return h("section", { class: "hvsec", id: "hvNext", "aria-labelledby": "hvNextH" },
+    h("div", { class: "hvsechead" }, h("h2", { id: "hvNextH" }, "Waiting on you"), h("span", null, "Across every structure, bill and claim. Biggest value first.")),
+    items.length ? h("div", { class: "hvwgrid" }, items.slice(0, 6).map((it, i) => h("div", { class: "hvnextitem" + (i === 0 ? " first" : "") },
+        h("span", { class: "hvkick" }, it.kick), h("b", null, it.t), h("span", null, it.s),
+        h("button", { type: "button", class: "hvbtn " + (i === 0 ? "lime" : "outline"), onclick: it.go }, it.b))))
+      : h("p", { class: "sub" }, list ? "Nothing is waiting on you in this project." : "…"));
+}
+// A structure's card: its kind, when its model was read, its signed version, the five-step track and where it stands
+function hvRowEl(s) {
+  const st = s.step, run = s.runs[0], tr = hvTrackOf({ step: st, runs: Object.fromEntries(s.runs.map((m) => [m.id, 1])), signed: Object.fromEntries(s.signed.map((b) => [b.n, 1])) });
+  const kind = KIND_BY_ID.get(s.kind)?.title || "Kind not set";
+  const signed = s.last ? `v${s.last.n} ${s.last.kind === "imported" ? "imported" : "signed"}` : "";
+  const status = st.kind === "revision" ? `${plural(st.changed || 0, "line")} changed` : st.n === 2 ? "No model yet" : st.n === 0 ? "Not opened since this model was read" : st.chip;
+  return h("a", { class: "hvst", href: "#", "data-sid": s.id, onclick: (e) => { e.preventDefault(); stPage(s.id); } },
+    h("div", { class: "hvsttop" }, h("div", { class: "hvstname" }, h("b", null, s.name), h("span", null, [kind, run ? `model read ${hvDay(run.dated)}` : ""].filter(Boolean).join(" · "))),
+      signed ? h("span", { class: "hvchip green" }, signed) : null),
+    hvTrack(tr.at, `${s.name}: ${tr.label}`),
+    h("div", { class: "hvststep" }, h("b", null, tr.label), h("span", null, status)));
+}
+// The model data of a new structure (or a new run): the same upload as the bill's model menu
+function hvUpload() { $("file").click(); }
+const hvImportInput = () => h("input", { class: "sr", type: "file", id: "hvImport", accept: ".xlsx,.xlsm", onchange: (e) => { const fl = e.target.files?.[0]; e.target.value = ""; if (fl) Promise.resolve(clImportBills(fl)).then(() => { HV.ovFor = ""; renderOv(); }); } });
+function hvBillsTable(list) {
+  const rows = [];
+  for (const s of list) {
+    if (s.runs.length) rows.push({ kind: "work", s, bill: s.last ? "Working bill, new run" : "Working bill", sub: `Model read ${hvDay(s.runs[0].dated)}`, lines: s.step.lines || "—", state: s.step.kind === "signed" ? "Up to date" : s.step.chip, tone: s.step.tone, go: () => stOpen(s, "map") });
+    for (const b of s.signed.slice().reverse()) rows.push({ kind: "signed", s, bill: b.kind === "imported" ? `Tender bill, imported and locked as v${b.n}` : `Version ${b.n}, signed`, sub: `${b.kind === "imported" ? "Imported" : "Signed"} ${hvDay(b.at)}${b.name ? ` by ${b.name}` : ""}`,
+      lines: b.lines?.length || b.count || "—", state: "Signed", tone: "green", go: () => (b.kind === "imported" ? goClaims() : s.runs.length ? stOpen(s, "sign") : stPage(s.id)) });
+  }
+  const f = HV.billFilter || "all", n = (k) => rows.filter((r) => k === "all" || r.kind === k).length;
+  const shown = rows.filter((r) => f === "all" || r.kind === f);
+  return h("section", { class: "hvsec", id: "hvBills", "aria-labelledby": "hvBillsH" },
+    h("div", { class: "hvsechead" }, h("div", null, h("h2", { id: "hvBillsH" }, "Bills ", h("span", { class: "hvcount" }, String(rows.length))),
+        h("p", null, "Every bill in the project: the ones being worked on, the signed versions, and tender bills you imported.")),
+      h("div", { class: "tools" }, h("label", { class: "btn", for: "hvImport", tabindex: "0" }, "Import a bill (Excel)"), hvImportInput(),
+        h("button", { type: "button", class: "btn", id: "hvMaster", onclick: goMaster }, "Your bill (Master BoQ)"))),
+    h("div", { class: "hvfilters", role: "group", "aria-label": "Show" }, [["all", "All"], ["work", "Being worked on"], ["signed", "Signed"]].map(([k, l]) =>
+      h("button", { type: "button", class: "hvfilter", "data-billf": k, "aria-pressed": String(f === k), onclick: () => { HV.billFilter = k; renderOv(); } }, `${l} ${n(k)}`))),
+    shown.length ? h("div", { class: "tablewrap" }, h("table", { class: "hvtable" },
+      h("thead", null, h("tr", null, h("th", null, "Structure"), h("th", null, "Bill"), h("th", { class: "r" }, "Lines"), h("th", null, "Where it stands"), h("th", null, h("span", { class: "sr" }, "Open")))),
+      h("tbody", null, shown.map((r) => h("tr", { "data-bill": r.kind }, h("td", null, r.s.name), h("td", null, h("span", { class: "hvbill" }, r.bill), h("span", { class: "hvsub" }, r.sub)),
+        h("td", { class: "r" }, String(r.lines)), h("td", null, h("span", { class: "hvchip " + (r.tone || "") }, r.state)), h("td", { class: "r" }, h("button", { type: "button", class: "btn sm", onclick: r.go }, "Open")))))))
+      : h("p", { class: "sub" }, rows.length ? "None here." : "No bills yet: a structure’s bill is worked out once its model is in."));
+}
+function hvClaimsSection(list) {
+  const signed = list.filter((s) => s.last), c = CL.certs[0], k = c?.check, num = c?.meta?.number ?? "";
+  const stat = (label, value, tone) => h("div", { class: "hvstat" + (tone ? " " + tone : "") }, h("span", null, label), h("b", null, value));
+  const one = signed.length === 1 && k?.signed, tol = HV.tolOpen;
+  return h("section", { class: "hvsec", id: "hvClaims", "aria-labelledby": "hvClaimsH" },
+    h("div", { class: "hvsechead" }, h("div", null, h("h2", { id: "hvClaimsH" }, "Claims ", h("span", { class: "hvcount" }, String(CL.certs.length))),
+        h("p", null, "By bill: each signed bill with the certificates claimed against it. A certificate that claims on several bills is checked against each.")),
+      h("button", { type: "button", class: "btn dark", id: "hvAddCerts", onclick: goClaims }, "Add certificates")),
+    h("div", { class: "hvstats4" },
+      stat("Claimed over the signed bills, to date", k?.signed ? hvRand(k.over) : "—", k?.signed && k.over > 0 ? "red" : ""),
+      stat("Certificates checked", String(CL.certs.filter((x) => x.check).length)),
+      stat("Signed bills", `${signed.length} of ${list.length}`),
+      stat("To query", k ? String(k.toQuery || 0) : "—")),
+    h("p", { class: "hvtol" }, piTolText(), " ", h("button", { type: "button", class: "link accent", id: "hvTolChange", "aria-expanded": String(!!tol), onclick: () => { HV.tolOpen = !tol; renderOv(); } }, tol ? "Done" : "Change")),
+    tol ? piTolBox() : null,
+    signed.length ? h("div", { class: "tablewrap" }, h("table", { class: "hvtable" },
+      h("thead", null, h("tr", null, h("th", null, "Structure"), h("th", null, "Bill"), h("th", null, "Latest certificate"), h("th", { class: "r" }, "Over the signed bill"), h("th", { class: "r" }, "Certificates"), h("th", null, h("span", { class: "sr" }, "Open")))),
+      h("tbody", null, signed.map((s) => h("tr", null, h("td", null, s.name),
+        h("td", null, h("span", { class: "hvbill" }, s.last.kind === "imported" ? `Tender bill, imported v${s.last.n}` : `Version ${s.last.n}, signed`), h("span", { class: "hvsub" }, `${s.last.kind === "imported" ? "Imported" : "Signed"} ${hvDay(s.last.at)}`)),
+        h("td", null, c ? `PC${num}${c.dated ? ` · ${hvDay(c.dated)}` : ""}` : "—"), h("td", { class: "r" }, one ? hvRand(k.over) : c ? "Open to see" : "—"),
+        h("td", { class: "r" }, String(CL.certs.length)), h("td", { class: "r" }, h("button", { type: "button", class: "btn sm", onclick: goClaims }, "Open")))))))
+      : h("p", { class: "sub" }, "Certificates are checked against a structure’s signed or imported bill: none yet. Import your tender bill under Bills to check claims before SolvBoQ’s bill is signed."));
+}
+// A project with no structure yet: bring the first model, from Revit or as model data
+function hvEmpty(p) {
+  return [h("section", { class: "hvsec hvbring", id: "hvBring", "aria-labelledby": "hvBringH" },
+      h("div", null, h("h2", { id: "hvBringH" }, "Bring in the first structure’s model"),
+        h("p", null, "Every structure in SolvBoQ is a model: a valve chamber, a tank, a building. When its model arrives, the structure is added here and its bill is worked out from it.")),
+      h("div", { class: "hvbringgrid" },
+        h("div", { class: "hvfromrevit" }, h("div", { class: "hvbringtitle" }, h("b", null, "From Revit"), h("span", null, "Recommended: the model stays linked")),
+          h("ol", null, h("li", null, "Open the structure’s model in Revit."), h("li", null, h("b", null, "SolvBoQ"), " tab › ", h("b", null, "Open beside the model"), "."),
+            h("li", null, "Link the model to ", h("b", null, p.name), ". It appears here under Structures.")),
+          h("div", { class: "hvlive", role: "status", id: "hvLive" }, h("span", { class: "live", "aria-hidden": "true" }), "Waiting for a model. This page updates as soon as it arrives."),
+          h("a", { class: "btn", href: typeof ADDIN_URL !== "undefined" ? ADDIN_URL : "#", download: "SolvBoQ-Revit2025.zip" }, "Don’t have the add-in? Download it")),
+        h("button", { type: "button", class: "hvdrop", id: "hvDrop", onclick: hvUpload },
+          h("b", null, "Drop the model data here"), h("span", null, "or choose a file (.json). It appears under Structures."),
+          h("small", null, "The add-in saves it in Documents › SolvBoQ › Readiness reports, so a model read on another PC can come in too.")))),
+    h("section", { class: "hvsec", id: "hvLater", "aria-labelledby": "hvLaterH" }, h("h2", { id: "hvLaterH" }, "Later, when you need them"),
+      h("div", { class: "hvlater" },
+        h("div", null, h("b", null, "Your tender bill"), h("span", null, "Import it from Excel to check claims before SolvBoQ’s bill for a structure is signed."),
+          h("label", { class: "btn sm", for: "hvImport", tabindex: "0" }, "Import a bill"), hvImportInput()),
+        h("div", null, h("b", null, "Payment certificates"), h("span", null, "Checked against a structure’s signed or imported bill. Opens once there is one."), h("span", { class: "hvchip" }, "After the first bill")),
+        h("div", null, h("b", null, "Ground report, schedules, drawings"), h("span", null, "No need to load them now. We’ll ask on the line that needs one, and say what it changes."))))];
+}
+// While an empty project's home is open it looks for the first model every 15 s (from Revit it arrives in the project on its own)
+function hvPollEmpty(on) {
+  clearInterval(HV.poll); HV.poll = null;
+  if (on) HV.poll = setInterval(() => { if (state.view !== "ov") return hvPollEmpty(false); hvLoad(true); }, 15000);
 }
 function renderOv() {
   const v = $("viewOv"), p = CL.projects.find((x) => x.id === CL.pid);
   if (!Store.user || !p) {
-    v.replaceChildren(h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, "Overview"))),
+    hvPollEmpty(false);
+    v.replaceChildren(h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, "Project"))),
       h("section", { class: "hvcard plain" }, h("p", null, !Store.available ? "Projects are kept in the cloud, and it’s off in this copy of the page." : !Store.user ? "Sign in to see your projects." : !CL.loaded ? "Loading your projects…" : "Choose a project, or start one."),
         Store.user && CL.loaded ? h("button", { type: "button", class: "hvbtn night", onclick: goHome }, "All projects") : null));
     return;
@@ -16953,30 +17147,299 @@ function renderOv() {
   hvLoad();
   const ready = HV.ov && HV.ovFor === p.id, list = ready ? hvStructures() : null;
   if (list) hvBackfill(p.id, list);
-  const signed = list ? list.filter((s) => s.last).length : 0;
-  const sub = [`Measured to ${hvMethod(hvInputsHere(p.id) ? piDoc() : null)}`, list ? plural(list.length, "structure") : "", list ? `${plural(signed, "bill")} signed` : ""].filter(Boolean).join(" · ");
-  const structs = h("section", { class: "hvstructs", id: "hvStructs" },
-    h("div", { class: "hvstructshead" }, h("h2", null, "Structures"),
-      h("button", { type: "button", class: "hvbtn outline", onclick: () => { goProj(); setTimeout(() => $("piStructs")?.scrollIntoView({ block: "start" }), 50); } }, "Add a structure")),
-    HV.ovErr ? h("div", { class: "err" }, `The project couldn’t be read: ${HV.ovErr}`)
-      : !list ? h("p", { class: "sub" }, "Loading the structures…")
-      : list.length ? list.map(hvRowEl)
-      : h("p", { class: "sub" }, "No structures yet. Add them under Set up, or open a model of this project in Revit and read it with the SolvBoQ add-in (or upload model data under Bills): each model is a structure until you name them."));
-  v.replaceChildren(
-    h("div", { class: "hvtitle" }, h("div", { class: "hvtitletext" }, h("h1", null, p.name), h("p", null, sub)),
-      h("div", { class: "hvtools" }, h("button", { type: "button", class: "hvbtn outline", id: "ovClaims", onclick: goClaims }, "Claims"))),
-    h("div", { class: "hvov" }, h("div", { class: "hvmain" }, hvSetupCard(), structs), h("div", { class: "hvside" }, hvNext(list), typeof pplCard === "function" ? pplCard() : null)));
+  const docs = typeof DOCS !== "undefined" && DOCS.pid === CL.pid ? DOCS.list.length : 0;
+  const bills = list ? list.reduce((t, s) => t + (s.runs.length ? 1 : 0) + s.signed.length, 0) : 0;
+  const ids = [...new Set(p.memberIds || Object.keys(p.members || {}))];
+  const fact = (id, k, val, go, extra) => h("button", { type: "button", class: "hvfact", id, onclick: go }, k ? h("span", { class: "k" }, k) : null, extra || null, h("b", null, val));
+  const head = h("section", { class: "hvphead", id: "hvHead", "aria-labelledby": "hvPH" },
+    h("div", { class: "hvphtop" }, h("div", null, h("h1", { id: "hvPH" }, p.name), list && !list.length ? h("p", { class: "sub" }, hvWhenText({ when: "" }, p)) : null), hvProjectMenu(p)),
+    h("div", { class: "hvfacts" },
+      fact("hvFactContract", "Contract no.", p.contract || "Add", () => hvContractDialog(p)),
+      fact("hvFactMethod", "Measured under", hvInputsHere(p.id) ? piMethodText() : "…", hvMethodDialog),
+      fact("hvFactPeople", "", "Invite", hvPeopleDialog, h("span", { class: "hvfactppl" }, hvAvatars(p), h("span", null, ids.length > 1 ? `${ids.length} people` : "Just you")))),
+    list && list.length ? h("nav", { class: "hvjumps", "aria-label": "In this project" },
+      [["#hvStructs", "Structures", list.length], ["#hvBills", "Bills", bills], ["#hvClaims", "Claims", CL.certs.length], ["#docsCard", "Documents", docs]].map(([href, l, n]) =>
+        h("a", { class: "hvjump", href, onclick: (e) => { e.preventDefault(); document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" }); } }, `${l} `, h("b", null, String(n))))) : null);
+  if (HV.ovErr) { hvPollEmpty(false); return v.replaceChildren(head, h("div", { class: "err" }, `The project couldn’t be read: ${HV.ovErr}`)); }
+  if (!list) return v.replaceChildren(head, h("p", { class: "sub" }, "Loading the project…"));
+  if (!list.length) { hvPollEmpty(true); return v.replaceChildren(head, ...hvEmpty(p)); }
+  hvPollEmpty(false);
+  const props = typeof piProposals === "function" ? piProposals() : null;
+  const structs = h("section", { class: "hvsec", id: "hvStructs", "aria-labelledby": "hvStructsH" },
+    h("div", { class: "hvsechead" }, h("h2", { id: "hvStructsH" }, "Structures ", h("span", { class: "hvcount" }, String(list.length))), h("span", null, "One per model, linked from Revit or uploaded here.")),
+    h("div", { class: "hvstgrid" }, ...list.map(hvRowEl),
+      h("button", { type: "button", class: "hvst add", id: "hvAddStructure", onclick: hvUpload }, h("b", null, "Another structure?"),
+        h("span", null, "Link its model from the Revit panel, or upload its model data here. It appears in this list."), h("span", { class: "btn sm" }, "Upload model data"))),
+    props);
+  v.replaceChildren(head, hvNext(list), structs, hvBillsTable(list), hvClaimsSection(list), typeof docsCard === "function" ? docsCard() : null);
 }
+document.addEventListener("click", (e) => { if (HV.menu && String(HV.menu).startsWith("ov:") && state.view === "ov" && !e.target.closest?.(".hvmenuwrap")) { HV.menu = null; renderOv(); } });
 
 // After the project list loads or the project changes (projectview.js pvAfterProjects)
 function homeAfter() {
   HV.sum = {}; HV.ovFor = "";
-  if (state.view === "home") renderHome(); else if (state.view === "ov") renderOv(); else navMark();
+  if (state.view === "home") renderHome(); else if (state.view === "ov") renderOv(); else if (state.view === "st") renderSt(); else navMark();
 }
-Store.onUser(() => { HV.sum = {}; HV.ov = null; HV.ovFor = ""; HV.stSaved = {}; if (state.view === "home" || state.view === "ov") render(); else navMark(); });
+Store.onUser(() => { HV.sum = {}; HV.ov = null; HV.ovFor = ""; HV.stSaved = {}; if (["home", "ov", "st"].includes(state.view)) render(); else navMark(); });
 // In a browser with the cloud, SolvBoQ opens on your projects; opened from Revit, on the model it was handed
 // (the model checks are no longer where Revit opens: the bill is, with the checks on its lines)
 state.view = HOST ? "next" : !FROM_REVIT && Store.available ? "home" : "map";   // docked in Revit: Next (dockview.js)
+
+// ===== A structure (the UI redesign's stage 3, 21 Nov 2026; the canvas's Structure board) =====
+// One page per structure: its header (kind, bill, claims), the five steps of its bill with the one thing to do at the step chosen, a
+// preview of its bill, its versions and the claims on them, what its bill rests on (each figure with where it came from and how to make
+// an estimate a measurement), the ground report and its figures, what the bill still needs from the model, and its model runs.
+// The structure is one of the project's (homeview.js hvStructures); its newest run is opened behind the page, so what the page says
+// about the bill is the bill's own. Its figures are the project's inputs (inputsview.js piStructure, piReportCard).
+// Top-level names: st*, renderSt.
+
+const ST_STEPS = ["Model", "Parts", "Questions", "Review", "Signed"];
+function stCurrent() { return HV.ov && HV.ovFor === CL.pid && HV.sid ? hvStructures().find((x) => x.id === HV.sid) || null : null; }
+function stPage(sid, anchor) {
+  HV.sid = sid; HV.stTab = null; HV.stAnchor = anchor || "";
+  state.view = "st"; render(); window.scrollTo(0, 0);
+}
+// The structure page of the model that is open (the bill's crumb, its links to where its figures are set)
+function stGoHere(anchor) {
+  if (!CL.pid || !state.records || state.fromSample) { state.view = "map"; render(); return; }
+  stPage(stOf(state.name).id, anchor);
+}
+const stLive = (s) => !!(s && s.runs[0] && state.pmid === s.runs[0].id && !state.fromSample && state.result && !HV.opening);
+// The structure in the project's inputs: found by its id, or added with its kind guessed and its models (create)
+function stInputs(s, create) {
+  const d = piDoc(); let i = d.structures.findIndex((x) => String(x.id) === s.id);
+  if (i < 0 && create) {
+    const at = new Date().toISOString(), kind = s.kind || (typeof guessKind === "function" ? guessKind(s.name, "") : "") || "";
+    d.structures.push({ id: s.id, name: s.name, kind, models: [...new Set(s.runs.map((m) => cleanName(m.fileName || m.title)))], grade: "", rebarKg: null, earthworks: {},
+      geotech: { report: {}, method: "average", limitations: "", holes: [] }, src: kind ? { kind: { from: "judgement", why: "Guessed from its name, on its page", by: piWho(), at } } : {}, by: piWho(), at });
+    i = d.structures.length - 1; piChanged(false);
+  }
+  return i < 0 ? null : { si: d.structures[i], i };
+}
+// Go to a part of the page, adding the structure to the project's inputs first when it isn't (its figures are kept there)
+function stGoTo(s, id) {
+  if (["stGround", "stRests"].includes(id) && hvInputsHere(CL.pid)) stInputs(s, true);
+  if (id === "stGround") PI.open.add(s.id);
+  renderSt(); setTimeout(() => $(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 30);
+}
+
+// ----- The header -----
+function stKindDialog(s) {
+  const sel = h("select", { id: "stKindSel", class: "piinput" }, h("option", { value: "" }, "Choose the kind…"), ...STRUCTURE_KINDS.map((k) => h("option", { value: k.id, selected: k.id === s.kind ? true : null }, k.title)));
+  let dlg = null;
+  const save = () => {
+    const x = stInputs(s, true); if (!x) return toast("The project’s inputs aren’t read yet: try again in a moment.");
+    x.si.kind = sel.value; piStamp(x.si, "kind"); piChanged(false);
+    Store.saveStructure(CL.pid, s.id, { kind: sel.value }).catch(() => {}); HV.ovFor = "";
+    dlg.close(); renderSt();
+  };
+  dlg = hvDialog("stKindDlg", `What kind of structure is ${s.name}?`, h("div", null,
+    h("p", { class: "sub" }, "The kind decides its earthworks rule, its standard grade and what else its bill asks for."), sel),
+    { foot: h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", id: "stKindSave", onclick: save }, "Keep it"), h("button", { type: "button", class: "btn", onclick: () => dlg.close() }, "Cancel")) });
+}
+function stRenameDialog(s) {
+  const inp = h("input", { id: "stNameIn", class: "piinput", autocomplete: "off", value: s.name });
+  let dlg = null;
+  const save = (e) => {
+    e?.preventDefault?.(); const name = inp.value.trim(); if (!name) return;
+    const x = stInputs(s, true); if (x) { x.si.name = name; piStamp(x.si, "name"); piChanged(false); }
+    Store.saveStructure(CL.pid, s.id, { name }).catch(() => {}); HV.ovFor = ""; dlg.close(); renderSt();
+  };
+  dlg = hvDialog("stNameDlg", "Rename the structure", h("form", { onsubmit: save }, h("p", { class: "sub" }, "As its bill and the SolvBoQ Structure label call it."), inp),
+    { foot: h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", id: "stNameSave", onclick: save }, "Rename"), h("button", { type: "button", class: "btn", onclick: () => dlg.close() }, "Cancel")) });
+  inp.select();
+}
+function stMenu(s) {
+  const open = HV.menu === "st:" + s.id, empty = !s.runs.length && !s.signed.length;
+  return h("div", { class: "hvmenuwrap" },
+    h("button", { type: "button", class: "hvmbtn", id: "stMenuBtn", "aria-label": "Structure options: rename or remove", "aria-haspopup": "menu", "aria-expanded": String(open),
+      onclick: (e) => { e.stopPropagation(); HV.menu = open ? null : "st:" + s.id; renderSt(); } }, svg('<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>')),
+    open ? h("div", { class: "hvmenu", role: "menu" },
+      h("button", { type: "button", class: "hvmi", role: "menuitem", id: "stRename", onclick: (e) => { e.stopPropagation(); HV.menu = null; renderSt(); stRenameDialog(s); } }, "Rename…", h("small", null, "Its name in the bill and the project")),
+      h("button", { type: "button", class: "hvmi danger", role: "menuitem", id: "stRemove", disabled: empty ? null : true,
+        onclick: (e) => { e.stopPropagation(); HV.menu = null; const x = stInputs(s, false); if (x) { piDoc().structures.splice(x.i, 1); piChanged(false); } HV.ovFor = ""; goOv(); toast(`${s.name} removed from the project`); } },
+        "Remove", h("small", null, empty ? "From the project’s list" : "It has models or signed bills: they stay in the project"))) : null);
+}
+
+// ----- The five steps of its bill, and the one thing to do at the one chosen -----
+function stCounts(s) {
+  if (!stLive(s)) { const st = s.step || {}; return { live: false, open: st.open || 0, unsure: st.unsure || 0, asks: st.n === 4 ? st.open || 0 : 0, review: st.n === 5 ? st.open || 0 : 0, moved: st.moved || st.changed || 0, lines: st.lines || 0 }; }
+  const lines = (state.mapLines || mapLines(currentGroups())).filter((L) => L.status !== "out"), n = (f) => lines.filter(f).length;
+  const unsure = (typeof partsNow === "function" ? partsNow()?.rows.filter((x) => !x.sure).length : 0) || 0;
+  const still = typeof stillNeeds === "function" ? stillNeeds(state.result) : [];
+  return { live: true, lines: lines.length, open: n((L) => OPEN.has(L.status)), unsure, asks: n((L) => ["flag", "unmapped", "measure"].includes(L.status)),
+    review: n((L) => ["confirm", "claude", "moved"].includes(L.status)), moved: n((L) => L.status === "moved"), needs: still.reduce((t, x) => t + x.count, 0) };
+}
+function stSteps(s, tr, c) {
+  const run = s.runs[0], last = s.last, at = Math.min(tr.at, 4), signedNow = tr.at >= 5;
+  const defs = [
+    { sub: run ? `Read ${hvDay(run.dated)}` : "No model yet",
+      title: run ? `The model was read ${pvDate(run.dated)}` : "Bring the model",
+      text: run ? (c.live ? (c.needs ? `${plural(c.needs, "thing")} the bill still needs from the model are listed below; until they’re fixed, the lines they touch say what was assumed.` : "Every element gives what its card asks for.") : "Opening it to see what the bill still needs from it…")
+        : "Open the structure’s model in Revit and read it with the SolvBoQ add-in, or upload its model data. Its bill is worked out from it.",
+      action: run ? "See what’s missing" : "Upload model data", go: () => (run ? stGoTo(s, "stNeeds") : hvUpload()) },
+    { sub: c.unsure ? `${c.unsure} to place` : at > 1 || signedNow ? "Confirmed" : "To come",
+      title: c.unsure ? `${plural(c.unsure, "element")} to place in a part` : "Its parts", text: c.unsure ? "SolvBoQ wasn’t sure which part they are: confirm them by part, in colour in Revit." : "Every element has its part: walls, slabs, beams, base, benching. A changed element is asked again on the next run.",
+      action: "Open the parts", go: () => stOpen(s, "parts") },
+    { sub: c.asks ? `${c.asks} open` : at > 2 || signedNow ? "None open" : "To come",
+      title: c.asks ? `${plural(c.asks, "question")} open` : "No questions open", text: c.asks ? "Model problems, lines with no item yet and figures to measure: each says what it changes in the bill." : "Everything the bill asks of you has an answer or a stated assumption.",
+      action: c.asks ? "Answer them" : "See the bill", go: () => stOpen(s, "need") },
+    { sub: c.review ? `${c.review} to look at` : signedNow ? "Done" : at > 3 ? "Done" : "To come",
+      title: c.moved ? `Review the ${plural(c.moved, "line")} that changed since version ${last?.n || ""}`.trim() : c.review ? `Review ${plural(c.review, "line")}` : "Every line is confirmed",
+      text: c.moved ? "The others stay confirmed. Each changed line shows what it was, what it is now and the elements that moved it." : c.review ? "Each line comes with its working and its elements: accept it, change it or leave it out." : "Nothing left to look at.",
+      action: c.review ? `Review the ${plural(c.review, "line")}` : "Open the bill", go: () => stOpen(s, c.review ? "need" : "map") },
+    { sub: last ? `Version ${last.n}, ${hvDay(last.at)}` : "Not yet",
+      title: last ? `Version ${last.n} was ${last.kind === "imported" ? "imported and locked" : "signed"} on ${hvDay(last.at)}` : "Not signed yet",
+      text: last ? (signedNow ? "Locked and reproducible. It matches today’s run." : `Locked and reproducible. Sign version ${last.n + 1} once the lines that changed are confirmed; version ${last.n} stays as it was signed.`) : "Once every line is decided, sign it: a locked version you can reproduce, downloaded in your layout.",
+      action: "Go to sign-off", go: () => stOpen(s, "sign") }];
+  const sel = HV.stTab ?? at, d = defs[sel], cur = sel === at && !signedNow;
+  return [h("div", { class: "ststeps", role: "tablist", "aria-label": "Where this structure’s bill stands" },
+      defs.map((x, i) => { const done = i < at || signedNow, current = i === at && !signedNow;
+        return h("button", { type: "button", role: "tab", class: "ststep" + (current ? " cur" : "") + (done ? " done" : ""), id: `stTab${i}`, "aria-selected": String(i === sel), onclick: () => { HV.stTab = i; renderSt(); } },
+          h("span", { class: "ststephead" }, h("span", { class: "stdot" }, done && !current ? "✓" : String(i + 1)), h("b", null, ST_STEPS[i])), h("span", { class: "ststepsub" }, x.sub)); })),
+    h("div", { class: "ststepbox" + (cur ? " cur" : ""), role: "tabpanel", id: "stStepBox" }, h("div", null, h("b", null, d.title), h("span", null, d.text)),
+      h("button", { type: "button", class: "hvbtn " + (cur ? "lime" : "outline"), id: "stStepGo", onclick: d.go }, d.action))];
+}
+
+// ----- The bill, a preview -----
+function stBill(s, c) {
+  const run = s.runs[0];
+  const head = (kids) => h("section", { class: "hvsec", id: "stBill", "aria-labelledby": "stBillH" },
+    h("div", { class: "hvsechead" }, h("div", null, h("h2", { id: "stBillH" }, "The bill"),
+        h("p", null, !run ? "Worked out once its model is in." : s.last ? `Today’s run, against version ${s.last.n}. Lines marked changed moved with the model.` : "Today’s run.")),
+      run ? h("div", { class: "tools" }, h("button", { type: "button", class: "btn dark", id: "stOpenBill", onclick: () => stOpen(s, "map") }, "Open the bill"),
+        h("button", { type: "button", class: "btn", id: "stDownload", disabled: c.live ? null : true, onclick: () => $("btnBoqCsv")?.click() }, "Download")) : null), ...kids);
+  if (!run) return head([]);
+  if (!c.live) return head([h("p", { class: "sub" }, "Opening its newest model…")]);
+  const lines = (state.mapLines || mapLines(currentGroups())), rows = [], secs = [];
+  for (const L of lines) { if (!secs.includes(L.section)) secs.push(L.section); }
+  for (const sec of secs.slice(0, 4)) {
+    rows.push(h("tr", { class: "sthead" }, h("td", { colspan: "4" }, sec || "Other")));
+    for (const L of lines.filter((x) => x.section === sec).slice(0, 3)) {
+      const [st, cls] = L.status === "moved" ? ["Changed", "s-moved"] : lineState(L);
+      rows.push(h("tr", null, h("td", null, L.description), h("td", { class: "r" }, L.shownQty == null ? "—" : `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`), h("td", null, basisChip(L)), h("td", null, h("span", { class: "lstate " + cls }, st))));
+    }
+  }
+  return head([h("div", { class: "tablewrap" }, h("table", { class: "hvtable stpreview" }, h("thead", null, h("tr", null, h("th", null, "Item"), h("th", { class: "r" }, "Quantity"), h("th", null, "How we got it"), h("th", null, "Status"))), h("tbody", null, rows))),
+    h("button", { type: "button", class: "link accent", id: "stAllLines", onclick: () => stOpen(s, "map") }, `See all ${plural(lines.length, "line")}`)]);
+}
+
+// ----- Versions and the claims on them -----
+async function stRepro(s, b) { await signCheckRepro(b); if (state.view === "st") renderSt(); }
+function stVersions(s, c) {
+  const run = s.runs[0], canRepro = c.live && SIGN.sid === s.id;
+  const rows = [];
+  if (run) rows.push(h("div", { class: "stver" }, h("div", null, h("b", null, "Working bill · today’s run"),
+      h("span", null, c.moved && s.last ? `${plural(c.moved, "line")} changed since version ${s.last.n}. Sign it as version ${s.last.n + 1} once they’re confirmed.` : c.open ? `${plural(c.open, "line")} need${c.open === 1 ? "s" : ""} you.` : "Every line is decided.")),
+    h("button", { type: "button", class: "btn sm", onclick: () => stOpen(s, "map") }, "Open")));
+  for (const b of s.signed.slice().reverse()) {
+    const imported = b.kind === "imported", sb = canRepro ? SIGN.list.find((x) => x.n === b.n) : null;
+    rows.push(h("div", { class: "stver signed", "data-version": String(b.n) },
+      h("div", null, h("b", null, imported ? `Tender bill · imported and locked as version ${b.n}` : `Version ${b.n} · signed ${hvDay(b.at)}`),
+        h("span", null, `${b.lines?.length ? plural(b.lines.length, "line") + ", " : ""}locked. Claims on this structure are checked against it.`),
+        sb ? signReproBox(sb) : null),
+      h("div", { class: "tools" }, !imported && sb ? h("button", { type: "button", class: "btn sm", "data-repro": String(b.n), onclick: () => stRepro(s, sb) }, "Check it reproduces") : null,
+        run && !imported ? h("button", { type: "button", class: "btn sm", onclick: () => stOpen(s, "sign") }, "Open") : null)));
+  }
+  const cert = CL.certs[0];
+  const claims = !s.last ? "Claims are checked against a signed or imported bill: this structure has none yet."
+    : !CL.certs.length ? "No payment certificate has claimed on this bill yet. When one does, its claims show here, and under Claims on the project."
+    : null;
+  return h("section", { class: "hvsec", id: "stVersions", "aria-labelledby": "stVerH" }, h("h2", { id: "stVerH" }, "Versions and claims"),
+    rows.length ? h("div", { class: "stvers" }, rows) : null,
+    claims ? h("p", { class: "stclaims" }, claims)
+      : h("div", { class: "stclaims" }, h("span", null, `${plural(CL.certs.length, "certificate")} in the project, the newest PC${cert.meta?.number ?? ""}${cert.check?.signed ? `: ${hvRand(cert.check.over)} claimed over the signed bills` : ""}.`),
+        h("button", { type: "button", class: "btn sm", id: "stClaims", onclick: goClaims }, "Open the claims")));
+}
+
+// ----- What its bill rests on: each figure, where it came from, and how to make it firmer -----
+function stRests(s, c) {
+  const x = hvInputsHere(CL.pid) ? stInputs(s, false) : null, si = x?.si, K = KIND_BY_ID.get(si?.kind || s.kind);
+  const ea = c.live ? state.result.derived?.earthworks : null, civil = ea ? ea.civil : K?.module !== "building";
+  const rows = [];
+  const row = (label, value, chip, tone, ask, go) => rows.push(h("div", { class: "strest" },
+    h("div", null, h("span", null, label), h("b", null, value), ask ? h("button", { type: "button", class: "link accent", onclick: go }, ask) : null),
+    h("span", { class: "src " + (tone || "") }, chip)));
+  row("Kind", K ? K.title : "Not set", si?.kind ? "Yours" : K ? "Guessed from its name" : "Not set", si?.kind ? "" : "amber", si?.kind ? null : "Choose its kind", () => stKindDialog(s));
+  row("Standard concrete grade", si?.grade || K?.grade || "—", si?.grade ? "Yours" : K ? "From the kind" : "Assumed", si?.grade ? "" : K ? "" : "amber", null, null);
+  if (ea && !ea.manhole) {
+    const assumed = !ea.nglFrom || /assum/i.test(ea.nglFrom);
+    row("Natural ground level", ea.ngl != null ? `${fmt2(ea.ngl)} m` : "Not found", ea.ngl == null ? "Not in the model" : assumed ? "Assumed from the model" : "From the model", ea.ngl == null || assumed ? "amber" : "", ea.ngl == null || assumed ? "Label it NGL in Revit to be sure" : null, () => toast("In Revit: name a level, or a spot elevation, NGL. The next read takes it."));
+    const dk = ea.civil ? "replacementDepth" : "buildingDepth", src = ea.src?.[dk];
+    row(ea.civil ? "Replacement depth" : "Excavation depth", `${fmt2(ea[dk])} m`, src === "geotech" || src === "project" ? "Yours" : src === "model" ? "Set for this model" : "Assumed", src === "geotech" || src === "project" || src === "model" ? "" : "amber",
+      src === "geotech" || src === "project" || src === "model" ? null : "Add the ground report", () => stGoTo(s, "stGround"));
+  }
+  const kg = si?.rebarKg ?? (typeof CONV !== "undefined" ? CONV.rebar?.[civil ? "civil" : "building"] : null);
+  if (si?.rebarDoc) row("Reinforcement", "From the bending schedule", "From a document", "", null, null);
+  else row("Reinforcement", kg != null ? `${kg} kg/m³ of concrete` : "—", si?.rebarKg != null ? "Yours" : "Estimate", si?.rebarKg != null ? "" : "amber", si?.rebarKg != null ? null : "Add a bending schedule", () => { goOv(); setTimeout(() => $("docsCard")?.scrollIntoView({ block: "start" }), 60); });
+  const holes = si?.geotech?.holes?.length || 0;
+  row("Rock classes", holes ? `From ${plural(holes, "borehole log")}` : ea?.rockShare != null ? `${Math.round(ea.rockShare * 100)}% hard rock, provisional` : "None set", holes ? "From the ground report" : "Not from a report", holes ? "" : "amber", holes ? null : "Add the ground report", () => stGoTo(s, "stGround"));
+  row("Method of measurement", hvInputsHere(CL.pid) ? piMethodText() : "…", "The project’s", "", null, null);
+  return h("section", { class: "hvsec", id: "stRests", "aria-labelledby": "stRestsH" }, h("h2", { id: "stRestsH" }, "What the bill rests on"),
+    h("p", { class: "sub" }, "Each figure says where it came from. Change one here or on the line it affects."), ...rows,
+    c.live ? h("button", { type: "button", class: "link accent", id: "stStage", onclick: goProj }, "The bills’ stage and specification") : null);
+}
+function stGround(s) {
+  const x = hvInputsHere(CL.pid) ? stInputs(s, false) : null;
+  if (x) PI.open.add(s.id);
+  return h("section", { class: "hvsec", id: "stGround", "aria-labelledby": "stGroundH" }, h("h2", { id: "stGroundH" }, "Its figures and the ground report"),
+    h("p", { class: "sub" }, "Its grade, reinforcement rate and depth, and the borehole logs with your SANS 1200 D reading of each layer. Each figure keeps its source."),
+    x ? piStructure(x.si, x.i) : h("div", { class: "tools" }, h("button", { type: "button", class: "btn", id: "stAddFigures", onclick: () => stGoTo(s, "stGround") }, "Add its grade, rate and ground")),
+    x ? piReportCard() : null);
+}
+function stNeedsCard(s, c) {
+  const still = c.live && typeof stillNeeds === "function" ? stillNeeds(state.result) : [];
+  const total = still.reduce((t, x) => t + x.count, 0);
+  return h("section", { class: "hvsec", id: "stNeeds", "aria-labelledby": "stNeedsH" },
+    h("h2", { id: "stNeedsH" }, !c.live ? "What the bill still needs from the model" : total ? `${plural(total, "thing")} the bill still needs from the model` : "The model gives what the bill needs"),
+    !c.live ? h("p", { class: "sub" }, s.runs.length ? "Shown once its model is open." : "Once its model is in.")
+      : still.length ? h("ul", { class: "stneeds" }, still.map((x) => h("li", null, h("b", null, `${x.need.what}`), ` (${plural(x.count, "element")}). Until then: ${(IF_MISSING[x.need.missing] || "").toLowerCase()}.`,
+          HOST ? h("button", { type: "button", class: "link accent", onclick: () => hostSelect(x.ids) }, " Select them") : null))) : null,
+    c.live && still.length ? h("span", { class: "sub" }, "Until then SolvBoQ assumes and says so on the line. The modeller fixes them in Revit; the panel selects each one.") : null);
+}
+function stRunsCard(s) {
+  return h("section", { class: "hvsec", id: "stRuns", "aria-labelledby": "stRunsH" }, h("h2", { id: "stRunsH" }, "Model runs"),
+    s.runs.length ? h("div", { class: "struns" }, s.runs.map((m, i) => h("div", { class: "strun" + (i === 0 ? " newest" : "") }, h("span", { class: "strundot", "aria-hidden": "true" }),
+      h("div", null, h("b", null, pvDate(m.dated)), h("span", null, [i === 0 ? "Newest" : "", m.elements ? plural(m.elements, "element") : "", state.pmid === m.id ? "open now" : ""].filter(Boolean).join(" · "))))))
+      : h("p", { class: "sub" }, "No model yet."),
+    s.runs.length > 1 ? h("button", { type: "button", class: "btn sm", id: "stRunsDiff", onclick: () => { stOpen(s, "map").then?.(() => {}); setTimeout(() => { if (typeof selectLine === "function") selectLine(null); setTimeout(() => document.querySelector(".revbox")?.scrollIntoView({ block: "center" }), 200); }, 400); } }, "What changed between runs") : null);
+}
+
+function renderSt() {
+  const v = $("viewSt"); if (!v) return;
+  const p = CL.projects.find((x) => x.id === CL.pid);
+  if (!Store.user || !p) return v.replaceChildren(h("section", { class: "hvcard plain" }, h("p", null, "Open a project first."), h("button", { type: "button", class: "hvbtn night", onclick: goHome }, "All projects")));
+  hvLoad();
+  if (!HV.ov || HV.ovFor !== p.id) return v.replaceChildren(h("p", { class: "sub" }, HV.ovErr ? `The project couldn’t be read: ${HV.ovErr}` : "Loading the structure…"));
+  const s = stCurrent();
+  if (!s) return v.replaceChildren(h("section", { class: "hvcard plain" }, h("p", null, "That structure isn’t in this project."), h("button", { type: "button", class: "hvbtn night", onclick: goOv }, "Back to the project")));
+  navMark();
+  // Its newest run is opened behind the page, so the page speaks for the bill as it is
+  const run = s.runs[0];
+  if (run && state.pmid !== run.id && !HV.opening && HV.stOpening !== run.id) {
+    HV.stOpening = run.id;
+    pvOpenModel(run.id, true).finally(() => { HV.stOpening = ""; if (state.view === "st") renderSt(); });
+  }
+  const c = stCounts(s), tr = hvTrackOf({ step: s.step, runs: Object.fromEntries(s.runs.map((m) => [m.id, 1])), signed: Object.fromEntries(s.signed.map((b) => [b.n, 1])) });
+  const K = KIND_BY_ID.get(s.kind);
+  const fact = (id, k, val, go) => h("button", { type: "button", class: "hvfact", id, onclick: go }, h("span", { class: "k" }, k), h("b", null, val));
+  const head = h("section", { class: "hvphead", id: "stHead", "aria-labelledby": "stH" },
+    h("div", { class: "hvphtop" },
+      h("div", { class: "sthead" }, h("span", { class: "sticon", "aria-hidden": "true" }, (s.name[0] || "S").toUpperCase()),
+        h("div", null, h("h1", { id: "stH" }, s.name), h("p", { class: "sub" }, run ? `Model last read ${pvDate(run.dated)}${s.runs.length > 1 ? ` · ${plural(s.runs.length, "run")}` : ""}` : "No model yet"))),
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn", id: "stUpload", onclick: hvUpload }, run ? "Upload a new run" : "Upload model data"), stMenu(s))),
+    h("div", { class: "hvfacts" },
+      fact("stFactKind", "Kind", K ? K.title : "Not set", () => stKindDialog(s)),
+      fact("stFactBill", "Bill", [c.lines ? plural(c.lines, "line") : run ? "Being worked out" : "No bill yet", s.last ? `version ${s.last.n} ${s.last.kind === "imported" ? "imported" : "signed"}` : ""].filter(Boolean).join(" · "), () => (run ? stOpen(s, "map") : hvUpload())),
+      fact("stFactClaims", "Claims", s.last && CL.certs.length ? plural(CL.certs.length, "certificate") : "None yet", () => (s.last && CL.certs.length ? goClaims() : stGoTo(s, "stVersions")))),
+    ...stSteps(s, tr, c));
+  v.replaceChildren(head,
+    h("div", { class: "stgrid" },
+      h("div", { class: "stmain" }, stBill(s, c), stVersions(s, c), stGround(s)),
+      h("aside", { class: "stside" }, stRests(s, c), stNeedsCard(s, c), stRunsCard(s))));
+  if (HV.stAnchor && c.live !== undefined) { const id = HV.stAnchor; HV.stAnchor = ""; setTimeout(() => stGoTo(s, id), 30); }
+}
+document.addEventListener("click", (e) => { if (HV.menu && String(HV.menu).startsWith("st:") && state.view === "st" && !e.target.closest?.(".hvmenuwrap")) { HV.menu = null; renderSt(); } });
 
 // ===== The bill docked in Revit (the canvas's four “Revit panel” boards; about 440 px wide) =====
 // Built 17 Nov 2026 after his first use (14 Nov: too large, the selected item small, no way to see how a figure was got). The
