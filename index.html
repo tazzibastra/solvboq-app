@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-21T14:58:13Z">
+<meta name="solvboq-build" content="2026-11-22T08:52:42Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1617,6 +1617,74 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
 #mTools:empty{display:none}
 #viewMap.bnew .mfoot{padding:12px 4px 0}
 @media (max-width:640px){.bheadbox{position:static}.bprogbar{width:90px}}
+/* ===== Claims on one bill (the redesign's stage 5, 21 Nov 2026; claimbill.js) ===== */
+#viewCb{display:flex;flex-direction:column;gap:20px}
+.clred{color:var(--red-t)}
+.cbhead .hvkick{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--muted)}
+.cbhead h1{font-size:30px}
+.cbasat{display:flex;flex-wrap:wrap;align-items:center;gap:8px;border-top:1px solid var(--rule);padding-top:14px}
+.cbasat .edlabel{margin:0 4px 0 0}
+.cbover{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:12px 24px;align-items:center}
+@media (max-width:900px){.cbover{grid-template-columns:minmax(0,1fr)}}
+.cbbig{display:flex;flex-direction:column;gap:2px}
+.cbbig>span{color:var(--muted);font-size:13px}
+.cbbig b{font-size:40px;line-height:1.1;letter-spacing:-.03em}
+.cbstats{grid-column:1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cbstats>div{background:var(--head);border-radius:16px;padding:12px 14px;display:flex;flex-direction:column}
+.cbstats b{font-size:18px}
+.cbstats span{color:var(--muted);font-size:12px}
+.cbchart{grid-column:2;grid-row:1 / span 2;margin:0;display:flex;flex-direction:column;gap:6px}
+@media (max-width:900px){.cbchart{grid-column:1;grid-row:auto}}
+.cbchart figcaption{font-size:13px;font-weight:600;color:var(--ink-2)}
+.cbplot{position:relative}
+.cbaxis{stroke:var(--line);stroke-width:1}
+.cbline{stroke:var(--red-t);stroke-width:2;stroke-linejoin:round}
+.cbdot{fill:var(--card);stroke:var(--red-t);stroke-width:2}
+.cbdot.none{fill:var(--line);stroke:var(--line)}
+.cbdot.cur{fill:var(--lime);stroke:var(--ink)}
+.cblabel{font:700 12px var(--sans);fill:var(--ink)}
+.cbhit{fill:transparent;cursor:pointer}
+.cbtip{position:absolute;top:-8px;transform:translate(-50%,-100%);background:var(--night);color:#fff;font-size:12px;padding:6px 10px;border-radius:10px;white-space:nowrap;pointer-events:none}
+.cbtip[hidden]{display:none}
+.cbaxislabels{display:flex;justify-content:space-between;gap:8px;font-size:12px;color:var(--muted)}
+.cbsort{display:flex;align-items:center;gap:8px}
+.cbtable td{vertical-align:top}
+.cbrow{cursor:pointer}
+.cbrow:hover td,.cbrow.open td{background:var(--head)}
+.cbitem{white-space:nowrap;color:var(--muted)}
+.cbdesc{border:0;background:transparent;padding:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer}
+.cbdesc:hover{text-decoration:underline;text-underline-offset:3px}
+.cbclaim{min-width:200px}
+.cbfig{display:flex;gap:8px;align-items:baseline;white-space:nowrap}
+.cbfig span{color:var(--muted);font-size:12px}
+.cbbar{position:relative;height:8px;border-radius:999px;background:var(--track);margin-top:6px;overflow:hidden}
+.cbbar span{position:absolute;top:0;bottom:0}
+.cbbar .ok{left:0;background:var(--ink)}
+.cbbar .ok.twice{background:var(--amber)}
+.cbbar .ov{background:var(--red)}
+.cbbar .ov.notin{background:var(--accent)}
+.cbrand{white-space:nowrap;font-weight:600}
+.cbdec{display:block;margin-top:4px;font-size:12px;font-weight:600;color:var(--amber-t)}
+.cbdec.query{color:var(--red-t)}
+.cbdec.accept,.cbdec.dismiss{color:var(--muted)}
+.cbsec td{background:var(--head);font-weight:700}
+.cbdetail>td{background:var(--head);padding:16px 18px}
+.cbdgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px}
+@media (max-width:800px){.cbdgrid{grid-template-columns:minmax(0,1fr)}}
+.cbdleft,.cbdright{display:flex;flex-direction:column;gap:12px;min-width:0}
+.cbdfigs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.cbdfigs>div{background:var(--card);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column}
+.cbdfigs span{color:var(--muted);font-size:12px}
+.cbhbars{display:flex;align-items:flex-end;gap:3px;height:64px;padding:2px 0}
+.cbhbar{flex:1;min-width:6px;border-radius:4px 4px 0 0;background:var(--ink)}
+.cbhbar.over{background:var(--red)}
+.cbhbar.later{background:var(--line)}
+.cbhbar.cur{outline:2px solid var(--lime);outline-offset:1px}
+.cbquery{display:flex;flex-direction:column;gap:6px}
+.cbquery textarea{width:100%;box-sizing:border-box}
+.cbqlist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px}
+.cbqlist li{display:flex;flex-direction:column;gap:4px}
+.cbqlist li>span{color:var(--ink-2)}
 </style>
 </head>
 <body>
@@ -1801,6 +1869,8 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
 
   <!-- ===== Claims: payment certificates ===== -->
   <div id="viewClaims" hidden></div>
+  <!-- Claims on one signed or imported bill (the redesign's stage 5; claimbill.js) -->
+  <div id="viewCb" hidden></div>
 
   <!-- ===== Standards: the modelling standard, cards and BoQ codes ===== -->
   <div id="viewStd" hidden class="stdwrap"></div>
@@ -11574,7 +11644,7 @@ const state = { profile: null, convAll: false, mapDecisions: {}, mFilter: "decid
 function load(records, name, meta = {}) {
   if (typeof decFlush === "function") decFlush();   // the model being left: its decisions saved, none carried into the next
   if (typeof ovFlush === "function") ovFlush();     // and its corrections kept in SolvBoQ: never laid on the next model
-  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "st", "map", "conv", "next", "firm"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
+  Object.assign(state, { lineOut: new Set(), prov: new Set(), mapDecisions: {}, revAck: null, mFilter: "decide", mBatch: null, mEdit: null, mQ: "", name, tier: 0, trade: "", view: ["master", "claims", "std", "proj", "parts", "sign", "home", "ov", "st", "cb", "map", "conv", "next", "firm"].includes(state.view) ? state.view : "overview", detail: null, dCat: "", dQ: "", sel: null, fix: new Set(), accepted: new Set(), ai: [], aiExpected: [], aiAsk: new Set(), aiDismiss: new Set(), showDone: false, note: meta.note || "", desc: meta.desc || "", earth: loadEarth(name), manual: loadManual(name), wFilter: "all", open: new Set() });
   state.records = records; state.fromSample = Object.entries(SAMPLES).some(([k, v]) => v === meta && k !== "model" && k !== "upload" && !k.startsWith("proj:"));
   engineRunOn(records);
   $("fProject").value = meta.project || name.replace(/\.[a-z0-9]+$/i, ""); $("fSource").value = meta.source || ""; $("fRev").value = meta.rev || "";
@@ -11673,6 +11743,7 @@ function render() {
   $("viewHome").hidden = state.view !== "home";
   $("viewOv").hidden = state.view !== "ov";
   $("viewSt").hidden = state.view !== "st";
+  $("viewCb").hidden = state.view !== "cb";
   $("viewFirm").hidden = state.view !== "firm";
   $("viewNext").hidden = state.view !== "next";
   // The top bar's tab, the sub-bar under Bills or Settings, and the page heading (homeview.js)
@@ -11680,6 +11751,7 @@ function render() {
   if (state.view === "home") return renderHome();
   if (state.view === "ov") return renderOv();
   if (state.view === "st") return renderSt();
+  if (state.view === "cb") return renderCb();
   if (state.view === "next") return renderNext();
   if (state.view === "firm") return renderFirm();
   // The master BoQ needs the model; the fix list is the model's
@@ -14851,6 +14923,273 @@ document.addEventListener("dragover", (e) => { if (state.view === "claims") { e.
 document.addEventListener("dragleave", (e) => { if (!e.relatedTarget) document.body.classList.remove("dropping"); });
 document.addEventListener("drop", (e) => { document.body.classList.remove("dropping"); if (state.view !== "claims") return; e.preventDefault(); const fs = e.dataTransfer?.files; if (fs?.length) addCertificateFiles(fs); });
 
+// ===== Claims on one bill (the UI redesign's stage 5, 21 Nov 2026; the canvas's Claims board) =====
+// One page per signed or imported bill: every certificate of the project, read once, matched to the bill with the existing pairing
+// (claimsview.js clMasterFor: the certificate bill by name or his choice; claims.js compareWithMaster: lines by item and unit,
+// variation orders by wording). “As at” a certificate winds the whole page back to it: the headline, the table and each line's history.
+// The decisions are today's (claimsview.js setReview: Query, Accept as claimed, Not an issue, his wording of the query), kept per
+// certificate as before, so the Claims page and its query list agree with this one. Nothing new is stored; no rule changes.
+// Top-level names: CB, cb*, renderCb.
+
+const CB = { sid: "", at: "", full: new Map(), loading: "", err: "", filter: "decide", sort: "value", open: "", qOpen: false, cache: null };
+const CB_FIND = { over: ["Over the bill", "red"], twice: ["Claimed twice", "amber"], notin: ["Not in the bill", "violet"], ok: ["Within the bill", "green"], none: ["Not claimed yet", ""] };
+const CB_DEC = { query: "Queried", accept: "Accepted as claimed", dismiss: "Not an issue" };
+// The bill's name as he would say it: “BILL C4: GRAVITY THICKENERS” → “Gravity Thickeners”, and its possessive
+const cbName = (m) => { const t = String(m?.name || "").replace(/^BILL\s+\S+\s*:?\s*/i, "").trim(); return t === t.toUpperCase() ? t.toLowerCase().replace(/(^|[\s(-])([a-z])/g, (x, a, c) => a + c.toUpperCase()) : t; };
+const cbOf = (m) => { const t = cbName(m); return /s$/i.test(t) ? `${t}’` : `${t}’s`; };
+const cbBill = () => (CL.signed || []).find((x) => x.sid === CB.sid) || null;
+const cbCertsByDate = () => [...certList()].sort((a, b) => -certSort(a, b));   // oldest first
+const cbNum = (c) => `PC${String(c.meta?.number ?? "?").padStart(2, "0")}`;
+const CB_MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const cbWhen = (c) => { const d = c.dated || certDated(c.meta || {}), t = d ? new Date(d) : null; return t && !isNaN(t) ? `${CB_MON[t.getUTCMonth()]} ${t.getUTCFullYear()}` : c.meta?.date || ""; };
+
+function cbPage(sid) { CB.sid = sid; CB.open = ""; CB.qOpen = false; CB.filter = "decide"; state.view = "cb"; render(); window.scrollTo(0, 0); }
+
+// Every certificate of the project, read once (they are kept in memory for the page)
+async function cbLoadAll() {
+  const pid = CL.pid, list = cbCertsByDate().filter((c) => !CB.full.has(`${pid}|${c.id}`));
+  if (!list.length || CB.loading) return;
+  try {
+    for (const [i, c] of list.entries()) {
+      CB.loading = `Reading certificate ${i + 1} of ${list.length} (${cbNum(c)})…`; if (state.view === "cb") renderCb();
+      CB.full.set(`${pid}|${c.id}`, await getCert(c.id));
+    }
+    CB.err = "";
+  } catch (e) { CB.err = `The certificates couldn’t all be read: ${e.message}`; }
+  CB.loading = ""; CB.cache = null;
+  if (state.view === "cb") renderCb();
+}
+// The certificate bill that pairs with this signed bill (by name, or his choice), or "" when the certificate has none
+function cbCertBill(cert, master) {
+  const bills = [...new Map(cert.lines.filter((l) => l.bill).map((l) => [l.bill, l.billTitle])).entries()];
+  let best = "", n = -1;
+  for (const [b, t] of bills) { if (clMasterFor(b, t)?.id !== master.id) continue; const m = compareWithMaster(cert, b, claimLines(master.bill)).matched; if (m > n) { n = m; best = b; } }
+  return best;
+}
+// The bill, line by line, against every certificate: per line of the bill its claim to date on each certificate (the certificate
+// lines matched to it added together); and the certificate lines matched to no line of the bill, as lines of their own
+function cbHistory(master, certs) {
+  const tol = (CL.mtol ?? 2) / 100, mlines = claimLines(master.bill);
+  const rows = new Map(mlines.map((m) => [m.key, { key: m.key, m, item: m.item, section: m.section, description: m.description, unit: m.unit, agreed: m.agreed, rate: m.rate, hist: [] }]));
+  const per = certs.map((c) => {
+    const bill = cbCertBill(c.cert, master);
+    if (!bill) return { c, bill: "", cmp: null };
+    const cmp = compareWithMaster(c.cert, bill, mlines, { tolerance: tol });
+    for (const r of cmp.rows) {
+      const k = r.m ? r.m.key : `vo|${r.l.section}|${r.l.item}|${r.l.description}`;
+      if (!rows.has(k)) rows.set(k, { key: k, m: null, notIn: true, item: `${r.l.section === "variation" ? "VO " : ""}${r.l.item}`, section: r.l.section === "variation" ? "Variation orders" : "Not in the bill", description: r.l.description, unit: r.l.unit, agreed: null, rate: r.l.rate, hist: [] });
+    }
+    return { c, bill, cmp };
+  });
+  for (const [i, p] of per.entries()) {
+    for (const row of rows.values()) row.hist[i] = { qty: 0, lines: [] };
+    if (!p.cmp) continue;
+    for (const r of p.cmp.rows) {
+      const k = r.m ? r.m.key : `vo|${r.l.section}|${r.l.item}|${r.l.description}`, x = rows.get(k).hist[i];
+      x.qty += r.l.toDateQty ?? 0; x.lines.push(r.l);
+    }
+  }
+  return { rows: [...rows.values()], per, tol };
+}
+// One line on one certificate: claimed to date, over (and its rands), what it is, and the finding his decision is kept on
+function cbAt(row, i, res, cmp) {
+  const x = row.hist[i] || { qty: 0, lines: [] }, claimed = x.qty, tol = (CL.mtol ?? 2) / 100;
+  const rate = row.rate ?? x.lines.find((l) => l.rate)?.rate ?? 0;
+  const twice = (res?.findings || []).find((f) => f.kind === "dup" && f.lines.some((l) => x.lines.includes(l)));
+  let find = claimed <= 0.0005 ? "none" : row.notIn ? "notin" : twice ? "twice" : row.agreed != null && claimed > row.agreed * (1 + tol) + 0.005 ? "over" : "ok";
+  const over = find === "over" ? claimed - row.agreed : 0;
+  const impact = find === "over" ? over * rate : find === "notin" ? x.lines.reduce((t, l) => t + (l.toDateAmount || 0), 0) : find === "twice" ? claimed * rate : 0;
+  // The finding his decision is kept on: the certificate's own (over his bill, not in it, claimed twice) where there is one, else one
+  // made the same way for the line's certificate lines together
+  const own = find === "twice" ? twice : (cmp?.findings || []).find((f) => (find === "notin" ? f.kind === "notInMaster" : f.kind === "overMaster") && f.lines.some((l) => x.lines.includes(l)));
+  let f = null;
+  if (own && (find !== "over" || x.lines.length === 1)) f = Object.assign(own, { against: "the signed bill" });
+  else if (find === "over") { const l0 = x.lines[0]; f = { kind: "overMaster", tier: 1, title: CLAIM_KINDS.overMaster.title, key: "overMaster|" + x.lines.map((l) => l.key).join("&"), impact, against: "the signed bill",
+    lines: [{ ...l0, toDateQty: claimed, description: x.lines.length > 1 ? row.description : l0.description }], master: row.m }; }
+  return { claimed, over, impact, find, f, lines: x.lines, rate, twiceWith: twice ? twice.lines.filter((l) => !x.lines.includes(l)) : [] };
+}
+
+// ----- The page -----
+function renderCb() {
+  const v = $("viewCb"); if (!v) return;
+  if (Store.user && CL.pid && CL.signedFor !== CL.pid) clSignedLoad().then(() => { if (state.view === "cb") renderCb(); });
+  const master = cbBill();
+  if (!Store.user || !CL.pid) return v.replaceChildren(h("section", { class: "hvcard plain" }, h("p", null, "Open a project first.")));
+  if (!master) return v.replaceChildren(h("section", { class: "hvcard plain" }, h("p", null, CL.signed ? "That bill isn’t signed or imported in this project." : "Reading the project’s signed bills…"), h("button", { type: "button", class: "hvbtn night", onclick: goOv }, "Back to the project")));
+  const certs = cbCertsByDate();
+  if (certs.some((c) => !CB.full.has(`${CL.pid}|${c.id}`))) { cbLoadAll(); }
+  const loaded = certs.filter((c) => CB.full.has(`${CL.pid}|${c.id}`)).map((c) => ({ ...c, cert: CB.full.get(`${CL.pid}|${c.id}`) }));
+  const head = (kids) => v.replaceChildren(h("section", { class: "hvphead cbhead", id: "cbHead" },
+    h("div", { class: "hvphtop" }, h("div", null, h("span", { class: "hvkick", id: "cbKick" }, cbKicker(master, null)), h("h1", null, `Claims against ${cbOf(master)} bill`)),
+      h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", id: "cbAdd", onclick: goClaims }, "Add certificates"))), ...kids));
+  if (!certs.length) return head([h("p", { class: "sub" }, "No payment certificate in this project yet. Add the contractor’s certificates: each is checked against this bill.")]);
+  if (loaded.length < certs.length) return head([h("p", { class: "sub", role: "status" }, CB.loading || "Reading the certificates…"), CB.err ? h("div", { class: "err" }, CB.err) : null]);
+  // The history, worked out once per bill and set of certificates (and tolerance)
+  const ck = `${CL.pid}|${master.id}|${master.n}|${loaded.map((c) => c.id).join(",")}|${CL.mtol}|${JSON.stringify(clBillMasterGet())}`;
+  if (CB.cache?.key !== ck) CB.cache = { key: ck, H: cbHistory(master, loaded) };
+  const H = CB.cache.H, withBill = H.per.map((p, i) => (p.bill ? i : -1)).filter((i) => i >= 0);
+  if (!withBill.length) return head([h("p", { class: "sub" }, `None of the ${plural(certs.length, "certificate")} claims on a bill that pairs with this one. If the certificate names it differently, pair it on the Claims page (Against your BoQ).`)]);
+  // As at: the chosen certificate (the newest with this bill by default); the page opens its findings and decisions
+  let i = H.per.findIndex((p) => p.c.id === CB.at); if (i < 0 || !H.per[i].bill) i = withBill[withBill.length - 1];
+  const P = H.per[i];
+  if (CL.open?.id !== P.c.id) { cbOpenCert(P.c.id); return head([h("p", { class: "sub", role: "status" }, "Opening the certificate…")]); }
+  const res = CL.open.res, at = H.rows.map((row) => ({ row, a: cbAt(row, i, res, P.cmp) }));
+  const issue = (x) => ["over", "twice", "notin"].includes(x.a.find), dec = (x) => (x.a.f ? CL.reviews[x.a.f.key]?.status : null);
+  const sumOver = at.filter((x) => x.a.find === "over").reduce((t, x) => t + x.a.impact, 0), nOver = at.filter((x) => x.a.find === "over").length;
+  const value = H.rows.filter((r) => !r.notIn && r.agreed != null && r.rate).reduce((t, r) => t + r.agreed * r.rate, 0);
+  const left = at.filter((x) => !x.row.notIn && x.row.agreed != null && x.a.rate).reduce((t, x) => t + Math.max(0, x.row.agreed - x.a.claimed) * x.a.rate, 0);
+  const nTwice = at.filter((x) => x.a.find === "twice").length, nNotIn = at.filter((x) => x.a.find === "notin").length;
+  const queries = at.filter((x) => dec(x) === "query" && x.a.f).sort((a, b) => b.a.impact - a.a.impact);
+  // As at ‹ [PCnn] › with its state
+  const idx = withBill.indexOf(i), older = withBill[idx - 1], newer = withBill[idx + 1];
+  const open = at.filter(issue).filter((x) => !dec(x)).length;
+  const arrow = (d, label, to) => h("button", { type: "button", class: "ibtn", "aria-label": label, title: label, disabled: to == null ? "" : null, id: label.startsWith("Older") ? "cbOlder" : "cbNewer", onclick: () => to != null && cbGo(H.per[to].c.id) },
+    svg(`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true"><path d="${d}"></path></svg>`));
+  const asAt = h("div", { class: "cbasat" }, h("span", { class: "edlabel" }, "As at"), arrow("M15 6l-6 6 6 6", "Older certificate", older),
+    h("label", { class: "sr", for: "cbAt" }, "Certificate"),
+    h("select", { id: "cbAt", class: "clcertsel", onchange: (e) => cbGo(e.target.value) }, withBill.map((k) => h("option", { value: H.per[k].c.id, selected: k === i ? true : null }, `${cbNum(H.per[k].c)} · ${cbWhen(H.per[k].c)}`))),
+    arrow("M9 6l6 6-6 6", "Newer certificate", newer),
+    h("span", { class: "hvchip " + (open ? "amber" : "green"), id: "cbState" }, open ? `${open} to decide` : idx === withBill.length - 1 ? "Checked" : "Checked"));
+  // The overview: claimed over the signed bill to date, the bill's value, what is still to claim, twice and not in the bill; the chart
+  const overview = h("div", { class: "cbover" },
+    h("div", { class: "cbbig" }, h("span", null, "Claimed over the signed bill, to date"), h("b", { id: "cbOverBig", class: sumOver > 0 ? "clred" : "" }, hvRand(sumOver)), h("span", null, `on ${plural(nOver, "line")}, after ${cbNum(P.c)}`)),
+    h("div", { class: "cbstats" },
+      h("div", null, h("b", null, value ? rands(value) : "—"), h("span", null, value ? "signed bill, at its rates" : "signed bill (no rates in it)")),
+      h("div", null, h("b", { id: "cbLeft" }, value ? rands(left) : "—"), h("span", null, "still to claim")),
+      h("div", null, h("b", { id: "cbTwiceNotIn" }, `${nTwice} · ${nNotIn}`), h("span", null, "claimed twice · not in the bill"))),
+    cbChart(H, i, withBill));
+  const tol = CB.tolOpen;
+  const tolLine = h("p", { class: "hvtol", id: "cbTol" }, piTolText(), " ", h("button", { type: "button", class: "link accent", id: "cbTolChange", "aria-expanded": String(!!tol), onclick: () => { CB.tolOpen = !tol; renderCb(); } }, tol ? "Done" : "Change"));
+  // The table: To decide first, biggest over first; or the bill's order by section
+  const flt = { decide: (x) => issue(x) && !dec(x), over: (x) => x.a.find === "over", twice: (x) => x.a.find === "twice", notin: (x) => x.a.find === "notin", queried: (x) => dec(x) === "query", all: () => true };
+  const labels = [["decide", "To decide"], ["over", "Over the bill"], ["twice", "Claimed twice"], ["notin", "Not in the bill"], ["queried", "Queried"], ["all", "All lines"]];
+  // The open line stays where it is while he decides it (Query takes it off To decide, and the query is written after)
+  const shown = at.filter((x) => (flt[CB.filter] || flt.decide)(x) || x.row.key === CB.open);
+  if (CB.sort === "value") shown.sort((a, b) => b.a.impact - a.a.impact || (b.a.claimed > 0) - (a.a.claimed > 0));
+  const trs = []; let sec = null;
+  for (const x of shown) {
+    if (CB.sort === "bill" && x.row.section !== sec) { sec = x.row.section; trs.push(h("tr", { class: "cbsec" }, h("td", { colspan: "5" }, sec || "The bill"))); }
+    trs.push(cbRow(x, i, H, dec(x)));
+    if (CB.open === x.row.key) trs.push(cbDetail(x, i, H, P, dec(x)));
+  }
+  const table = h("section", { class: "hvsec cblines", id: "cbLines", "aria-labelledby": "cbLinesH" },
+    h("div", { class: "hvsechead" }, h("div", null, h("h2", { id: "cbLinesH" }, "The bill, line by line"),
+        h("p", null, `What is claimed on each line to date, against its signed quantity. Flagged above ${CL.mtol ?? 2}% over. Click a line for its history.`)),
+      h("label", { class: "cbsort" }, h("span", { class: "edsub" }, "Order"), h("select", { id: "cbSort", class: "clbill", onchange: (e) => { CB.sort = e.target.value; renderCb(); } },
+        h("option", { value: "value", selected: CB.sort === "value" ? true : null }, "Biggest over first"), h("option", { value: "bill", selected: CB.sort === "bill" ? true : null }, "Bill order")))),
+    h("div", { class: "hvfilters", role: "group", "aria-label": "Show" }, labels.map(([k, l]) => h("button", { type: "button", class: "hvfilter", "data-cbf": k, "aria-pressed": String(CB.filter === k), onclick: () => { CB.filter = k; CB.open = ""; renderCb(); } }, `${l} ${at.filter(flt[k]).length}`))),
+    tolLine, tol ? piTolBox() : null,
+    trs.length ? h("div", { class: "tablewrap" }, h("table", { class: "hvtable cbtable" },
+      h("thead", null, h("tr", null, h("th", null, "Item"), h("th", null, "Description"), h("th", null, "Claimed to date, against signed"), h("th", { class: "r" }, "Over, in rands"), h("th", null, "Finding"))),
+      h("tbody", null, trs)))
+      : h("p", { class: "sub" }, CB.filter === "decide" ? "Nothing to decide on this certificate." : "No line here."));
+  v.replaceChildren(h("section", { class: "hvphead cbhead", id: "cbHead" },
+      h("div", { class: "hvphtop" }, h("div", null, h("span", { class: "hvkick", id: "cbKick" }, cbKicker(master, P.bill)), h("h1", null, `Claims against ${cbOf(master)} bill`)),
+        h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm", id: "cbAdd", onclick: goClaims }, "Add certificates"),
+          h("button", { type: "button", class: "btn sm dark", id: "cbQueries", onclick: () => cbQueryDialog(queries, P.c) }, `Query list · ${queries.length}`))),
+      asAt, overview),
+    table);
+  navMark();
+}
+const cbKicker = (master, bill) => [master.kind === "imported" ? `Tender bill v${master.n} · imported${master.bill?.sheet ? ` from ${master.bill.sheet}` : ""} and locked` : `Version ${master.n} · signed ${new Date(master.at).toLocaleDateString("en-GB")}`,
+  bill ? `certificate bill ${bill}` : ""].filter(Boolean).join(" · ");
+function cbGo(cid) { CB.at = cid; CB.open = ""; renderCb(); }
+// The chosen certificate, opened as the Claims page opens it (its own checks, the one before it, his decisions on it), without leaving
+async function cbOpenCert(cid) {
+  if (CB.opening === cid) return; CB.opening = cid;
+  try {
+    const list = certList(), cert = CB.full.get(`${CL.pid}|${cid}`) || await getCert(cid), num = Number(cert.meta.number);
+    const earlier = list.filter((c) => c.id !== cid && Number(c.meta?.number) < num).sort((a, b) => Number(b.meta.number) - Number(a.meta.number))[0];
+    const previous = earlier ? CB.full.get(`${CL.pid}|${earlier.id}`) || await getCert(earlier.id) : null;
+    const reviews = await Store.loadReviews(CL.pid, cid).catch(() => ({}));
+    CL.reviews = reviews || {}; CL.open = { id: cid, cert, previous, res: checkCertificate(cert, { previous, tolerance: CL.tol / 100 }) }; CL.sel = null;
+  } catch (e) { CB.err = e.message; }
+  CB.opening = ""; if (state.view === "cb") renderCb();
+}
+// The over-claim on this bill, certificate by certificate (one series: its title names it), the chosen one marked and labelled
+function cbChart(H, i, withBill) {
+  const pts = H.per.map((p, k) => ({ k, c: p.c, v: p.bill ? H.rows.reduce((t, row) => { const a = cbAt(row, k, null, p.cmp); return t + (a.find === "over" ? a.impact : 0); }, 0) : null }));
+  const W = 440, Ht = 120, pad = 14, max = Math.max(1, ...pts.map((p) => p.v || 0)), n = Math.max(1, pts.length - 1);
+  const X = (k) => pad + (k * (W - 2 * pad)) / n, Y = (v) => Ht - 20 - Math.round(((Ht - 36) * v) / max);
+  const known = pts.filter((p) => p.v != null), line = known.map((p) => `${X(p.k)},${Y(p.v)}`).join(" ");
+  const cur = pts[i], ns = "http://www.w3.org/2000/svg", s = (tag, a, ...kids) => { const e = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(a)) e.setAttribute(k, v); e.append(...kids); return e; };
+  const tip = h("div", { class: "cbtip", hidden: true, role: "status" });
+  const svgEl = s("svg", { viewBox: `0 0 ${W} ${Ht}`, width: "100%", height: String(Ht), role: "img", "aria-label": `Over the signed bill by certificate: ${known.map((p) => `${cbNum(p.c)} ${hvRand(p.v)}`).join(", ")}` },
+    s("line", { x1: "0", y1: String(Ht - 20), x2: String(W), y2: String(Ht - 20), class: "cbaxis" }),
+    known.length > 1 ? s("polyline", { points: line, class: "cbline", fill: "none" }) : s("g", {}),
+    ...pts.map((p) => s("circle", { cx: String(X(p.k)), cy: String(p.v == null ? Ht - 20 : Y(p.v)), r: p.k === i ? "6" : "4", class: p.k === i ? "cbdot cur" : p.v == null ? "cbdot none" : "cbdot" })),
+    cur?.v != null ? s("text", { x: String(Math.min(W - 4, Math.max(4, X(i)))), y: String(Math.max(12, Y(cur.v) - 10)), class: "cblabel", "text-anchor": X(i) > W - 60 ? "end" : X(i) < 60 ? "start" : "middle" }, rands(cur.v)) : s("g", {}),
+    // Hit targets bigger than the marks: hover shows the certificate and its figure; a click goes there
+    ...pts.map((p) => { const t = s("rect", { x: String(X(p.k) - (W - 2 * pad) / n / 2), y: "0", width: String((W - 2 * pad) / n), height: String(Ht), class: "cbhit" });
+      t.addEventListener("mouseenter", () => { tip.hidden = false; tip.textContent = `${cbNum(p.c)} · ${cbWhen(p.c)}: ${p.v == null ? "nothing claimed on this bill" : `${hvRand(p.v)} over`}`; tip.style.left = `${(100 * X(p.k)) / W}%`; });
+      t.addEventListener("mouseleave", () => { tip.hidden = true; });
+      if (p.v != null) t.addEventListener("click", () => cbGo(p.c.id));
+      return t; }));
+  const first = pts.find((p) => p.v != null) || pts[0], last = pts[pts.length - 1];
+  return h("figure", { class: "cbchart", id: "cbChart" }, h("figcaption", null, "Over the signed bill, certificate by certificate"), h("div", { class: "cbplot" }, svgEl, tip),
+    h("div", { class: "cbaxislabels" }, h("span", null, `${cbNum(first.c)} · ${cbWhen(first.c)}`), h("span", null, `${cbNum(last.c)} · ${cbWhen(last.c)}`)));
+}
+function cbRow(x, i, H, d) {
+  const { row, a } = x, u = row.unit, open = CB.open === row.key;
+  const scale = Math.max(a.claimed, row.agreed || a.claimed, 0.0001), okW = row.agreed == null ? 0 : (Math.min(a.claimed, row.agreed) / scale) * 100;
+  const ovW = row.agreed == null ? (a.claimed > 0 ? 100 : 0) : a.find === "twice" ? 0 : (Math.max(0, a.claimed - row.agreed) / scale) * 100;
+  const note = a.lines.length > 1 ? a.lines.map((l) => `${l.section === "variation" ? "VO " : "item "}${l.item}, ${qfmt(l.toDateQty ?? 0, u)}`).join(", plus ")
+    : a.find === "twice" && a.twiceWith.length ? `Same quantity and work as item ${a.twiceWith.map((l) => l.item).join(", ")}` : row.notIn ? "Not a line of the signed bill" : "";
+  const [fl, ft] = CB_FIND[a.find];
+  return h("tr", { class: "cbrow" + (open ? " open" : ""), "data-key": row.key, onclick: () => { CB.open = open ? "" : row.key; renderCb(); } },
+    h("td", { class: "cbitem" }, row.item || "—"),
+    h("td", null, h("button", { type: "button", class: "cbdesc", "aria-expanded": String(open), onclick: (e) => { e.stopPropagation(); CB.open = open ? "" : row.key; renderCb(); } }, row.description), note ? h("span", { class: "hvsub" }, note) : null),
+    h("td", { class: "cbclaim" }, h("div", { class: "cbfig" }, h("b", { class: ["over", "twice", "notin"].includes(a.find) ? "clred" : "" }, qfmt(a.claimed, u)), h("span", null, row.agreed == null ? "not in the bill" : `of ${qfmt(row.agreed, u)}`)),
+      h("div", { class: "cbbar", "aria-hidden": "true" }, h("span", { class: "ok" + (a.find === "twice" ? " twice" : ""), style: `width:${okW}%` }), h("span", { class: "ov" + (a.find === "notin" ? " notin" : ""), style: `left:${okW}%;width:${ovW}%` }))),
+    h("td", { class: "r cbrand" + (a.impact ? " clred" : "") }, a.impact ? hvRand(a.impact) : "—"),
+    h("td", null, h("span", { class: "hvchip " + ft }, fl), ["over", "twice", "notin"].includes(a.find) ? h("span", { class: "cbdec" + (d ? " " + d : "") }, d ? CB_DEC[d] : "To decide") : null));
+}
+function cbDetail(x, i, H, P, d) {
+  const { row, a } = x, u = row.unit, prev = i > 0 ? row.hist[i - 1]?.qty || 0 : 0, month = a.claimed - prev, rem = row.agreed == null ? null : row.agreed - a.claimed;
+  const max = Math.max(0.0001, row.agreed || 0, ...row.hist.map((y) => y?.qty || 0)), tol = (CL.mtol ?? 2) / 100;
+  const bars = H.per.map((p, k) => { const q = row.hist[k]?.qty || 0, over = row.agreed == null ? q > 0 : q > row.agreed * (1 + tol) + 0.005;
+    return h("span", { class: "cbhbar" + (k > i ? " later" : over ? " over" : "") + (k === i ? " cur" : ""), style: `height:${Math.max(2, Math.round((60 * q) / max))}px`, title: `${cbNum(p.c)}: ${qfmt(q, u)}${p.bill ? "" : " (not on this certificate)"}` }); });
+  const f = a.f, draft = f ? claimQuery(f, "the signed bill") : "", text = f ? CL.reviews[f.key]?.query || draft : "";
+  const decide = (s) => { if (!f) return; const cur = CL.reviews[f.key]?.status; setReview(f, cur === s ? null : s, CL.reviews[f.key]?.note || "").then(() => { CB.cache = CB.cache; renderCb(); }); };
+  return h("tr", { class: "cbdetail" }, h("td", { colspan: "5" }, h("div", { class: "cbdgrid" },
+    h("div", { class: "cbdleft" },
+      h("div", { class: "cbdfigs" }, h("div", null, h("span", null, "Rate"), h("b", null, a.rate ? `${money(a.rate)} / ${u}` : "—")),
+        h("div", null, h("span", null, `In ${cbNum(P.c)}`), h("b", null, month > 0.0005 ? qfmt(month, u) : "Nothing")),
+        h("div", null, h("span", null, "Remaining"), h("b", { class: rem != null && rem < -0.0005 ? "clred" : "", id: "cbRemaining" }, rem == null ? "—" : `${rem < 0 ? "−" : ""}${qfmt(Math.abs(rem), u)}`))),
+      h("div", { class: "cbhist" }, h("span", { class: "edlabel" }, "Claimed to date, by certificate"), h("div", { class: "cbhbars", id: "cbHist" }, ...bars),
+        h("div", { class: "cbaxislabels" }, h("span", null, cbNum(H.per[0].c)), h("span", null, "red: over the signed quantity"), h("span", null, cbNum(H.per[H.per.length - 1].c))))),
+    h("div", { class: "cbdright" },
+      f ? h("div", null, h("span", { class: "edlabel" }, "Your decision"), h("div", { class: "seg", role: "group", "aria-label": "Your decision", id: "cbDecide" },
+          [["query", "Query"], ["accept", "Accept as claimed"], ["dismiss", "Not an issue"]].map(([k, l]) => h("button", { type: "button", "aria-pressed": String(d === k), "data-dec": k, onclick: (e) => { e.stopPropagation(); decide(k); } }, l))))
+        : h("p", { class: "edtext" }, a.find === "none" ? "Not claimed on this certificate." : "Within the signed quantity. Nothing to decide."),
+      f && d === "query" ? h("div", { class: "cbquery" }, h("label", { class: "edlabel", for: "cbQueryText" }, "The query, as the contractor will read it"),
+        h("textarea", { id: "cbQueryText", class: "edinput cltext", rows: "4", onclick: (e) => e.stopPropagation(), onchange: (e) => { const t = e.target.value.trim(); setReview(f, "query", CL.reviews[f.key]?.note || "", t && t !== draft ? t : null).then(renderCb); } }, text),
+        text !== draft ? h("button", { type: "button", class: "link", onclick: (e) => { e.stopPropagation(); setReview(f, "query", CL.reviews[f.key]?.note || "", null).then(renderCb); } }, "Back to the draft") : null) : null,
+      h("div", { class: "tools" },
+        a.lines.length ? h("button", { type: "button", class: "btn xs", id: "cbOnCert", onclick: (e) => { e.stopPropagation(); CL.tab = "findings"; CL.filter = "all"; CL.sel = f?.key || null; goClaims(); } }, "Open on the certificate") : null,
+        cbLineLink(row))))));
+}
+// The bill line itself: a version signed in SolvBoQ is a structure's bill (open on its line); an imported bill is his Master BoQ's
+function cbLineLink(row) {
+  const master = cbBill(); if (!master || row.notIn) return null;
+  if (master.kind === "imported") return h("button", { type: "button", class: "btn xs", onclick: (e) => { e.stopPropagation(); goMaster(); } }, "Open your bill");
+  const s = HV.ov && HV.ovFor === CL.pid ? hvStructures().find((x) => x.id === master.sid) : null;
+  return s?.runs.length ? h("button", { type: "button", class: "btn xs", id: "cbBillLine", onclick: async (e) => { e.stopPropagation(); await stOpen(s, "map"); const L = state.mapLines?.find((x) => x.key === row.key); if (L) { state.mFilter2 = "all"; selectLine(L); } } }, "Open the bill line") : null;
+}
+// The query list: every queried line of this bill on this certificate, biggest value first, in his wording
+function cbQueryDialog(queries, c) {
+  const texts = queries.map((x) => CL.reviews[x.a.f.key]?.query || claimQuery(x.a.f, "the signed bill")).filter(Boolean);
+  const name = `${certLabel(c.meta || {})}`, head = `Queries on ${name}${c.meta?.contract ? `, contract ${c.meta.contract}` : ""}`;
+  hvDialog("cbQueryDlg", "Query list", h("div", null,
+    h("p", { class: "sub" }, `${cbNum(c)} · for the contractor. Every line you marked Query, biggest value first, with your wording.`),
+    texts.length ? h("ol", { class: "cbqlist" }, queries.map((x, k) => h("li", null, h("b", null, `Item ${x.row.item || "—"} · ${x.row.description}`, x.a.impact ? h("span", { class: "clred" }, ` ${hvRand(x.a.impact)}`) : null), h("span", null, texts[k]))))
+      : h("p", null, "No line is marked Query yet.")),
+    { foot: h("div", { class: "tools" },
+      h("button", { type: "button", class: "btn dark sm", id: "cbQueryDownload", disabled: texts.length ? null : true, onclick: () => saveFile(`${name} queries.txt`, claimQueryText(head, texts)) }, "Download the query list"),
+      h("button", { type: "button", class: "btn sm", disabled: texts.length ? null : true, onclick: () => copyText(claimQueryText(head, texts), "Query list copied") }, "Copy"),
+      h("button", { type: "button", class: "btn sm", id: "cbQueryClose", onclick: () => { const d = $("cbQueryDlg"); if (d) { d.close(); d.remove(); } } }, "Close")) });
+}
+
 // ===== Master BoQ view: his bill as a tree (section › clause and heading › line), each line linked to the model =====
 // Same layout as Map to SANS. The bill is his (an Excel BoQ); the model only supplies quantities through links.
 const MB = { master: null, saved: [], sel: null, filter: "all", q: "", coll: null, showEls: false, adding: false, addQ: "", addAll: false, open: new Set(), busy: "", err: "", tol: 5, cache: null, linkVer: 0, saveT: null, savedMsg: "" };
@@ -16225,12 +16564,13 @@ function piTolApply() {
   CL.tol = piTol("overBill"); CL.mtol = piTol("overYours"); MB.tol = piTol("matches");
   if (was[0] !== CL.tol && CL.open && state.view === "claims" && typeof recheck === "function") recheck();
   else if ((was[1] !== CL.mtol && state.view === "claims") || (was[2] !== MB.tol && state.view === "master")) render();
+  else if ((was[0] !== CL.tol || was[1] !== CL.mtol) && state.view === "cb" && typeof renderCb === "function") renderCb();   // claims on a bill: its figures follow
 }
 function piTolSet(k, v) {
   const d = PI_TOL.find((x) => x[0] === k), x = inNum(v, 0, d[3]);
   if (x == null) return toast(`Give a figure from 0 to ${d[3]}%.`);
   const p = piDoc().project; p.tolerances = { ...(p.tolerances || {}), [k]: x === d[2] ? null : x }; p.by = piWho(); p.at = new Date().toISOString();
-  piChanged(["proj", "ov", "st"].includes(state.view)); piTolApply();
+  piChanged(["proj", "ov", "st", "cb"].includes(state.view)); piTolApply();
 }
 // After the inputs change: the model is checked again with them, and the page shown again
 function piAfter() {
@@ -16244,6 +16584,7 @@ function piRedraw() {
   if (state.view === "st" && typeof renderSt === "function") return renderSt();
   if (state.view === "ov" && typeof renderOv === "function") return renderOv();
   if (state.view === "proj") return renderProj();
+  if (state.view === "cb" && typeof renderCb === "function") return renderCb();
 }
 function piChanged(rerender = true) {
   PI.doc = normInputs(PI.doc);
@@ -16809,7 +17150,7 @@ Store.onUser(() => docsLoad());
 
 const HV = { sum: {}, ov: null, ovFor: "", ovBusy: false, ovErr: "", filled: "", opening: "", billView: "map", setView: "conv", stTimer: null, stSaved: {},
   q: "", show: "active", menu: null, confirm: null, note: null, who: {} };
-const HV_SECTION = { home: "home", ov: "ov", st: "st", claims: "claims", conv: "settings", std: "settings", firm: "settings", next: "bills" };
+const HV_SECTION = { home: "home", ov: "ov", st: "st", cb: "cb", claims: "claims", conv: "settings", std: "settings", firm: "settings", next: "bills" };
 const hvSection = () => HV_SECTION[state.view] || "bills";
 const hvDay = (iso) => { const d = new Date(iso); return iso && !isNaN(d) ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : ""; };
 const hvRand = (v) => `R ${Math.round(v || 0).toLocaleString("en-GB")}`;
@@ -16840,7 +17181,7 @@ function navMark() {
   // The Settings side menu names the firm (Settings is only the firm's since the redesign's stage 2)
   if (sec === "settings") $("setFirmName").textContent = Store.firm ? Store.firm.name || Store.firm.id || "" : Store.user ? "Just you (no firm)" : "";
   $("meBtn").textContent = hvInitials();
-  $("phead").hidden = home || sec === "ov" || sec === "st" || billNew;   // those pages carry their own heading, as designed
+  $("phead").hidden = home || sec === "ov" || sec === "st" || sec === "cb" || billNew;   // those pages carry their own heading, as designed
   const p = CL.projects.find((x) => x.id === CL.pid);
   const head = sec === "claims" ? ["Claims", p ? `${p.name}: payment certificates, checked against the signed bills` : "Payment certificates, checked against the bill"]
     : sec === "settings" ? ["Settings", `${Store.firm ? Store.firm.name || "Your firm" : "Your"}${Store.firm ? "’s" : ""} practice, modelling guide and people: every project ${Store.firm ? "of the firm" : "of yours"} uses them`]
@@ -16862,6 +17203,7 @@ function hvCrumbs() {
   add("crHome", "Projects", goHome);
   if (sec === "settings") { add("crFirm", Store.firm?.name || "Your firm", goFirmSettings); add("crPage", HV_PAGE[view] || "Settings", null); }
   else if (sec === "st") { if (p) add("crProject", p.name, goOv); add("crStructure", (typeof stCurrent === "function" && stCurrent()?.name) || "Structure", null); }
+  else if (sec === "cb") { if (p) add("crProject", p.name, goOv); const b = typeof cbBill === "function" ? cbBill() : null; add("crPage", b ? `Claims · ${cbName(b)}` : "Claims", null); }
   else if (sec !== "home") {
     const sample = sec === "bills" && state.fromSample, inProject = !!(p && !sample && state.pmid && PV.models.some((x) => x.id === state.pmid));
     if (p && !sample) add("crProject", p.name, goOv);
@@ -17510,7 +17852,7 @@ function hvClaimsSection(list) {
       h("tbody", null, signed.map((s) => h("tr", null, h("td", null, s.name),
         h("td", null, h("span", { class: "hvbill" }, s.last.kind === "imported" ? `Tender bill, imported v${s.last.n}` : `Version ${s.last.n}, signed`), h("span", { class: "hvsub" }, `${s.last.kind === "imported" ? "Imported" : "Signed"} ${hvDay(s.last.at)}`)),
         h("td", null, c ? `PC${num}${c.dated ? ` · ${hvDay(c.dated)}` : ""}` : "—"), h("td", { class: "r" }, one ? hvRand(k.over) : c ? "Open to see" : "—"),
-        h("td", { class: "r" }, String(CL.certs.length)), h("td", { class: "r" }, h("button", { type: "button", class: "btn sm", onclick: goClaims }, "Open")))))))
+        h("td", { class: "r" }, String(CL.certs.length)), h("td", { class: "r" }, h("button", { type: "button", class: "btn sm", "data-cb": s.id, onclick: () => cbPage(s.id) }, "Open")))))))
       : h("p", { class: "sub" }, "Certificates are checked against a structure’s signed or imported bill: none yet. Import your tender bill under Bills to check claims before SolvBoQ’s bill is signed."));
 }
 // A project with no structure yet: bring the first model, from Revit or as model data
@@ -17753,7 +18095,7 @@ function stVersions(s, c) {
     rows.length ? h("div", { class: "stvers" }, rows) : null,
     claims ? h("p", { class: "stclaims" }, claims)
       : h("div", { class: "stclaims" }, h("span", null, `${plural(CL.certs.length, "certificate")} in the project, the newest PC${cert.meta?.number ?? ""}${cert.check?.signed ? `: ${hvRand(cert.check.over)} claimed over the signed bills` : ""}.`),
-        h("button", { type: "button", class: "btn sm", id: "stClaims", onclick: goClaims }, "Open the claims")));
+        h("button", { type: "button", class: "btn sm", id: "stClaims", onclick: () => cbPage(s.id) }, "Open the claims")));
 }
 
 // ----- What its bill rests on: each figure, where it came from, and how to make it firmer -----
@@ -17835,7 +18177,7 @@ function renderSt() {
     h("div", { class: "hvfacts" },
       fact("stFactKind", "Kind", K ? K.title : "Not set", () => stKindDialog(s)),
       fact("stFactBill", "Bill", [c.lines ? plural(c.lines, "line") : run ? "Being worked out" : "No bill yet", s.last ? `version ${s.last.n} ${s.last.kind === "imported" ? "imported" : "signed"}` : ""].filter(Boolean).join(" · "), () => (run ? stOpen(s, "map") : hvUpload())),
-      fact("stFactClaims", "Claims", s.last && CL.certs.length ? plural(CL.certs.length, "certificate") : "None yet", () => (s.last && CL.certs.length ? goClaims() : stGoTo(s, "stVersions")))),
+      fact("stFactClaims", "Claims", s.last && CL.certs.length ? plural(CL.certs.length, "certificate") : "None yet", () => (s.last && CL.certs.length ? cbPage(s.id) : stGoTo(s, "stVersions")))),
     ...stSteps(s, tr, c));
   v.replaceChildren(head,
     h("div", { class: "stgrid" },
