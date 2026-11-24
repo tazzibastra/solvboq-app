@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-22T08:52:42Z">
+<meta name="solvboq-build" content="2026-11-24T19:20:00Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -5986,7 +5986,7 @@ const SANS1200_SPEC = (() => {
     "G.JOINT.WALLBASE": { section: G, clause: "8.5", heading: "Joints", wording: "Watertight construction joints with water bar, at the base of walls and between lifts", unit: "m", takes: { what: "joint", joint: "wallBase" }, from: STD },
     "G.JOINT.WALLVERT": { section: G, clause: "8.5", heading: "Joints", wording: "Vertical construction joints in walls{@jointMark}", unit: "m", takes: { what: "joint", joint: "wallVertical" }, from: STD },
     "G.JOINT.SLABWALL": { section: G, clause: "8.5", heading: "Joints", wording: "Watertight construction joints where slabs meet walls", unit: "m", takes: { what: "joint", joint: "slabWall" }, from: STD },
-    "G.JOINT.FLOOR": { section: G, clause: "8.5", heading: "Joints", wording: "Watertight construction joints in floor slabs{@estimateNote}", unit: "m", takes: { what: "joint", joint: "floor" }, from: STD },
+    "G.JOINT.FLOOR": { section: G, clause: "8.5", heading: "Joints", wording: "Watertight construction joints in floor slabs{@jointMark}{@estimateNote}", unit: "m", takes: { what: "joint", joint: "floor" }, from: STD },
     "G.JOINT.SAWCUT": { section: G, clause: "8.5", heading: "Joints", wording: "Saw-cut contraction joints in ground slabs (estimate, about 5 m grid)", unit: "m", takes: { what: "joint", joint: "sawCut" }, from: STD },
     "G.JOINT.SEALANT": { section: G, clause: "8.5", heading: "Joints", wording: "Joint sealant to saw-cut joints (estimate)", unit: "m", takes: { what: "joint", joint: "sealant" }, from: STD },
     "G.JOINT.ISOLATION": { section: G, clause: "8.5", heading: "Joints", wording: "Isolation joints, 10 mm thick, with sealant", unit: "m", rule: "expected", from: STD },
@@ -6347,7 +6347,7 @@ const SANS1200_SPEC = (() => {
   }
 
   return {
-    id: "sans1200", version: "1.3.0", name: "SANS 1200 Clause 8", title: "SANS 1200 Clause 8, with SANS 1200 A",
+    id: "sans1200", version: "1.4.0", name: "SANS 1200 Clause 8", title: "SANS 1200 Clause 8, with SANS 1200 A",
     sections: {
       order: [D, G, LE, LD, H, HB, L, MK, PD],
       title: { [D]: "Earthworks", [G]: "Concrete (structural)", [LE]: "Stormwater drainage", [LD]: "Sewers", [H]: "Structural steelwork", [HB]: "Cladding and sheeting",
@@ -7744,10 +7744,16 @@ function inferLines(r, ctx) {
   }
   // Stop ends at the construction joints in floor slabs (his “sides of sump footing” adds joints B and D × 200 mm), where the
   // structure pack casts floors in bays
-  if (r.structurePack?.practice?.floorJoints === "bays") for (const e of ground.filter((e) => conc.includes(e))) {
-    const lj = layoutJoints(r, e), len = lj ? lj.total : floorJoints(r, e, slabs), t = e.Thickness || height(e);
-    add(`fwedge|stop|${typeKey(e)}`, fwf("floorSlabs", "stopEnds", true, typeName(e)),
-      lj ? `Inferred: the joint length in the floor ${layoutText(lj)}, × the slab thickness (${(t * 1000).toFixed(0)} mm).` : "Inferred: the estimated joint length in the floor × the slab thickness. Replace it with the joint layout when it’s available.", e, len * t);
+  if (r.structurePack?.practice?.floorJoints === "bays") {
+    // The pour plan's bays where the faces were read (pours.js), else the box rules' reading of the layout, else the estimate
+    const plan = ctx.faces !== false && typeof pourPlanOf === "function" ? pourPlanOf(r) : null;
+    for (const e of ground.filter((e) => conc.includes(e))) {
+      const covered = !!plan?.covered?.has(String(e.Id)), bays = covered ? floorBays(plan, e) : null, bayLen = bays?.reduce((s, [, l]) => s + l, 0) || 0;
+      const lj = covered ? null : layoutJoints(r, e), len = bayLen > 0 ? bayLen : lj ? lj.total : floorJoints(r, e, slabs), t = e.Thickness || height(e);
+      add(`fwedge|stop|${typeKey(e)}`, fwf("floorSlabs", "stopEnds", true, typeName(e)),
+        bayLen > 0 ? `Inferred: the joint lines of your joint layout (${plan.layout.name}) inside the floor’s own outline, ${fmt2(bayLen)} m, × the slab thickness (${(t * 1000).toFixed(0)} mm).`
+          : lj ? `Inferred: the joint length in the floor ${layoutText(lj)}, × the slab thickness (${(t * 1000).toFixed(0)} mm).` : "Inferred: the estimated joint length in the floor × the slab thickness. Replace it with the joint layout when it’s available.", e, len * t);
+    }
   }
 
   // Stairs, from the riser count and run widths the add-in reads from Revit: risers (narrow widths), the sloping soffit of
@@ -7946,6 +7952,12 @@ function inferLines(r, ctx) {
   return { lines: [...lines.values()], notMeasured };
 }
 
+// The bays of the pour plan in a floor: [[joint letter or null, length]], from the designer's layout lines inside its outline
+function floorBays(plan, e) {
+  const by = new Map();
+  for (const j of plan?.joints || []) if (j.kind === "bay" && j.a === e && j.length > 0) by.set(j.mark || null, (by.get(j.mark || null) || 0) + j.length);
+  return [...by];
+}
 // Construction joints in a floor slab, until the joint layout is known. Water-retaining floors up to 300 mm: bays of about 4 m,
 // 0.5 m of joint per m² (his Gravity Thickeners floors: 160 m in 306 m²); thicker bases about 6 m bays, 0.33 m/m² (assumed).
 // Slabs under 30 m² and narrow rings or strips (a footing ring under a wall) are one pour; overlapping slabs count once.
@@ -8337,10 +8349,31 @@ function inferMore(r, ctx) {
   const groundArea = ground.reduce((s, e) => s + (e.Area || 0), 0);
   const tops = live.filter((e) => e.Box && r.tradeOfId[e.Id] === "concrete" && (e.Bic === "OST_Floors" || e.Bic === "OST_StructuralFoundation"));
   if (PR.floorJoints === "bays") {
+    // Where the faces were read, the joints are the edges between pours (pours.js): where each wall stands on its base, a water-holding
+    // slab cast into a wall, the bays of the designer's layout and where they meet the walls, with his joint letters. Elements the
+    // plan doesn't speak for (no faces, contacts not read) keep the box rules below.
+    const plan = ctx.faces !== false && typeof pourPlanOf === "function" ? pourPlanOf(r) : null;
+    const byPlan = (e) => !!plan?.covered?.has(String(e.Id));
+    if (plan) {
+      const of = (kind, e) => plan.joints.filter((j) => j.kind === kind && j.b === e && j.length > 0);
+      // A line's key carries the joint letter only when the model has more than one letter of that kind, so his decisions on a line
+      // (kept by its key) survive the plan taking over from the box rules
+      const vMarks = new Set(plan.joints.filter((j) => j.kind === "wallVertical").map((j) => j.mark || ""));
+      for (const e of live.filter((e) => e.Bic === "OST_Walls" && byPlan(e))) {
+        const base = [...of("wallBase", e), ...of("lift", e)];
+        if (base.length) add("jwall", "joint", mFact("joint", "length", { joint: "wallBase" }),
+          "From the model: where each wall stands on its base (the faces that touch), along the wall’s centreline; walls over the lift height have a joint between lifts. Short upstands cast with their slab have none.", e, base.reduce((s, j) => s + j.length, 0));
+        for (const j of of("wallVertical", e)) add(`jwallvert${vMarks.size > 1 && j.mark ? `|${j.mark}` : ""}`, "joint", mFact("joint", "length", { joint: "wallVertical", mark: j.mark }),
+          `From your joint layout (${plan.layout?.name || "the joint layout"}): where a floor joint in the floor the wall stands on meets it, a vertical joint its full height.`, e, j.length);
+      }
+      for (const s of live.filter((s) => byPlan(s))) { const js = of("slabIntoWall", s);
+        if (js.length) add("jslab", "joint", mFact("joint", "length", { joint: "slabWall" }),
+          "From the model: where a water-holding slab is cast against a wall partway up (the faces that touch), the length of the edge.", s, js.reduce((t, j) => t + j.length, 0)); }
+    }
     // Water-retaining: a construction joint with a water bar where each wall meets the base it stands on. A short upstand on a
     // suspended slab (a launder wall) is cast with the slab, so it has none.
     const walls = live.filter((e) => e.Bic === "OST_Walls" && r.tradeOfId[e.Id] === "concrete" && e.Box && e.Length > 0);
-    for (const e of walls) {
+    for (const e of walls.filter((e) => !byPlan(e))) {
       const base = tops.find((s) => Math.abs(s.Box[5] - e.Box[2]) <= 0.05 && s.Box[0] <= e.Box[3] && s.Box[3] >= e.Box[0] && s.Box[1] <= e.Box[4] && s.Box[4] >= e.Box[1]);
       if (!base || (suspended.includes(base) && e.Box[5] - e.Box[2] <= r.conv.joints.upstand)) continue;
       // Walls over 5 m are cast in lifts of up to 5 m, with a horizontal joint between lifts (his note, 7 Nov 2026)
@@ -8358,14 +8391,19 @@ function inferMore(r, ctx) {
     }
     // Where a suspended slab that holds water is cast into a wall partway up it (a launder floor against the tank wall, his joint type R).
     // Not a dry slab against the outside of the walls (the 3 Way Splitter's walkway, 9 Nov 2026: his bill has no joint there)
-    for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box && r.concretePart?.[s.Id]?.wt)) {
+    for (const s of suspended.filter((s) => s.Bic === "OST_Floors" && s.Box && r.concretePart?.[s.Id]?.wt && !byPlan(s))) {
       let len = 0;
       for (const w of walls) if (s.Box[2] > w.Box[2] + 0.1 && s.Box[5] < w.Box[5] - 0.05 && planShared(s.Box, w.Box) >= 0.5 * Math.min(planArea(s.Box), planArea(w.Box))) len += w.Length;
       if (len > 0) add("jslab", "joint", mFact("joint", "length", { joint: "slabWall" }),
         "Inferred: the length of the walls a suspended slab is cast against partway up, up to the slab’s perimeter.", s, Math.min(len, s.Perimeter || len));
     }
     for (const e of ground) {
-      const lj = layoutJoints(r, e);
+      // The plan's bays: the layout's joint lines inside this floor's own outline, by his joint letter. None in this floor: the estimate
+      const bays = byPlan(e) ? floorBays(plan, e) : null;
+      if (bays?.length) { const fMarks = new Set(plan.joints.filter((j) => j.kind === "bay").map((j) => j.mark || ""));
+        for (const [mark, len] of bays) add(`jfloorlayout${fMarks.size > 1 && mark ? `|${mark}` : ""}`, "joint", mFact("joint", "length", { joint: "floor", mark }),
+        `From your joint layout (${plan.layout.name}): the joint lines inside each floor’s own outline.`, e, len); continue; }
+      const lj = byPlan(e) ? null : layoutJoints(r, e);
       if (lj) add("jfloorlayout", "joint", mFact("joint", "length", { joint: "floor" }), `Inferred: ${layoutText(lj)}.`, e, lj.total);
       else add("jfloor", "joint", mFact("joint", "length", { joint: "floor", estimate: true }),
         `Inferred: ${r.conv.joints.bayThin} m of joint per m² of floor up to ${Math.round(r.conv.joints.thinMax * 1000)} mm thick, ${r.conv.joints.bayThick} m per m² of thicker bases; slabs under ${r.conv.joints.minPour} m² and narrow rings are one pour. Replace it with the joint layout when it’s available.`,
@@ -9223,6 +9261,320 @@ function facePlanShare(e, below) {
 function faceParts(r, g = faceGraph(r)) {
   const S = r?.structurePack;
   return S && typeof S.recognise === "function" ? S.recognise(r, g) : null;
+}
+
+
+// ===== The pour plan: joints as the edges between pours (shadow: no line or quantity uses it yet) =====
+// A joint isn't estimated: it is wherever one pour of concrete meets another. So this works out the pours, then reads every
+// joint off the edges between them, each with where it came from:
+//   1. Pours. Each concrete element is a pour, joined with what touches it and is cast at the same time (the casting order the
+//      formwork uses, faceOrder: walls meeting at a corner, a slab and the beams under it), and a short upstand with the slab it
+//      stands on (the conventions' joints.upstand). Bedding (blinding, no-fines, fill) isn't part of the structure: no joint.
+//   2. Edges between elements, from the faces' contacts (the model's own geometry, never a drawn line): a wall standing on a
+//      base, a slab cast into a wall partway up, a slab cast onto walls, a column on its base, infill against the structure.
+//      Length = the shared area ÷ the width of the narrower member (a wall's thickness at its base, a slab's at its side).
+//   3. Splits inside an element: a floor in bays along the designer's joint layout (the layout lines clipped to the floor's own
+//      outline, not its box), a wall where a floor joint meets it (a vertical joint its full height), a tall wall in lifts.
+//   4. Each joint's type (his letters, “Joint A”) from the layout: a bay joint takes its line's label; a vertical joint the label
+//      set by the wall where it is. Otherwise none: asked, never guessed.
+//   5. Whether a kind of edge is billed, and as which joint, is his practice (POUR_BILLED): a kind he doesn't bill is listed with
+//      why, never dropped unseen.
+// Needs faces (null without them). One shared page scope: the top-level names here are pour*, POUR_*.
+
+// Roles that aren't part of the structure's pours: what they touch gives no joint
+const POUR_BEDDING = ["blinding", "noFines", "fill"];
+// Roles cast later against the structure (infill): their edges aren't construction joints
+const POUR_INFILL = ["benching", "screed", "plinth", "chamfer"];
+const POUR_APRON = ["apron", "kerb"];
+
+// How each kind of edge is billed in a water-retaining structure (his practice, from his GT bill and the valve chamber notes):
+// the neutral joint fact it becomes, or null with why it isn't billed. Moves into the structure pack when the pour plan drives the bill.
+const POUR_BILLED = {
+  wallBase: { joint: "wallBase" },
+  lift: { joint: "wallBase" },
+  wallVertical: { joint: "wallVertical" },
+  bay: { joint: "floor" },
+  slabIntoWall: { joint: "slabWall" },
+  drySlabAgainstWall: { joint: null, why: "a slab that doesn't hold water, cast against a wall: his 3 Way Splitter bill has no joint there" },
+  slabOnWalls: { joint: null, why: "a slab cast onto the tops of walls, beams or columns: not billed in his valve chamber bill" },
+  columnBase: { joint: null, why: "a column standing on its base: not billed as a joint in his bills" },
+  elementToElement: { joint: null, why: "two pours side by side with no layout line between them: to confirm" },
+  infill: { joint: null, why: "benching, screeds and the like are cast against the structure later: no construction joint" },
+  apron: { joint: null, why: "an apron or kerb against the structure: an isolation joint if the drawings show one (to confirm)" },
+};
+
+// ---- Geometry helpers (plan, metres) ----
+function pourLoops(f) { return (f?.Loops || []).map((l) => { const p = []; for (let i = 0; i + 2 < l.length; i += 3) p.push([l[i], l[i + 1], l[i + 2]]); return p; }); }
+function pourArea2(p) { let a = 0; for (let i = 0; i < p.length; i++) { const [x1, y1] = p[i], [x2, y2] = p[(i + 1) % p.length]; a += x1 * y2 - x2 * y1; } return a / 2; }
+// A plan outline from a horizontal face: { outer, holes } (the largest loop is the outer one)
+function pourOutline(f) {
+  const ls = pourLoops(f).filter((p) => p.length >= 3).map((p) => ({ p, a: Math.abs(pourArea2(p)) })).sort((a, b) => b.a - a.a);
+  return ls.length ? { outer: ls[0].p, holes: ls.slice(1).map((x) => x.p) } : null;
+}
+function pourInside(pt, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if ((yi > pt[1]) !== (yj > pt[1]) && pt[0] < ((xj - xi) * (pt[1] - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+// Distance from a point to a polygon's edge (plan)
+function pourEdgeDist(pt, poly) {
+  let d = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length], dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy;
+    const t = L2 ? Math.max(0, Math.min(1, ((pt[0] - x1) * dx + (pt[1] - y1) * dy) / L2)) : 0;
+    d = Math.min(d, Math.hypot(pt[0] - x1 - t * dx, pt[1] - y1 - t * dy));
+  }
+  return d;
+}
+// The length of a segment a→b inside an outline (outer less its holes), cutting at every edge crossing and testing each piece's middle
+function pourClip(a, b, ol) {
+  if (!ol) return 0;
+  const ts = [0, 1], dx = b[0] - a[0], dy = b[1] - a[1];
+  for (const poly of [ol.outer, ...ol.holes]) for (let i = 0; i < poly.length; i++) {
+    const [x1, y1] = poly[i], [x2, y2] = poly[(i + 1) % poly.length], ex = x2 - x1, ey = y2 - y1, den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((x1 - a[0]) * ey - (y1 - a[1]) * ex) / den, u = ((x1 - a[0]) * dy - (y1 - a[1]) * dx) / den;
+    if (t > 0 && t < 1 && u >= 0 && u <= 1) ts.push(t);
+  }
+  ts.sort((x, y) => x - y);
+  let len = 0; const L = Math.hypot(dx, dy);
+  for (let i = 0; i + 1 < ts.length; i++) {
+    const m = (ts[i] + ts[i + 1]) / 2, pt = [a[0] + m * dx, a[1] + m * dy];
+    if (pourInside(pt, ol.outer) && !ol.holes.some((h) => pourInside(pt, h))) len += (ts[i + 1] - ts[i]) * L;
+  }
+  return len;
+}
+
+// ---- The designer's joint layout ----
+// One plan view (not a legend, section or sheet): the one named for joints, else the one with most joint lines. Its joint lines are
+// those drawn in a line style naming joints (the Zutari layout: “ZSt_Joint - Construction”), and those a joint label sits by. A label
+// names a joint when its text does (“JOINT A”, “Type B”), or, in a view named for joints, when it is a text note of one or two letters
+// (not a tag: grid and section tags carry letters too). Each label is paired with its own line, nearest first; a label with no line
+// of its own is kept as a loose mark (his Joint B labels sit by the walls).
+function pourLayout(ann) {
+  if (!ann) return null;
+  const g = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)];
+  const views = (g(ann, "Views") || []).filter((v) => /plan/i.test(String(g(v, "Kind") || "")) && !/legend|sheet|section|elevation/i.test(String(g(v, "Kind") || "")));
+  const lines = g(ann, "Lines") || [], labels = g(ann, "Labels") || [];
+  const named = (v) => /joint/i.test(String(g(v, "Name") || ""));
+  const markOf = (lb, v) => {
+    const t = String(g(lb, "Text") || "").replace(/\s+/g, " ").trim(), kind = String(g(lb, "Kind") || "text");
+    const m = t.match(/^(?:joint|jnt|type)\s*(?:type\s*)?([A-Z]{1,2}\d?)$/i);
+    if (m) return m[1].toUpperCase();
+    if (named(v) && !/tag/i.test(kind) && /^[A-Z]{1,2}\d?$/i.test(t) && !/^(UP|DN|N|S|E|W)$/i.test(t)) return t.toUpperCase();
+    return null;
+  };
+  const cands = views.map((v) => {
+    const vid = String(g(v, "Id")), scale = g(v, "Scale") || 50, near = Math.max(0.5, 0.03 * scale);
+    // Where the view draws joints in a joint line style, those are the joints: other lines by a label are its leaders and the like
+    let ls = lines.filter((l) => String(g(l, "View")) === vid && Array.isArray(g(l, "Points")));
+    if (ls.some((l) => /joint/i.test(String(g(l, "Style") || "")))) ls = ls.filter((l) => /joint/i.test(String(g(l, "Style") || "")));
+    const lbs = labels.filter((lb) => String(g(lb, "View")) === vid && Array.isArray(g(lb, "At"))).map((lb) => ({ m: markOf(lb, v), at: g(lb, "At") })).filter((x) => x.m);
+    const styled = ls.map((l) => /joint/i.test(String(g(l, "Style") || "")));
+    const dist = (p, l) => { const [x1, y1, , x2, y2] = g(l, "Points"), dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy, t = L2 ? Math.max(0, Math.min(1, ((p[0] - x1) * dx + (p[1] - y1) * dy) / L2)) : 0; return Math.hypot(p[0] - x1 - t * dx, p[1] - y1 - t * dy); };
+    // The same line drawn twice in the view counts once
+    const seenL = new Set(); ls = ls.filter((l) => { const k = g(l, "Points").map((x) => Math.round(x * 100)).join(","); if (seenL.has(k)) return false; seenL.add(k); return true; });
+    // Which letters name lines: a letter most of whose labels sit by a line (his JOINT A); a letter whose labels mostly sit by no line
+    // marks the walls instead (his JOINT B: 4 of 5 by no line, and the fifth 0.49 m from a Joint A line, which it mustn't take)
+    // (beside a line means along it: a label past a line's end marks where the line meets a wall, as his B labels do)
+    const along = (p, l) => { const [x1, y1, , x2, y2] = g(l, "Points"), dx = x2 - x1, dy = y2 - y1, L2 = dx * dx + dy * dy, t = L2 ? ((p[0] - x1) * dx + (p[1] - y1) * dy) / L2 : 0; return t > 0 && t < 1; };
+    const inReach = lbs.map((x) => ls.some((l) => along(x.at, l) && dist(x.at, l) <= near));
+    const lineLetter = new Set([...new Set(lbs.map((x) => x.m))].filter((m) => { const k = lbs.map((x, i) => [x, i]).filter(([x]) => x.m === m); return k.filter(([, i]) => inReach[i]).length * 2 > k.length; }));
+    // Pair those labels and lines: as many as can be, each label trying its nearest line first
+    const opts = lbs.map((x) => (lineLetter.has(x.m) ? ls.map((l, k) => [k, dist(x.at, l)]).filter(([, d]) => d <= near).sort((a, b) => a[1] - b[1]).map(([k]) => k) : []));
+    const owner = new Array(ls.length).fill(-1);
+    const tryL = (li, seen) => { for (const k of opts[li]) { if (seen.has(k)) continue; seen.add(k); if (owner[k] < 0 || tryL(owner[k], seen)) { owner[k] = li; return true; } } return false; };
+    lbs.forEach((_, li) => tryL(li, new Set()));
+    const segs = ls.map((l, k) => ({ l, k })).filter(({ k }) => styled[k] || owner[k] >= 0)
+      .map(({ l, k }) => ({ id: g(l, "Id"), pts: g(l, "Points"), length: g(l, "Length") || 0, style: g(l, "Style") || "", mark: owner[k] >= 0 ? lbs[owner[k]].m : null, how: owner[k] >= 0 ? "labelled" : "line style" }));
+    const loose = lbs.filter((x, li) => !owner.includes(li) && !lineLetter.has(x.m)).map((x) => ({ mark: x.m, at: x.at }));
+    return { v, vid, name: g(v, "Name") || "", level: g(v, "LevelElevation") ?? null, near, segs, loose };
+  }).filter((c) => c.segs.length || c.loose.length);
+  if (!cands.length) return null;
+  const best = cands.sort((a, b) => named(b.v) - named(a.v) || b.segs.length - a.segs.length)[0];
+  return best;
+}
+
+// ---- The plan ----
+function pourPlan(r) {
+  const all = r.elements || [], byId = new Map(all.map((e) => [String(e.Id), e]));
+  if (!all.some((e) => Array.isArray(e.Faces) && e.Faces.length)) return null;
+  const role = (e) => r.roles?.[e?.Id]?.role || "", concrete = (e) => !!e && r.tradeOfId?.[e.Id] === "concrete" && r.status?.[e.Id] !== "excluded";
+  const inStructure = (e) => concrete(e) && !POUR_BEDDING.includes(role(e));
+  const isWall = (e) => e?.Bic === "OST_Walls", isColumn = (e) => ["OST_StructuralColumns", "OST_Columns"].includes(e?.Bic);
+  const isSlab = (e) => ["OST_Floors", "OST_StructuralFoundation"].includes(e?.Bic);
+  const J = r.conv?.joints || {}, upstand = J.upstand ?? 1, liftH = J.liftHeight || 5;
+  const els = all.filter((e) => inStructure(e) && Array.isArray(e.Faces) && e.Faces.length);
+  const ids = new Set(els.map((e) => String(e.Id)));
+  const order = (e) => faceOrder(r, e), kind = (e) => r.slabKind?.[e.Id] || "";
+  const name = (e) => `${e.Type || e.Family || e.Category} [${e.Id}]`;
+  const thick = (e) => e.Thickness || (e.Box ? Math.min(e.Box[3] - e.Box[0], e.Box[4] - e.Box[1], e.Box[5] - e.Box[2]) : 0);
+  const height = (e) => (e.Box ? e.Box[5] - e.Box[2] : 0);
+  // Its underside at its bottom (not the head of an opening in it)
+  const soffitArea = (e) => (e.Faces || []).filter((f) => f.Kind === "soffit" && f.N && f.N[2] < -0.99 && (!e.Box || !f.Z || f.Z[0] <= e.Box[2] + 0.01)).reduce((s, f) => s + f.Area, 0);
+  const holdsWater = (e) => !!r.concretePart?.[e.Id]?.wt;
+
+  // Every contact, once per pair, from the face that describes it best: the later-cast element's (its underside or side on the
+  // earlier one), else the earlier one's as reported. { a: earlier, b: later, face kind on b, area }
+  const pairs = new Map();
+  for (const e of els) for (const f of e.Faces) for (const c of f.Contacts || []) {
+    const o = byId.get(String(c.Id)); if (!o || !ids.has(String(o.Id))) continue;
+    const key = [String(e.Id), String(o.Id)].sort().join("|"), mine = order(e) >= order(o);
+    const x = pairs.get(key) || { faces: [] };
+    x.faces.push({ on: e, other: o, kind: f.Kind, n: f.N, z: f.Z, area: c.Area, mine });
+    pairs.set(key, x);
+  }
+
+  // 1. Pours: union what touches and is cast at the same time; a short upstand goes with the suspended slab it stands on
+  const parent = new Map(els.map((e) => [String(e.Id), String(e.Id)]));
+  const find = (x) => { while (parent.get(x) !== x) { parent.set(x, parent.get(parent.get(x))); x = parent.get(x); } return x; };
+  const join = (a, b) => parent.set(find(String(a.Id)), find(String(b.Id)));
+  const why = new Map();
+  for (const x of pairs.values()) {
+    const { on: a, other: b } = x.faces[0];
+    if (POUR_INFILL.includes(role(a)) || POUR_INFILL.includes(role(b)) || POUR_APRON.includes(role(a)) || POUR_APRON.includes(role(b))) continue;
+    if (order(a) === order(b)) { join(a, b); continue; }
+    const [lo, hi] = order(a) < order(b) ? [a, b] : [b, a];
+    if (isWall(hi) && isSlab(lo) && (kind(lo) === "suspended" || kind(lo) === "raised") && height(hi) <= upstand && x.faces.some((f) => f.on === hi && f.kind === "soffit")) {
+      join(lo, hi); why.set(String(hi.Id), `a short upstand (${height(hi).toFixed(2)} m) cast with ${name(lo)}`);
+    }
+  }
+  const pourOf = (e) => find(String(e.Id));
+
+  // 2. Edges between elements in different pours
+  const joints = [], add = (j) => { j.billed = POUR_BILLED[j.kind] || { joint: null, why: "not a kind SolvBoQ bills" }; joints.push(j); };
+  for (const x of pairs.values()) {
+    const { on: a0, other: b0 } = x.faces[0];
+    if (pourOf(a0) === pourOf(b0)) continue;
+    const [early, late] = order(a0) <= order(b0) ? [a0, b0] : [b0, a0];
+    // The later element's own faces describe the edge; else the earlier one's
+    const fl = x.faces.filter((f) => f.on === late), fe = x.faces.filter((f) => f.on === early);
+    const use = fl.length ? fl : fe, area = use.reduce((s, f) => s + f.area, 0);
+    const under = fl.length ? fl.some((f) => f.kind === "soffit") : fe.some((f) => f.kind === "top");
+    const side = use.some((f) => f.kind === "side");
+    const infill = [early, late].find((e) => POUR_INFILL.includes(role(e))), apron = [early, late].find((e) => POUR_APRON.includes(role(e)));
+    const base = { a: early, b: late, area };
+    if (infill) { add({ ...base, kind: "infill", length: null, how: `${name(infill)} against ${name(infill === early ? late : early)}` }); continue; }
+    if (apron) { const w = Math.min(thick(apron) || 0.1, height(apron) || 0.1); add({ ...base, kind: "apron", length: area / w, how: `${name(apron)} against ${name(apron === early ? late : early)}: ${area.toFixed(2)} m² ÷ ${w.toFixed(2)} m` }); continue; }
+    if (under && isWall(late)) {
+      // Measured along the wall's centreline, as he measures it (Revit's location lines meet at the walls' centrelines, so the walls
+      // of a chamber add up to its centreline perimeter), for the share of its underside that stands on this base
+      const t = thick(late), lifts = Math.max(1, Math.ceil((height(late) - 0.01) / liftH)), sof = soffitArea(late);
+      const len = late.Length > 0 && sof > 0 ? late.Length * Math.min(1, area / sof) : t > 0 ? area / t : 0;
+      add({ ...base, kind: "wallBase", length: len, how: `${name(late)} stands on ${name(early)}: ${late.Length > 0 && sof > 0 ? `its centreline, ${late.Length.toFixed(2)} m${area < 0.99 * sof ? `, × the ${Math.round((100 * area) / sof)}% of its underside on it` : ""}` : `${area.toFixed(2)} m² ÷ ${(t * 1000).toFixed(0)} mm wall`}` });
+      if (lifts > 1) add({ ...base, kind: "lift", length: len * (lifts - 1), how: `${name(late)} is ${height(late).toFixed(2)} m high: ${lifts} lifts of up to ${liftH} m, ${lifts - 1} joint${lifts > 2 ? "s" : ""} between them` });
+      continue;
+    }
+    if (under && isColumn(late)) { add({ ...base, kind: "columnBase", length: null, count: 1, how: `${name(late)} stands on ${name(early)}` }); continue; }
+    if (under && isSlab(late)) { add({ ...base, kind: "slabOnWalls", length: null, how: `${name(late)} is cast on ${name(early)} (${area.toFixed(2)} m²)` }); continue; }
+    // A beam cast with its slab, its end bearing in a wall or on a column: part of the slab's bearing, not a joint of its own
+    if (late.Bic === "OST_StructuralFraming" && (isWall(early) || isColumn(early)) && pourOf(late) !== pourOf(early) && els.some((s) => isSlab(s) && pourOf(s) === pourOf(late))) {
+      add({ ...base, kind: "slabOnWalls", length: null, how: `${name(late)}, cast with its slab, bears in ${name(early)} (${area.toFixed(2)} m²)` }); continue;
+    }
+    if (side && isSlab(late) && isWall(early) && late.Box && early.Box && late.Box[2] > early.Box[2] + 0.1) {
+      // Water-retaining slabs only (a launder floor into the tank wall, his Type R); a dry slab against the walls (the 3 Way Splitter's
+      // walkway) has no joint in his bill
+      const t = thick(late), len = t > 0 ? area / t : 0;
+      add({ ...base, kind: holdsWater(late) ? "slabIntoWall" : "drySlabAgainstWall", length: len, how: `${name(late)} is cast against ${name(early)} partway up: ${area.toFixed(2)} m² ÷ ${(t * 1000).toFixed(0)} mm slab${holdsWater(late) ? "" : " (it doesn't hold water)"}` }); continue;
+    }
+    add({ ...base, kind: "elementToElement", length: null, how: `${name(late)} against ${name(early)} (${area.toFixed(2)} m²)` });
+  }
+
+  // A wall drawn a few millimetres above what it stands on (the 3 Way Splitter's 7 mm): the support graph lists the gap; its base
+  // joint is counted on what lies under the gap, and says so (the gap is a modelling error, reported by the support graph too)
+  for (const gp of faceGraph(r)?.gaps || []) {
+    const w = byId.get(gp.id), b = byId.get(gp.below);
+    if (!isWall(w) || !b || !ids.has(String(w.Id)) || !ids.has(String(b.Id)) || pourOf(w) === pourOf(b)) continue;
+    if (joints.some((j) => j.kind === "wallBase" && j.b === w)) continue;
+    const t = thick(w), len = w.Length > 0 ? w.Length : t > 0 ? soffitArea(w) / t : 0;
+    add({ a: b, b: w, area: soffitArea(w), kind: "wallBase", length: len, gap: gp.gap, how: `${name(w)} is drawn ${Math.round(gp.gap * 1000)} mm above ${name(b)}: taken as standing on it, its centreline ${len.toFixed(2)} m (fix the gap in the model)` });
+  }
+
+  // 3. Splits inside elements, from the designer's layout
+  const L = pourLayout(r.annotations);
+  const outline = (e, k) => { const f = (e.Faces || []).filter((f) => f.Kind === k && f.N && Math.abs(f.N[2]) > 0.99).sort((a, b) => b.Area - a.Area)[0]; return f ? pourOutline(f) : null; };
+  const atLevel = (z) => L && (L.level == null || Math.abs(L.level - z) <= 1.0);
+  const segsUsed = new Set(), linesIn = new Map();   // the layout lines in each floor's bays
+  if (L) {
+    // A floor in bays: each joint line inside the floor's own outline (its top), at the floor's level
+    for (const e of els.filter((e) => isSlab(e) && kind(e) === "ground" && !POUR_INFILL.includes(role(e)) && !POUR_APRON.includes(role(e)))) {
+      if (!atLevel(e.Box?.[5] ?? 0)) continue;
+      const ol = outline(e, "top"); if (!ol) continue;
+      for (const s of L.segs) {
+        const [ax, ay, , bx, by] = s.pts, len = pourClip([ax, ay], [bx, by], ol);
+        if (len > 0.05) { segsUsed.add(s.id); if (!linesIn.has(String(e.Id))) linesIn.set(String(e.Id), new Set()); linesIn.get(String(e.Id)).add(s.id); add({ a: e, b: e, kind: "bay", length: len, mark: s.mark, line: s.id, how: `layout line ${s.id} (${s.how}${s.mark ? `, Joint ${s.mark}` : ""}) inside ${name(e)}: ${len.toFixed(2)} m of its ${s.length.toFixed(2)} m` }); }
+      }
+    }
+    // A wall where a floor joint meets it: the line goes across the wall's footprint (inside it for no more than about its thickness
+    // and a half; a line running along inside a wall isn't a crossing), or ends on it. A vertical joint the wall's full height.
+    const verts = [];
+    for (const w of els.filter((e) => isWall(e) && !why.has(String(e.Id)))) {
+      if (!atLevel(w.Box?.[2] ?? 0)) continue;
+      const ol = outline(w, "soffit"); if (!ol) continue;
+      const t = thick(w);
+      // Only the joints of the floor it stands on run up it (a hard-stand layout beside a silo isn't the silo's)
+      const mine = new Set(joints.filter((j) => j.kind === "wallBase" && j.b === w).flatMap((j) => [...(linesIn.get(String(j.a.Id)) || [])]));
+      for (const s of L.segs.filter((s) => mine.has(s.id))) {
+        const [ax, ay, , bx, by] = s.pts, inside = pourClip([ax, ay], [bx, by], ol);
+        const ends = [[ax, ay], [bx, by]].some((p) => pourEdgeDist(p, ol.outer) <= 0.05 || pourInside(p, ol.outer));
+        if (!(inside > 0.01 || ends) || inside > 1.5 * t + 0.05) continue;
+        // where it meets the wall: the middle of the part inside, else the end that touches
+        const at = (() => { const dx = bx - ax, dy = by - ay, n = 200; let sx = 0, sy = 0, k = 0;
+          for (let i = 0; i <= n; i++) { const p = [ax + (dx * i) / n, ay + (dy * i) / n]; if (pourInside(p, ol.outer) || pourEdgeDist(p, ol.outer) <= 0.05) { sx += p[0]; sy += p[1]; k++; } }
+          return k ? [sx / k, sy / k] : [ax, ay]; })();
+        verts.push({ a: w, b: w, kind: "wallVertical", length: height(w), mark: null, line: s.id, at, how: `layout line ${s.id} meets ${name(w)} at (${at[0].toFixed(2)}, ${at[1].toFixed(2)}): its height, ${height(w).toFixed(2)} m` });
+      }
+    }
+    // The marks without a line of their own: each names the crossing nearest it (one each, nearest pairs first, within reach).
+    // Designers label a joint type once or a few times, not at every place it occurs: when every labelled crossing carries the same
+    // mark, the crossings without one take it too, and say so. Two different marks: the others are left for him.
+    const reach = Math.max(2.5, L.near * 1.7), pairs2 = [];
+    L.loose.forEach((x, li) => verts.forEach((v, vi) => { const d = Math.hypot(x.at[0] - v.at[0], x.at[1] - v.at[1]); if (d <= reach) pairs2.push([d, li, vi]); }));
+    const usedL = new Set(), marked = new Set();
+    for (const [d, li, vi] of pairs2.sort((p, q) => p[0] - q[0])) { if (usedL.has(li) || marked.has(vi)) continue;
+      usedL.add(li); marked.add(vi); verts[vi].mark = L.loose[li].mark; verts[vi].how += `; Joint ${L.loose[li].mark} is marked ${d.toFixed(1)} m away`; }
+    const marks = [...new Set(verts.filter((v) => v.mark).map((v) => v.mark))];
+    if (marks.length === 1) for (const v of verts) if (!v.mark) { v.mark = marks[0]; v.how += `; no mark of its own, taken as Joint ${marks[0]}, the only type marked on the walls`; }
+    for (const v of verts) add(v);
+  }
+  // Wall-base joints take the mark the layout sets by the wall, when only one mark sits by walls without a line (his Joint B)
+  // is not assumed: the base and the vertical joint may be different types. Left for him.
+
+  // Pours, with their elements
+  const pours = new Map();
+  for (const e of els) { const p = pourOf(e); if (!pours.has(p)) pours.set(p, []); pours.get(p).push(e); }
+  // The floor's bays: one pour per bay is what the lines mean; counted, not drawn
+  const notes = [];
+  if (!L) notes.push("No joint layout found in a plan view: floor bays and vertical joints in walls aren't known from the model (the box rules estimate them).");
+  else {
+    const unused = L.segs.filter((s) => !segsUsed.has(s.id));
+    if (unused.length) notes.push(`${unused.length} joint line${unused.length > 1 ? "s" : ""} on the layout (${L.name}) lie in no ground slab at its level: ${unused.slice(0, 6).map((s) => s.id).join(", ")}${unused.length > 6 ? "…" : ""}`);
+  }
+  for (const [id, w] of why) notes.push(`${name(byId.get(id))}: ${w}`);
+  return { pours: [...pours.values()].map((es) => ({ elements: es, order: Math.min(...es.map(order)) })).sort((a, b) => a.order - b.order), joints, layout: L, notes };
+}
+
+// The plan for a result, worked out once (the engine asks for it from the joints and the stop ends)
+const POUR_PLANS = new WeakMap();
+function pourPlanOf(r) { if (!POUR_PLANS.has(r)) { const p = pourPlan(r); if (p) p.covered = new Set(pourCovered(r)); POUR_PLANS.set(r, p); } return POUR_PLANS.get(r); }
+// The elements the plan speaks for: concrete in the structure whose faces and contacts were all read (else the box rules stand)
+function pourCovered(r) {
+  return (r.elements || []).filter((e) => r.tradeOfId?.[e.Id] === "concrete" && Array.isArray(e.Faces) && e.Faces.length && e.Faces.every((f) => f.Contacts != null)).map((e) => String(e.Id));
+}
+
+// The billed joints, summed as the bill would take them: by joint (the neutral fact's joint), mark and the member it is in
+function pourJointTotals(plan) {
+  const out = new Map();
+  for (const j of plan?.joints || []) {
+    if (!j.billed?.joint || !(j.length > 0)) continue;
+    const key = `${j.billed.joint}|${j.mark || ""}`;
+    const x = out.get(key) || { joint: j.billed.joint, mark: j.mark || null, length: 0, parts: [] };
+    x.length += j.length; x.parts.push(j); out.set(key, x);
+  }
+  return [...out.values()];
 }
 
 
