@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-24T19:59:24Z">
+<meta name="solvboq-build" content="2026-11-25T19:30:49Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -326,6 +326,11 @@ footer{color:var(--muted);font-size:12px;max-width:80ch}
 .edprob b{font-weight:600}
 .edai{padding:12px 14px;background:var(--accent-s);border-radius:14px;font-size:13px;color:var(--ink-2)}
 .edai b{color:var(--accent);font-weight:600}
+/* The joint letters asked on a floor joint line: one group per letter, a tick per set of lines */
+.jlset{border:1px solid var(--line);border-radius:10px;padding:6px 10px 8px;margin:6px 0 0;min-width:0}
+.jlset legend{font-weight:600;color:var(--ink);padding:0 4px}
+.jlopt{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;padding:2px 0;cursor:pointer}
+.jlset .sub{font-size:12px;color:var(--muted)}
 .link.accent{color:var(--accent);text-decoration:none;font-weight:500;font-size:13px;align-self:flex-start}
 .link.accent:hover{text-decoration:underline;text-underline-offset:3px}
 .edels{margin-top:4px;background:var(--card);border:1px solid var(--rule);border-radius:12px;overflow:hidden}
@@ -7192,6 +7197,8 @@ function deriveItems(r, opts = {}) {
   const manhole = manholeModel(r, live, opts);
   r.layout = jointLayout(opts.annotations);
   r.annotations = opts.annotations || null;
+  // His answer to which lines of the joint layout each letter names (pours.js, T-044), kept with this model's assumptions
+  r.jointLetters = opts.earthworks?.jointLetters || null;
   r.ngl = modelNgl(opts.annotations, live, r.method);
   const inferred = inferLines(r, { faces: opts.faces, coat: opts.earthworks || {}, live, slabs, suspended: withBoxes || hasElev ? [...suspended, ...raised] : [], ground: withBoxes || hasElev ? ground : slabs, isBlinding, rebar: opts.rebar, manhole, structure: opts.inputs?.structure || null });
   const total = (kind) => inferred.lines.filter((l) => l.kind === kind).reduce((s, l) => s + l.qty, 0);
@@ -9417,7 +9424,10 @@ const pourClipPoly = (poly, ol) => pourPieces(poly).reduce((s, [a, b]) => s + po
 // names a joint when its text does (“JOINT A”, “Type B”), or, in a view named for joints, when it is a text note of one or two letters
 // (not a tag: grid and section tags carry letters too). Each label is paired with its own line, nearest first; a label with no line
 // of its own is kept as a loose mark (his Joint B labels sit by the walls).
-function pourLayout(ann) {
+// The set a layout line belongs to: its style, shape and length (to the centimetre)
+const pourSetKey = (s) => `${s.style}|${s.shape}|${(+s.length || 0).toFixed(2)}`;
+// answers: { letter: [set keys] } (an empty list: the letter names none of the lines), his answers kept with the model
+function pourLayout(ann, answers = null) {
   if (!ann) return null;
   const g = (o, k) => o?.[k] ?? o?.[k[0].toLowerCase() + k.slice(1)];
   const views = (g(ann, "Views") || []).filter((v) => /plan/i.test(String(g(v, "Kind") || "")) && !/legend|sheet|section|elevation/i.test(String(g(v, "Kind") || "")));
@@ -9461,8 +9471,15 @@ function pourLayout(ann) {
       .map(({ l, k }) => ({ id: g(l, "Id"), pts: g(l, "Points"), poly: polyOf.get(l), shape: g(l, "Shape") || "line",
         // a curve sampled into pieces is a little shorter than the curve: what is clipped is scaled back to its true length
         scale: (() => { const p = polyOf.get(l), n = pourPieces(p).reduce((s, [a, b]) => s + Math.hypot(b[0] - a[0], b[1] - a[1]), 0), L = +g(l, "Length") || 0; return p.length > 2 && n > 0 && L > 0 ? L / n : 1; })(), length: g(l, "Length") || 0, style: g(l, "Style") || "", mark: owner[k] >= 0 ? lbs[owner[k]].m : null, how: owner[k] >= 0 ? "labelled" : "line style" }));
-    const loose = lbs.filter((x, li) => !owner.includes(li) && !lineLetter.has(x.m)).map((x) => ({ mark: x.m, at: x.at }));
-    return { v, vid, name: g(v, "Name") || "", level: g(v, "LevelElevation") ?? null, near, segs, loose };
+    // The joint lines in sets: the lines a designer draws as one pattern (the same style, shape and length: his six spokes, the
+    // hexagon's six sides, a ring), which is how he is asked about them and how his answer is kept
+    for (const s of segs) s.set = pourSetKey(s);
+    // His answers, kept with the model (T-044): which sets each letter names, or none. A letter he answered isn't a loose mark.
+    const ans = answers || {};
+    for (const s of segs) { const m = Object.keys(ans).find((m) => Array.isArray(ans[m]) && ans[m].includes(s.set)); if (m) { s.mark = m; s.how = "your answer"; } }
+    const loose = lbs.filter((x, li) => !owner.includes(li) && !lineLetter.has(x.m) && !(x.m in ans)).map((x) => ({ mark: x.m, at: x.at }));
+    const labelsOf = {}; for (const x of lbs) (labelsOf[x.m] = labelsOf[x.m] || []).push(x.at);
+    return { v, vid, name: g(v, "Name") || "", level: g(v, "LevelElevation") ?? null, near, segs, loose, labelsOf, styledView };
   }).filter((c) => c.segs.length || c.loose.length);
   if (!cands.length) return null;
   const best = cands.sort((a, b) => named(b.v) - named(a.v) || b.segs.length - a.segs.length)[0];
@@ -9565,7 +9582,7 @@ function pourPlan(r) {
   }
 
   // 3. Splits inside elements, from the designer's layout
-  const L = pourLayout(r.annotations);
+  const L = pourLayout(r.annotations, r.jointLetters || null);
   const outline = (e, k) => { const f = (e.Faces || []).filter((f) => f.Kind === k && f.N && Math.abs(f.N[2]) > 0.99).sort((a, b) => b.Area - a.Area)[0]; return f ? pourOutline(f) : null; };
   const atLevel = (z) => L && (L.level == null || Math.abs(L.level - z) <= 1.0);
   const segsUsed = new Set(), linesIn = new Map();   // the layout lines in each floor's bays
@@ -9625,7 +9642,27 @@ function pourPlan(r) {
     if (unused.length) notes.push(`${unused.length} joint line${unused.length > 1 ? "s" : ""} on the layout (${L.name}) lie in no ground slab at its level: ${unused.slice(0, 6).map((s) => s.id).join(", ")}${unused.length > 6 ? "…" : ""}`);
   }
   for (const [id, w] of why) notes.push(`${name(byId.get(id))}: ${w}`);
-  return { pours: [...pours.values()].map((es) => ({ elements: es, order: Math.min(...es.map(order)) })).sort((a, b) => a.order - b.order), joints, layout: L, notes };
+  // The question for him (T-044): letters on the layout that neither the rules nor his answers place (not on lines of their own, not
+  // marking where a floor joint meets a wall), with the sets of joint lines in the floors they might name. Asked once; until then
+  // the lines are billed as joints without a letter, which changes no quantity.
+  let question = null;
+  if (L) {
+    const usedOnWalls = new Set(joints.filter((j) => j.kind === "wallVertical" && j.mark).map((j) => j.mark));
+    const letters = [...new Set(L.loose.map((x) => x.mark))].filter((m) => !usedOnWalls.has(m)).sort();
+    if (letters.length) {
+      const inFloors = joints.filter((j) => j.kind === "bay"), sets = new Map();
+      for (const s of L.segs) {
+        const len = inFloors.filter((j) => j.line === s.id).reduce((t, j) => t + j.length, 0); if (!(len > 0)) continue;
+        const x = sets.get(s.set) || { key: s.set, style: s.style, shape: s.shape, each: +s.length || 0, lines: [], length: 0, mark: s.how === "your answer" ? s.mark : null };
+        x.lines.push(s.id); x.length += len; sets.set(s.set, x);
+      }
+      question = { view: L.name, letters: letters.map((m) => ({ mark: m, labels: (L.labelsOf[m] || []).length })), sets: [...sets.values()].sort((a, b) => b.length - a.length),
+        why: L.styledView ? "the joints are drawn in a joint line style, and the letters sit between lines where they can't be told apart"
+          : "the letters don't sit along a line of their own, or beside a wall where a floor joint meets it" };
+      notes.push(`Letters on the layout not yet placed: ${letters.join(", ")}: asked on the joint lines.`);
+    }
+  }
+  return { pours: [...pours.values()].map((es) => ({ elements: es, order: Math.min(...es.map(order)) })).sort((a, b) => a.order - b.order), joints, layout: L, notes, question };
 }
 
 // The plan for a result, worked out once (the engine asks for it from the joints and the stop ends)
@@ -13330,6 +13367,49 @@ function setCoatText(part, text) {
   if (t) state.earth[`coatText_${part}`] = t; else delete state.earth[`coatText_${part}`];
   saveEarth(state.name, state.earth); rerunChecks(); renderMap();
 }
+// ----- The joint layout's letters (T-044): asked once on the floor joint lines, kept with this model's assumptions -----
+// When the layout has letters SolvBoQ can't place (pours.js: drawn in a joint line style, or not beside a line or a wall), he says
+// which sets of lines each names, or none. Until then the lines are billed as joints without a letter: no length changes.
+const isFloorJointLine = (L) => !!L.groups?.some((g) => /^inferred\|jfloor/.test(g.key));
+function setJointLetters(ans) {
+  state.earth = { ...(state.earth || {}) };
+  if (ans && Object.keys(ans).length) state.earth.jointLetters = ans; else delete state.earth.jointLetters;
+  saveEarth(state.name, state.earth); rerunChecks(); renderMap();
+}
+function jointsLineAsk(L) {
+  if (!isFloorJointLine(L) || typeof pourPlanOf !== "function") return null;
+  const plan = pourPlanOf(state.result), q = plan?.question, kept = state.earth?.jointLetters;
+  const setText = (s) => `${s.lines.length} ${s.shape === "circle" ? "ring" : s.shape === "arc" ? "arc" : "line"}${s.lines.length > 1 ? "s" : ""} of ${fmt2(s.each)} m${s.style ? ` (${s.style})` : ""}: ${fmt2(s.length)} m`;
+  if (!q) {
+    if (!kept || !Object.keys(kept).length) return null;
+    const said = Object.entries(kept).map(([m, ks]) => `Joint ${m}: ${ks.length ? `${plural(ks.length, "set")} of lines` : "none of the lines"}`).join("; ");
+    return h("div", { class: "edwhy", id: "jlKept" }, h("b", null, "Your joint letters: "), `${said}. `,
+      h("button", { type: "button", class: "link accent", id: "btnJlAgain", onclick: () => setJointLetters(null) }, "Ask me again"));
+  }
+  const pick = {}; for (const x of q.letters) pick[x.mark] = new Set((kept?.[x.mark]) || []);
+  const docked = document.body.classList.contains("docked") && typeof HOST !== "undefined" && HOST;
+  return h("div", { class: "edai edwhy", id: "jlAsk" },
+    h("b", null, "Which lines does each joint letter name? "),
+    `Your joint layout (${q.view}) has ${q.letters.map((x) => `${x.mark} (${plural(x.labels, "label")})`).join(" and ")} that SolvBoQ can’t place: ${q.why}. `,
+    "Until you say, these lines are billed as joints without a letter; the length doesn’t change.",
+    ...q.letters.map((x) => h("fieldset", { class: "jlset", "data-mark": x.mark }, h("legend", null, `Joint ${x.mark}`),
+      ...q.sets.map((s) => h("label", { class: "jlopt" },
+        h("input", { type: "checkbox", "data-set": s.key, onchange: (ev) => { if (ev.target.checked) pick[x.mark].add(s.key); else pick[x.mark].delete(s.key); } }), ` ${setText(s)}`,
+        docked ? h("button", { type: "button", class: "link accent", onclick: (ev) => { ev.preventDefault(); HOST.postMessage({ type: "select", ids: s.lines }); } }, " Show in Revit") : null)),
+      h("div", { class: "sub" }, "None ticked: it names none of these lines (a ring or detail the model doesn’t carry, for example)."))),
+    h("div", { class: "tools" }, h("button", { type: "button", class: "btn sm dark", id: "btnJlKeep", onclick: () => {
+      const ans = {}; for (const x of q.letters) ans[x.mark] = [...pick[x.mark]];
+      setJointLetters({ ...(kept || {}), ...ans }); toast("Kept with this model: the joint lines are billed by your letters");
+    } }, "Keep my answer")));
+}
+// For the docked panel's Next: the joint letters waiting for him
+function jointsQueueItem(lines) {
+  const q = typeof pourPlanOf === "function" && state.result ? pourPlanOf(state.result)?.question : null;
+  const L = q ? lines.find(isFloorJointLine) : null;
+  if (!L) return null;
+  return { kind: "joints", tone: "violet", order: 2.6, value: 0, title: `${plural(q.letters.length, "joint letter")} to place`, sub: `${q.letters.map((x) => `Joint ${x.mark}`).join(", ")} on your joint layout: which lines does each name?`,
+    main: ["Answer on the line", () => dockOpen(L)] };
+}
 function setAssumption(k, v) {
   const x = parseFloat(v); state.earth = { ...(state.earth || {}) };
   if (v === "" || !Number.isFinite(x)) delete state.earth[k]; else state.earth[k] = x;
@@ -13534,7 +13614,7 @@ function editorFor(L, lines, inline) {
   else if (L.status === "measure") why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: it isn’t in the model. "), `${L.why || ""} ${inline ? "Type the quantity from the drawings, or bill it as provisional." : "Enter the quantity from the drawings below, or bill it as provisional."}`));
   else if (L.status === "unmapped") why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: no item fits it yet. "), inline ? "Choose its item, on the right" : "Choose its item below", sampleFn ? ", or ask Claude." : "."));
   // A document's answer for this line, waiting for him (the bending schedule for the reinforcement): asked here, pre-filled
-  const ask = typeof docsLineAsk === "function" ? docsLineAsk(L) : null;
+  const ask = (typeof docsLineAsk === "function" ? docsLineAsk(L) : null) || jointsLineAsk(L);
   // A check on the model that touches this line's elements (Readiness), said on the line it affects
   const checks = issues.length && L.status !== "flag" ? h("p", { class: "edtext warn", id: "edChecks" }, "A check on the model: " + issues.slice(0, 3).join("; ") + ". ",
     h("button", { type: "button", class: "link accent", onclick: () => { state.view = "overview"; render(); } }, "See the model checks")) : null;
@@ -18678,6 +18758,8 @@ function dockQueue() {
     items.push({ kind: "parts", tone: "violet", order: 2, value: 0, title: `${plural(unsure.length, "element")} ${unsure.length === 1 ? "has" : "have"} no part yet`, sub: ready === unsure.length ? "There’s a suggestion ready for each one" : ready ? `There’s a suggestion for ${ready} of them` : "SolvBoQ wasn’t sure which part they are", main: ["Check the suggestions", () => dockGo("parts")] }); }
   const fromDocs = typeof docsQueueItem === "function" ? docsQueueItem() : null;
   if (fromDocs) items.push(fromDocs);
+  const joints = typeof jointsQueueItem === "function" ? jointsQueueItem(lines) : null;
+  if (joints) items.push(joints);
   const asks = lines.filter((L) => ["unmapped", "measure"].includes(L.status));
   if (asks.length) { const nm = asks.filter((L) => L.unmapped).length, ms = asks.length - nm;
     items.push({ kind: "asks", tone: "amber", order: 3, value: sum(asks), title: `${plural(asks.length, "question")} on the bill`, sub: [nm ? `${plural(nm, "line")} with no item` : "", ms ? `${plural(ms, "figure")} to measure from the drawings` : ""].filter(Boolean).join(", "), main: ["Answer them", () => dockOpen(first(asks))] }); }
@@ -18723,6 +18805,78 @@ function dockNeeds() {
       : h("p", { class: "sub", id: "dockNeedsCount" }, "Every element gives what its card asks for."),
     ...still.slice(0, 4).map(row),
     still.length > 4 ? h("p", { class: "sub" }, `And ${still.length - 4} more: see Settings › Modelling guide.`) : null);
+}
+
+// ----- Review mode (T-046, 25 Nov 2026): walk the bill line by line, the model moving with it -----
+// Isolate in Revit is what made the docked panel worth having to him; Review mode does it for every line he opens: starting it, Accept
+// and go to the next line, Skip, Back, or a selection in Revit that opens a line, all send that line's elements to Revit (selected,
+// isolated for now and zoomed to). One path: whenever the open line changes, reviewSync sends it (renderMap calls it). With "Section
+// box" ticked, Revit shows the line in its own 3D view, "SolvBoQ review", with a section box round the elements (made the first time
+// after asking him; his own views are never given one). Leaving (End review, Esc) ends the isolate and goes back to the view he was in.
+//   page → Revit   { type: "review", ids, margin, box }     { type: "reviewend" }
+//   Revit → page   { type: "reviewDone", view, box, note }
+const REV = { on: false, box: false, sent: null, back: [], view: "", note: "", margin: 0.5 };
+const REV_RANK = { flag: 0, moved: 1, unmapped: 2, measure: 2, claude: 3, confirm: 3 };
+// The line to start on: the one open, if it needs him; else the first that needs him, model problems first, then by value
+function reviewFirst() {
+  const lines = (state.mapLines && state.mapLines.length ? state.mapLines : mapLines(currentGroups())).filter((L) => OPEN.has(L.status));
+  const cur = lines.find((L) => L.key === state.sel); if (cur) return cur;
+  const rate = (L) => (typeof signRate === "function" ? signRate(L) : null), val = (L) => { const r = rate(L); return r && L.shownQty > 0 ? L.shownQty * r : 0; };
+  return lines.slice().sort((a, b) => (REV_RANK[a.status] ?? 4) - (REV_RANK[b.status] ?? 4) || val(b) - val(a))[0] || null;
+}
+const reviewIds = (L) => [...new Set((L.groups || []).flatMap((g) => g.elements.map((e) => Number(e.Id))).filter((x) => Number.isFinite(x) && x > 0))];
+function reviewStart() {
+  if (!HOST) return;
+  const L = reviewFirst();
+  if (!L) return toast("Every line is confirmed: nothing to review");
+  Object.assign(REV, { on: true, sent: null, back: [], note: "", view: "" });
+  state.view = "map"; state.mFilter2 = "need"; render();
+  selectLine(L);   // renderMap → reviewSync sends it
+}
+function reviewEnd(quiet) {
+  if (!REV.on) return;
+  Object.assign(REV, { on: false, sent: null, back: [], note: "" });
+  if (HOST) HOST.postMessage({ type: "reviewend" });
+  state.revitIso = 0; isoBar(); if (state.view === "map") renderMap();
+  if (!quiet) toast("Review mode ended: Revit is back on your view");
+}
+function reviewBack() {
+  const key = REV.back.pop(); const L = key && (state.mapLines || []).find((x) => x.key === key);
+  if (!L) { isoBar(); return toast("This is the first line you reviewed"); }
+  REV.goingBack = true; selectLine(L);
+}
+function reviewBox(on) { REV.box = !!on; REV.sent = null; reviewSync(); }
+// Send the open line to Revit when it changed (called after every redraw of the docked bill)
+function reviewSync() {
+  if (!REV.on || !HOST) return;
+  const L = (state.mapLines || []).find((x) => x.key === state.sel);
+  if (!L) { isoBar(); return; }
+  if (L.key === REV.sent) return;
+  if (REV.sent && !REV.goingBack && REV.back[REV.back.length - 1] !== REV.sent) REV.back.push(REV.sent);
+  REV.goingBack = false; REV.sent = L.key;
+  const ids = reviewIds(L);
+  if (!ids.length) { REV.note = "No element in the model is behind this line (a figure to measure or enter): Revit still shows the line before."; isoBar(); return; }
+  REV.note = "";
+  HOST.postMessage({ type: "review", ids, margin: REV.margin, box: REV.box });
+  state.revitSel = new Set(ids.map(String)); state.revitIso = ids.length;
+  isoBar();
+}
+function reviewDone(m) { REV.view = m.view || ""; REV.note = m.note || ""; if (m.box === false && REV.box && m.note) REV.box = false; isoBar(); }
+// The bar above the tabs while reviewing (isoBar draws it in place of the isolate bar)
+function reviewBar() {
+  const lines = (state.mapLines || []).filter((L) => OPEN.has(L.status)), L = (state.mapLines || []).find((x) => x.key === state.sel);
+  const i = L ? lines.indexOf(L) : -1, ids = L ? reviewIds(L) : [];
+  return [h("span", { id: "revSay" }, h("b", {}, "Review mode. "),
+      L ? (i >= 0 ? `Line ${i + 1} of the ${lines.length} that need you` : "This line is decided") + (ids.length ? `: ${plural(ids.length, "element")} shown${REV.view ? ` in “${REV.view}”` : ""}.` : ".") : "Open a line to see it in Revit.",
+      REV.note ? h("span", { class: "revnote", id: "revNote" }, " " + REV.note) : null),
+    h("span", { class: "revbtns" },
+      h("button", { type: "button", class: "btn sm", id: "btnRevBack", disabled: REV.back.length ? null : true, onclick: reviewBack }, "Back"),
+      h("label", { class: "revbox", title: "Show each line in a 3D view of SolvBoQ’s own, “SolvBoQ review”, with a section box round its elements" },
+        h("input", { type: "checkbox", id: "revBox", checked: REV.box ? true : null, onchange: (e) => reviewBox(e.target.checked) }), "Section box"),
+      h("button", { type: "button", class: "btn sm dark", id: "btnRevEnd", onclick: () => reviewEnd() }, "End review (Esc)"))];
+}
+function reviewButton(id) {
+  return HOST ? h("button", { type: "button", class: "btn sm" + (REV.on ? " dark" : ""), id, "aria-pressed": String(REV.on), onclick: () => (REV.on ? reviewEnd() : reviewStart()) }, REV.on ? "End review" : "Review in the model") : null;
 }
 
 // ===== The first time a Revit model is opened: which project is it for? (T-022, 18 Nov 2026; the canvas's “Revit panel 1: First run”) =====
