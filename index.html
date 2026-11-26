@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-26T05:41:05Z">
+<meta name="solvboq-build" content="2026-11-26T11:17:00Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10046,7 +10046,29 @@ function faceSpot(r, lines, m, point) {
 // engine's (inferEarthworks via EARTH_DUG; the pour plan's joints); each shape's own figure is worked out from what is drawn and checked
 // against the line's, and a difference is said, never hidden. Not drawn yet: wall-base and vertical joints, box-outs, fill layers and the
 // shares of the excavation (rock, hand, stockpiling: the same prism).
-const WORK_COLOURS = { exc: "#B08968", ws: "#E8590C", joint: "#7048E8", stop: "#1C7ED6" };
+// Joints have a colour of their own (magenta), apart from formwork (green, orange, blue), earthworks (brown) and overlaps (red)
+const WORK_COLOURS = { exc: "#B08968", ws: "#E8590C", joint: "#E64980", stop: "#1C7ED6" };
+const WORK_BAND = 0.1;   // joints are drawn as a 100 mm band, so they show (a line alone is a hairline in Revit)
+// A band from a to b, w wide across the unit direction d, moved by n (off the face): as triangles
+function workBand(a, b, d, w, n = [0, 0, 0]) {
+  const h = [d[0] * w / 2, d[1] * w / 2, d[2] * w / 2], P = (p, s) => [p[0] + s * h[0] + n[0], p[1] + s * h[1] + n[1], p[2] + s * h[2] + n[2]];
+  return [[P(a, -1), P(b, -1), P(b, 1)], [P(a, -1), P(b, 1), P(a, 1)]];
+}
+// The foot of a wall face: its outline's points at its lowest height, in order (a straight face gives two; a curved one its arc)
+function workFoot(f) {
+  const p = paintPts((f.Loops || [])[0] || []); if (p.length < 2 || !f.Z) return [];
+  const z0 = f.Z[0], idx = p.map((q, i) => [q, i]).filter(([q]) => Math.abs(q[2] - z0) < 0.005).map(([, i]) => i);
+  if (idx.length < 2) return [];
+  // the run of low points in loop order (it may wrap past the loop's start)
+  const n = p.length; let start = 0;
+  for (let k = 0; k < idx.length; k++) { const prev = idx[(k + idx.length - 1) % idx.length]; if ((prev + 1) % n !== idx[k]) { start = k; break; } }
+  return [...idx.slice(start), ...idx.slice(0, start)].map((i) => p[i]);
+}
+// A wall's two long faces (upright sides): their feet
+function workWallFaces(e) {
+  return (e.Faces || []).filter((f) => f.Kind === "side" && f.N && Math.abs(f.N[2]) < 0.1).map((f) => ({ f, foot: workFoot(f) }))
+    .filter((x) => x.foot.length >= 2).sort((a, b) => b.f.Area - a.f.Area).slice(0, 2);
+}
 // A footprint's outline in plan (anticlockwise): its underside's outer loop where the faces were read, else its box (a circle when round)
 function workOutline(e, round) {
   const b = e.Box; if (!b) return null;
@@ -10106,7 +10128,7 @@ function workBays(r, e, mark) {
 }
 function paintWorked(r, L) {
   const none = (note) => ({ ok: false, note, total: 0, legend: [], groups: [] });
-  const g = (L.groups || []).find((x) => /^inferred\|(earth\|(exc|ws)$|jfloorlayout\||fwedge\|stop\|)/.test(x.key || ""));
+  const g = (L.groups || []).find((x) => /^inferred\|(earth\|(exc|ws)$|jfloorlayout\||jwall\||jwallvert\||fwedge\|stop\|)/.test(x.key || ""));
   if (!g) return null;
   const k = g.key.replace(/^inferred\|/, ""), byId = new Map((r.elements || []).map((e) => [String(e.Id), e])), tris = [], edges = [], notes = [];
   let total = 0, unit = "m²", label = "", colour = WORK_COLOURS.exc;
@@ -10127,6 +10149,48 @@ function paintWorked(r, L) {
         label = `Working space: the ${fmt2(x.wsTo - x.wsFrom)} m band round the excavation, at its bottom`;
       }
     }
+  } else if (/^jwall(vert)?\|/.test(k)) {
+    // Wall joints, from the pour plan: at the foot of each wall (and at each lift) a band along both its faces; where a floor joint meets
+    // a wall, an upright band up both its faces. The figure is the plan's own (along the wall's centreline: his convention)
+    const plan = typeof pourPlanOf === "function" ? pourPlanOf(r) : null;
+    if (!plan) return none("Not from the pour plan (the faces weren’t read): this joint is worked out by a box rule, with nothing to draw.");
+    const vert = /^jwallvert\|/.test(k), mark = k.split("|").pop() || null, liftH = r.conv?.joints?.liftHeight ?? 5;
+    // each wall once (the line lists a wall once per joint on it)
+    for (const id of new Set((g.parts || []).map((p) => String(p.id)))) {
+      const e = byId.get(id); if (!e) continue;
+      const faces = workWallFaces(e); if (!faces.length) { notes.push(`${e.Type || e.Id}: its faces weren’t read: nothing to draw.`); continue; }
+      const mine = plan.joints.filter((j) => String(j.b?.Id) === String(e.Id) && (vert ? j.kind === "wallVertical" && (!mark || (j.mark || "") === mark) : ["wallBase", "lift"].includes(j.kind)));
+      if (!mine.length) notes.push(`${e.Type || e.Id}: the pour plan has no ${vert ? "vertical" : "base"} joint on it.`);
+      for (const j of mine) {
+        total += j.length || 0;
+        if (vert) {
+          // up each face, at the point nearest where the floor joint meets the wall
+          for (const { f, foot } of faces) {
+            let best = null;
+            for (let i = 0; i + 1 < foot.length; i++) {
+              const a = foot[i], b = foot[i + 1], dx = b[0] - a[0], dy = b[1] - a[1], L2 = dx * dx + dy * dy || 1;
+              const t = Math.max(0, Math.min(1, ((j.at[0] - a[0]) * dx + (j.at[1] - a[1]) * dy) / L2)), q = [a[0] + t * dx, a[1] + t * dy], dd = Math.hypot(q[0] - j.at[0], q[1] - j.at[1]);
+              if (!best || dd < best.dd) best = { dd, q, d: paintNorm([dx, dy, 0]) };
+            }
+            if (!best) continue;
+            const nrm = paintNorm([best.d[1], -best.d[0], 0]), sgn = paintDot(nrm, f.N) >= 0 ? 1 : -1;
+            tris.push(...workBand([best.q[0], best.q[1], f.Z[0]], [best.q[0], best.q[1], f.Z[1]], best.d, WORK_BAND, nrm.map((x) => x * sgn * PAINT_LIFT * 2)));
+          }
+        } else {
+          // the base joint at the foot; a lift joint at each lift height
+          const lifts = j.kind === "lift" ? Math.max(0, Math.ceil(((e.Box?.[5] ?? 0) - (e.Box?.[2] ?? 0) - 0.01) / liftH) - 1) : 0;
+          const heights = j.kind === "lift" ? Array.from({ length: lifts }, (_, i) => (i + 1) * liftH) : [0];
+          for (const { f, foot } of faces) for (const dz of heights) for (let i = 0; i + 1 < foot.length; i++) {
+            const a = [foot[i][0], foot[i][1], foot[i][2] + dz + WORK_BAND / 2], b = [foot[i + 1][0], foot[i + 1][1], foot[i + 1][2] + dz + WORK_BAND / 2];
+            const along = paintNorm([b[0] - a[0], b[1] - a[1], 0]), nrm = paintNorm([along[1], -along[0], 0]), sgn = paintDot(nrm, f.N) >= 0 ? 1 : -1;
+            tris.push(...workBand(a, b, [0, 0, 1], WORK_BAND, nrm.map((x) => x * sgn * PAINT_LIFT * 2)));
+          }
+        }
+      }
+    }
+    unit = "m"; colour = WORK_COLOURS.joint;
+    label = vert ? `Vertical joint${mark ? ` ${mark}` : "s"}: where a floor joint meets a wall, the wall’s height` : "Wall-base joints: along each wall’s centreline, drawn at its foot (and at each lift) on both faces";
+    for (const t of tris) edges.push(...[t[0], t[1], t[1], t[2], t[2], t[0]].flat());
   } else {
     const mark = /^jfloorlayout\|/.test(k) ? k.split("|").pop() : null, stop = /^fwedge\|stop\|/.test(k);
     for (const p of g.parts || []) {
@@ -10136,7 +10200,7 @@ function paintWorked(r, L) {
       for (const [a, b] of pieces) {
         const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
         if (stop) { tris.push([[a[0], a[1], z0], [b[0], b[1], z0], [b[0], b[1], z1]], [[a[0], a[1], z0], [b[0], b[1], z1], [a[0], a[1], z1]]); edges.push(a[0], a[1], z0, b[0], b[1], z0, a[0], a[1], z1, b[0], b[1], z1); total += len * t; }
-        else { edges.push(a[0], a[1], z1 + 0.01, b[0], b[1], z1 + 0.01); total += len; }
+        else { const d = paintNorm([-(b[1] - a[1]), b[0] - a[0], 0]); tris.push(...workBand([a[0], a[1], z1 + 0.01], [b[0], b[1], z1 + 0.01], d, WORK_BAND)); edges.push(a[0], a[1], z1 + 0.01, b[0], b[1], z1 + 0.01); total += len; }
       }
     }
     unit = stop ? "m²" : "m"; colour = stop ? WORK_COLOURS.stop : WORK_COLOURS.joint;
