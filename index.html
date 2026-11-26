@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-26T13:27:54Z">
+<meta name="solvboq-build" content="2026-11-26T13:40:16Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1076,8 +1076,8 @@ body.docked .dockhead{display:flex;align-items:center;gap:12px;background:var(--
 .dockwho b{font-size:16px;line-height:1.3;overflow-wrap:anywhere}
 .dockwho span{color:var(--ink-2);font-size:13px}
 .dockhead .hvbtn{flex:none;padding:0 16px}
-body.docked .docknav{display:flex;flex:1 1 0%;min-width:0;gap:2px;background:var(--chip);border-radius:14px;padding:3px}
-.docknav button{flex:1 1 0%;min-width:0;min-height:36px;border-radius:11px;border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:14px;font-weight:600;cursor:pointer}
+body.docked .docknav{display:flex;flex:none;gap:1px;background:var(--chip);border-radius:11px;padding:2px}
+.docknav button{flex:none;min-height:28px;padding:0 9px;border-radius:9px;border:0;background:transparent;color:var(--ink-2);font:inherit;font-size:12px;font-weight:600;cursor:pointer}
 .docknav button:hover{color:var(--ink)}
 .docknav button[aria-current="page"]{background:var(--lime);color:var(--night);font-weight:700;box-shadow:0 1px 2px rgba(16,24,40,.12)}
 .docknav button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -1102,7 +1102,7 @@ body.docked .docknav{display:flex;flex:1 1 0%;min-width:0;gap:2px;background:var
 .dockmain{border:0;background:var(--night);color:#fff}
 .docksecond{border:1px solid var(--grey);background:var(--card);color:var(--ink)}
 /* A line, full size over the bill, with the tabs still below it */
-body.docked.ed-open .editor{top:62px;bottom:0;border-radius:20px 20px 0 0}
+body.docked.ed-open .editor{top:56px;bottom:0;border-radius:20px 20px 0 0}
 body.docked #viewMap .edhead{padding:14px 16px 0}
 body.docked #viewMap .edhead h2{font-size:18px}
 body.docked #viewMap .edbody{padding:14px 16px 16px;gap:16px}
@@ -1256,7 +1256,7 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .docksumbtns{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
 /* The panel's header (26 Nov 2026): floating on top, the menu, the three tabs, Read again */
 .dockmenu,.dockmenuback{display:none}
-body.docked .page{padding-top:54px}
+body.docked .page{padding-top:48px}
 body.docked .dockhead{position:fixed;top:8px;left:8px;right:8px;z-index:50;display:flex;align-items:center;gap:6px;padding:4px;border-radius:18px;min-height:0;background:var(--card);box-shadow:0 6px 20px rgba(16,24,40,.14),0 0 0 1px rgba(16,24,40,.04)}
 .dockicon{display:inline-grid;place-items:center;width:38px;height:38px;flex:none;border:0;border-radius:12px;background:transparent;color:var(--ink);cursor:pointer}
 .dockicon:hover{background:var(--chip)}
@@ -1266,9 +1266,17 @@ body.docked .dockmenuback:not([hidden]){display:block;position:fixed;inset:0;z-i
 body.docked .dockmenu:not([hidden]){display:flex;flex-direction:column;gap:10px;position:fixed;top:0;left:0;bottom:0;z-index:91;width:min(300px,86vw);overflow:auto;padding:12px;background:var(--bg);box-shadow:12px 0 32px rgba(16,24,40,.25);border-radius:0 22px 22px 0}
 .dockmenuhead{display:flex;align-items:center;gap:10px;padding:6px 4px 6px 6px}
 .dockmenuhead .docklogo{width:38px;height:38px;border-radius:12px;font-size:17px}
-.dockmenuhead .dockwho{flex:1 1 0%;min-width:0;display:flex;flex-direction:column}
-.dockmenuhead .dockwho b{font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dockmenuhead .dockwho span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dockmenutitle{flex:1 1 0%;font-size:16px}
+body.docked .dockhead .docklogo{width:32px;height:32px;border-radius:10px;font-size:15px}
+body.docked .dockhead .dockwho{flex:1 1 0%;min-width:0;display:flex;flex-direction:column;gap:0}
+body.docked .dockhead .dockwho b{font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.docked .dockhead .dockwho span{font-size:11.5px;line-height:1.2;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.docked .dockhead .dockicon{width:34px;height:34px}
+/* The bill steps in, level by level: section, clause heading, sub-heading and lines */
+body.docked #viewMap .mrow.dsec .nlabel{padding-left:6px!important}
+body.docked #viewMap .mrow.dhead .nlabel{padding-left:24px!important}
+body.docked #viewMap .mrow.subhead .nlabel{padding-left:46px!important}
+body.docked #viewMap .mrow.line .nlabel{padding-left:46px!important}
 .dockmenugroup{display:flex;flex-direction:column;gap:2px;background:var(--card);border-radius:18px;padding:6px}
 .dockmenugroup:empty{display:none}
 .dockmenulabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);padding:6px 10px 4px}
@@ -1782,6 +1790,8 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
      the tabs Next, Bill, Parts, Read again; 26 Nov 2026). The same page as the browser's, not a second app (dockview.js) -->
 <header class="dockhead" id="dockHead">
   <button type="button" class="dockicon" id="dockMenuBtn" aria-label="Menu" title="Menu" aria-expanded="false" aria-controls="dockMenu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
+  <span class="docklogo" aria-hidden="true">S</span>
+  <div class="dockwho"><b id="dockName">SolvBoQ</b><span id="dockSub"></span></div>
   <nav class="docknav" id="dockNav" aria-label="Panel">
     <button type="button" id="dockTabNext">Next</button>
     <button type="button" id="dockTabBill">Bill</button>
@@ -1792,7 +1802,7 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
 <!-- The panel's menu (26 Nov 2026): where to go, and what to do in Revit; it slides in from the left (dockview.js dockMenu*) -->
 <div class="dockmenuback" id="dockMenuBack" hidden></div>
 <aside class="dockmenu" id="dockMenu" hidden aria-label="Menu">
-  <div class="dockmenuhead"><span class="docklogo" aria-hidden="true">S</span><div class="dockwho"><b id="dockName">SolvBoQ</b><span id="dockSub"></span></div><button type="button" class="dockicon" id="dockMenuClose" aria-label="Close the menu" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+  <div class="dockmenuhead"><span class="docklogo" aria-hidden="true">S</span><b class="dockmenutitle">SolvBoQ</b><button type="button" class="dockicon" id="dockMenuClose" aria-label="Close the menu" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
   <div class="dockmenugroup" id="dockMenuGo" role="group" aria-label="Go to"></div>
   <div class="dockmenugroup" id="dockMenuDo" role="group" aria-label="In Revit"></div>
   <div class="dockmenugroup" id="dockMenuBill" role="group" aria-label="The bill"></div>
