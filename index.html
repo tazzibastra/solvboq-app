@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-26T14:01:41Z">
+<meta name="solvboq-build" content="2026-11-26T17:29:11Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1782,6 +1782,30 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
 .cbqlist{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:12px}
 .cbqlist li{display:flex;flex-direction:column;gap:4px}
 .cbqlist li>span{color:var(--ink-2)}
+/* Docked, a line opens as a dialog over the bill (26 Nov 2026: “make it look like a popup”): inset from the edges, rounded all round,
+   a shadow, and the bill dimmed behind it */
+body.docked.ed-open::before{content:"";position:fixed;inset:0;z-index:39;background:rgba(17,18,20,.38)}
+body.docked.ed-open .editor{top:58px;left:8px;right:8px;bottom:8px;border-radius:20px;box-shadow:0 16px 48px rgba(16,24,40,.32),0 0 0 1px rgba(16,24,40,.06);overflow:hidden}
+body.docked.ed-open #viewMap .edbody .edfoot{border-radius:0 0 20px 20px}
+/* The line's actions in one row: Paint, Select, Isolate, Ask AI */
+.edacts{display:flex;flex-wrap:wrap;gap:6px;margin:2px 0 4px}
+.edact{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 12px;border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.edact:hover{background:var(--chip)}
+.edact:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.edact.on{background:var(--night);border-color:var(--night);color:#fff}
+.edact.ai{border-color:var(--accent);color:var(--accent);background:var(--accent-s)}
+.edact.ai:hover{background:var(--accent);color:#fff}
+.edact[disabled]{opacity:.6;cursor:default}
+/* How it's worked out and the elements: each opens and shuts the same way */
+.edfold{display:block;text-align:left;margin:6px 0 0}
+.edfoldbody{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border-radius:14px;background:var(--head)}
+.edchgwrap{display:flex;flex-direction:column;gap:14px;padding-top:14px;border-top:1px solid var(--rule)}
+#viewMap .edbody .edfoot #btnChange.on{background:var(--chip);border-color:var(--ink)}
+/* The dialog fits what it holds, up to the panel's height (then its body scrolls); the four actions share one row */
+body.docked.ed-open .editor{bottom:auto;max-height:calc(100vh - 66px)}
+.edacts{flex-wrap:nowrap}
+.edact{flex:1 1 auto;justify-content:center;padding:0 8px;min-width:0}
+body.docked.ed-open .editor .edbody{min-height:0}
 </style>
 </head>
 <body>
@@ -13939,7 +13963,7 @@ function nextOpenAfter(L) {
 }
 function selectLine(L) {
   if (!L) { state.sel = null; renderMap(); return; }
-  state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null; state.mapTarget = null; state.pickCode = null;
+  state.sel = L.key; state.showEls = false; state.showWork = false; state.chgOpen = false; state.itemMenu = false; LN.edit = null; state.mapTarget = null; state.pickCode = null;
   state.coll.delete(L.section); state.coll.delete(headKey(L)); state.dColl?.delete(L.section); state.dHColl?.delete(headKey(L));
   renderMap();
   const esc = window.CSS && CSS.escape ? CSS.escape(L.key) : L.key.replace(/["\\]/g, "\\$&");
@@ -14217,7 +14241,8 @@ function editorFor(L, lines, inline) {
   const figure = h("div", { class: "edfigure", id: "edFigure" },
     h("div", { class: "edfigtext" }, inline ? h("span", { class: "edlabel" }, "The figure") : null,
       h("span", { class: "edbig" }, L.status === "out" ? "Left out" : L.status === "prov" ? "Provisional" : L.shownQty == null ? "Not measured yet" : `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`),
-      b ? basisChip(L) : null, h("span", { class: "lstate " + sc }, st)),
+      // Docked, the basis and the status aren't repeated here: the line says them (its sub-title and the box below) (26 Nov 2026)
+      inline && b ? basisChip(L) : null, inline ? h("span", { class: "lstate " + sc }, st) : null),
     inline ? h("button", { type: "button", class: "btn sm", id: "btnWorking", onclick: () => billWork(L) }, "How it’s worked out") : null);
   // Why it needs him, in one sentence (with what that reason offers)
   const why = [];
@@ -14256,7 +14281,40 @@ function editorFor(L, lines, inline) {
   const part = new Map(L.groups.flatMap((g) => (g.parts || []).map((p) => [String(p.id), p.qty])));
   const showEls = inline || state.showEls;
   const cb = inline ? null : calcBox(L);
-  const working = h("div", { class: "edfield", id: "edWorking" },
+  // Docked (26 Nov 2026: “make it look like a popup”): one row of what can be done in Revit and by Claude (Paint, Select, Isolate,
+  // Ask AI), then how the figure is worked out and the elements, each folding open and shut the same way
+  const pnt = !inline && HOST && typeof paintOf === "function" ? paintOf(L) : null, painted = pnt?.ok && PNT.key === L.key;
+  const aiOk = !inline && !L.expected && !L.unmapped && (L.shownQty ?? L.qty) != null, aiX = aiOk ? state.explain?.[explainKey(L)] : null;
+  const actIcon = (d) => svg(`<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`);
+  const acts = inline ? null : [
+    pnt?.ok ? (painted ? h("button", { type: "button", class: "edact on", id: "btnPaintClear", title: "Take the paint off the model again", onclick: () => { paintClear(); renderMap(); } }, actIcon('<path d="M4 20l6-6M14 4l6 6-8 8-6-6z"></path>'), "Clear paint")
+      : h("button", { type: "button", class: "edact", id: "btnPaint", title: "Paint in Revit: draws the faces counted and the parts left out over the model, in 3D views; nothing is added to the model", onclick: () => { paintSend(L); toast("Painted in Revit’s 3D views: counted in green, left out in orange"); renderMap(); } }, actIcon('<path d="M4 20l6-6M14 4l6 6-8 8-6-6z"></path>'), "Paint")) : null,
+    els.length && HOST ? h("button", { type: "button", class: "edact", id: "btnSelRevit", title: "Select in Revit: these elements selected and zoomed to", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, actIcon('<path d="M5 3l14 8-6 2-2 6z"></path>'), `Select (${els.length})`) : null,
+    els.length && HOST ? (state.revitIso ? h("button", { type: "button", class: "edact on", id: "btnShowAll", onclick: () => hostShowAll() }, actIcon('<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"></path><circle cx="12" cy="12" r="3"></circle>'), "Show all")
+      : h("button", { type: "button", class: "edact", id: "btnIsoRevit", title: "Isolate in Revit: hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, actIcon('<circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path>'), "Isolate")) : null,
+    aiOk ? h("button", { type: "button", class: "edact ai", id: "btnAskAI", title: "Claude explains this figure in plain words, from SolvBoQ’s working", disabled: aiX?.busy ? true : null, onclick: () => (sampleFn ? explainLine(L) : toast("Ask AI needs Claude: add your Claude key under Your firm › Practice and wording › Claude")) },
+      actIcon('<path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"></path>'), aiX?.busy ? "Asking…" : "Ask AI") : null].filter(Boolean);
+  const fold = (on, id, show, hide, fn) => h("button", { type: "button", class: "link accent edfold", id, "aria-expanded": String(!!on), onclick: fn }, on ? hide : show);
+  const working = !inline ? h("div", { class: "edfield", id: "edWorking" },
+    acts.length ? h("div", { class: "edacts", id: "edActs" }, ...acts) : null,
+    aiX && !aiX.busy ? explainBox(L) : null,
+    L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
+      h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
+    fold(state.showWork, "btnWork", "Show how this figure is worked out", "Hide how this figure is worked out", () => { state.showWork = !state.showWork; renderMap(); }),
+    state.showWork ? h("div", { class: "edfoldbody", id: "edWorkBody" }, cb,
+      h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
+      ...reasons.map((r) => h("p", { class: "edtext" }, r)),
+      /joint/i.test(L.description) ? jointLayoutNote() : null,
+      typeof paintBox === "function" ? paintBox(L, true) : null) : null,
+    els.length ? fold(state.showEls, "btnEls", `Show the ${plural(els.length, "element")} in the model`, `Hide the ${plural(els.length, "element")} in the model`, () => { state.showEls = !state.showEls; renderMap(); }) : h("span", { class: "edsub" }, "No model elements behind this line."),
+    state.showEls && els.length ? h("div", { class: "edels" },
+      h("div", { class: "edelrow eh" }, h("span", {}, "ID"), h("span", {}, "Family : type · level"), h("span", { class: "r" }, L.unit || "")),
+      h("div", { class: "edelscroll" }, ...els.slice(0, 300).map(({ e, g }) => { const q = part.size ? part.get(String(e.Id)) : L.unit ? basisQty(e, g.item?.unit || L.unit) : null;
+        const on = !!state.revitSel?.has(String(e.Id));
+        return h(HOST ? "button" : "div", { class: "edelrow" + (on ? " on" : "") + (HOST ? " pick" : ""), "data-el": String(e.Id), ...(HOST ? { type: "button", title: "Select it in Revit", "aria-pressed": String(on), onclick: () => { hostSelect([e.Id]); renderMap(); } } : {}) }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
+      h("div", { class: "edelfoot" }, h("span", {}, "Paste into Revit: Manage › Select by ID"),
+        h("button", { type: "button", class: "btn xs", id: "btnCopyIds", onclick: () => copyText(els.map(({ e }) => e.Id).join(";"), plural(els.length, "ID") + " copied for Revit’s Select by ID") }, "Copy IDs for Revit"))) : null)
+  : h("div", { class: "edfield", id: "edWorking" },
     inline ? h("span", { class: "edlabel" }, els.length ? `${plural(els.length, "element")} behind it` : "Behind it") : cb ? null : h("span", { class: "edlabel" }, "How this figure is worked out"),
     cb, inline ? null : explainBox(L),
     L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
@@ -14288,7 +14346,8 @@ function editorFor(L, lines, inline) {
   // Leave out or Bring back
   const foot = [], by = L.groups.length && L.groups.every((g) => g.method === "rule");
   const leave = L.status !== "out" ? h("button", { type: "button", class: "btn", id: "btnLeaveOut", onclick: () => leaveOut(L) }, "Leave out") : null;
-  const change = h("button", { type: "button", class: "btn", id: "btnChange", onclick: () => edChange() }, "Change");
+  // Docked, Change opens the item, the quantity, the assumptions and the Revit types below the decisions, and shuts them again
+  const change = h("button", { type: "button", class: "btn" + (state.chgOpen ? " on" : ""), id: "btnChange", "aria-expanded": String(!!state.chgOpen), onclick: () => { if (state.chgOpen) { state.chgOpen = false; state.itemMenu = false; state.mEdit = null; renderMap(); } else edChange(); } }, "Change");
   if (inline) {
     const typeFig = L.unmapped || L.status === "out" ? null : h("button", { type: "button", class: "btn", id: "btnTypeFig", onclick: () => billEditQty(L) }, "Type a figure");
     if (L.status === "out") foot.push(h("button", { type: "button", class: "btn dark grow", id: "btnBringBack", onclick: () => billBringBack([L]) }, "Bring back"));
@@ -14384,10 +14443,12 @@ function editorFor(L, lines, inline) {
     h("div", { class: "edcol" }, ...why, ask, checks, figure, measure, footEl),
     h("div", { class: "edcol" }, working, typeof paintBox === "function" ? paintBox(L) : null, typeof overlapBox === "function" ? overlapBox(L) : null, types, changeEl))];
   const one = HOST && state.revitPicked && typeof elementCard === "function" ? elementCard(state.revitPicked, "Selected in Revit: what it gives the bill") : null;
-  return [head, h("div", { class: "edbody" }, figure, ...why, ask, checks, working, one, typeof paintBox === "function" ? paintBox(L) : null, typeof overlapBox === "function" ? overlapBox(L) : null, types, measure, footEl, changeEl)];
+  const chgShown = state.chgOpen || state.itemMenu || !!state.mEdit || L.status === "measure" || L.unmapped;
+  return [head, h("div", { class: "edbody" }, figure, ...why, ask, checks, measure, working, one, typeof overlapBox === "function" ? overlapBox(L) : null, footEl,
+    chgShown ? h("div", { class: "edchgwrap", id: "edChgWrap" }, types, changeEl) : null)];
 }
 // Change: to the item, quantity and assumptions below the decisions
-function edChange() { setTimeout(() => { const c = $("edChange"); if (!c) return; c.scrollIntoView({ block: "start", behavior: "smooth" }); (c.querySelector("#edqty") || c.querySelector(".edselect"))?.focus({ preventScroll: true }); }, 0); }
+function edChange() { if (!state.chgOpen && typeof renderMap === "function") { state.chgOpen = true; renderMap(); } setTimeout(() => { const c = $("edChange"); if (!c) return; c.scrollIntoView({ block: "start", behavior: "smooth" }); (c.querySelector("#edqty") || c.querySelector(".edselect"))?.focus({ preventScroll: true }); }, 0); }
 const fmtN = (v, d) => (Math.round(v * 10 ** d) / 10 ** d).toFixed(d);
 
 // Nothing selected: progress, how lines were mapped, and the quick ways through
@@ -19573,7 +19634,7 @@ function paintSync() {
   if (PNT.key && !String(PNT.key).startsWith("~") && (!L || L.key !== PNT.key)) paintClear();   // ghosts (~) stay until colours are cleared
   if (L && REV.on && !PNT.key && paintOf(L)?.ok && paintSend(L)) { const b = document.getElementById("paintBox"), nb = paintBox(L); if (b && nb) b.replaceWith(nb); }
 }
-function paintBox(L) {
+function paintBox(L, folded) {   // folded: inside the docked line's working, its Paint button on the line's action row
   const p = paintOf(L);
   if (!p || (!p.ok && !p.els?.length && !/^Not measured|box rule|footprint|layout/.test(p.note || ""))) return null;
   const on = PNT.key === L.key;
@@ -19584,7 +19645,7 @@ function paintBox(L) {
     p.ok ? h("div", { class: "pntlist" }, ...p.legend.map(row)) : h("p", { class: "edsub" }, p.note),
     p.ok && p.note ? h("p", { class: "edsub", id: "paintNote" }, p.note) : null,
     PNT.note && on ? h("p", { class: "edsub warn" }, PNT.note) : null,
-    p.ok && HOST ? h("div", { class: "tools" }, on ? h("button", { type: "button", class: "btn sm dark", id: "btnPaintClear", onclick: () => { paintClear(); renderMap(); } }, "Clear the paint in Revit")
+    p.ok && HOST && !folded ? h("div", { class: "tools" }, on ? h("button", { type: "button", class: "btn sm dark", id: "btnPaintClear", onclick: () => { paintClear(); renderMap(); } }, "Clear the paint in Revit")
       : h("button", { type: "button", class: "btn sm", id: "btnPaint", title: "Draws the faces counted and the parts left out over the model, in 3D views; nothing is added to the model", onclick: () => { paintSend(L); toast("Painted in Revit’s 3D views: counted in green, left out in orange"); renderMap(); } }, "Paint in Revit")) : null);
 }
 
