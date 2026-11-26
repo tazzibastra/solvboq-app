@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-26T11:17:00Z">
+<meta name="solvboq-build" content="2026-11-26T11:45:19Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1252,6 +1252,11 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .isobar .btn.sm:not(.dark){background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
 .isobar .btn[disabled]{opacity:.45}
 .docksumbtns{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+/* The docked line, calmer (26 Nov 2026): a quiet reason, one row of Revit actions */
+.edquiet{margin:2px 0 6px;color:var(--muted)}
+.edrevit{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:4px 0 10px}
+.edrevit .edlabel{margin:0 4px 0 0}
+.edquietlink{font-size:13px}
 /* Colour the model (T-049) */
 .coldlg{max-width:440px;width:calc(100% - 24px);border:0;border-radius:20px;padding:18px;box-shadow:0 12px 40px rgba(16,24,40,.25)}
 .coldlg h2{margin:0 0 6px;font-size:17px}
@@ -14115,13 +14120,13 @@ function editorFor(L, lines, inline) {
     h("h2", {}, L.description),
     // Docked: where this line is among those that need him (the canvas's “Revit panel 4: A line”)
     HOST ? h("span", { class: "edpos", id: "edPos" }, (() => { const need = lines.filter((x) => OPEN.has(x.status)), k = need.indexOf(L);
-      return k >= 0 ? `Line ${k + 1} of the ${need.length} that need${need.length === 1 ? "s" : ""} you` : `Item ${L.n} of ${lines.filter((x) => x.status !== "out").length}`; })()) : null);
+      return k >= 0 ? `Line ${k + 1} of ${need.length} to review` : `Item ${L.n} of ${lines.filter((x) => x.status !== "out").length}`; })()) : null);
   // The figure, how it was got, and where it stands
   const b = lineBasis(L);
   const figure = h("div", { class: "edfigure", id: "edFigure" },
     h("div", { class: "edfigtext" }, inline ? h("span", { class: "edlabel" }, "The figure") : null,
       h("span", { class: "edbig" }, L.status === "out" ? "Left out" : L.status === "prov" ? "Provisional" : L.shownQty == null ? "Not measured yet" : `${mapQty(L.shownQty, L.unit)} ${L.unit || ""}`),
-      b ? basisChip(L) : null, h("span", { class: "lstate " + sc }, st)),
+      b ? basisChip(L) : null, inline || !open ? h("span", { class: "lstate " + sc }, st) : null),
     inline ? h("button", { type: "button", class: "btn sm", id: "btnWorking", onclick: () => billWork(L) }, "How it’s worked out") : null);
   // Why it needs him, in one sentence (with what that reason offers)
   const why = [];
@@ -14145,6 +14150,7 @@ function editorFor(L, lines, inline) {
       : h("div", { class: "edai edwhy" }, h("b", {}, `It needs you: Claude suggested the item${ai.confidence != null ? ` (${Math.round(ai.confidence * 100)}% sure)` : ""}. `), ai.reason || "", " Accept it, or change it below."));
   }
   else if (L.status === "confirm" && L.doc) why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: the figure comes from a document. "), "Check it’s this structure’s steel and that the size is billed as you bill it."));
+  else if (L.status === "confirm" && !inline && !L.est) why.push(h("p", { class: "edsub edquiet", id: "edWhyQuiet" }, "A rule chose the item: confirm it, or change it below."));
   else if (L.status === "confirm") why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: a rule chose the item, and it’s yours to confirm. "), ruleWhy.length ? ruleWhy.join(" ") : L.inferred ? "It is worked out from the model by SolvBoQ’s rule." : "Check the item is the one you would bill."));
   else if (L.status === "measure") why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: it isn’t in the model. "), `${L.why || ""} ${inline ? "Type the quantity from the drawings, or bill it as provisional." : "Enter the quantity from the drawings below, or bill it as provisional."}`));
   else if (L.status === "unmapped") why.push(h("div", { class: "edwhy" }, h("b", {}, "It needs you: no item fits it yet. "), inline ? "Choose its item, on the right" : "Choose its item below", sampleFn ? ", or ask Claude." : "."));
@@ -14162,18 +14168,18 @@ function editorFor(L, lines, inline) {
   const cb = inline ? null : calcBox(L);
   const working = h("div", { class: "edfield", id: "edWorking" },
     inline ? h("span", { class: "edlabel" }, els.length ? `${plural(els.length, "element")} behind it` : "Behind it") : cb ? null : h("span", { class: "edlabel" }, "How this figure is worked out"),
-    cb, inline ? null : explainBox(L),
+    cb,
     L.lessOn && !L.edited ? h("p", { class: "edtext warn", id: "lessOn" }, `Billed less ${fmt2(L.overlapLess)} m³ that these elements share with ${overlapNames(L)} without being joined: counted there, not twice (Revit’s volume is ${mapQty(L.modelQty, L.unit)} m³${L.overlapApprox ? "; approximate" : ""}). `,
       h("button", { type: "button", class: "link accent", onclick: () => { state.lessOverlap.delete(L.key); saveLess(state.name, state.lessOverlap); toast("Billed in full again"); renderMap(); } }, "Bill it in full")) : null,
-    inline ? null : h("p", { class: "edtext" }, L.expected ? L.why : `${L.inferred ? "Inferred from" : "From"} ${plural(els.length, "model element")}${L.groups.length > 1 ? ` in ${plural(L.groups.length, "Revit group")}` : ""}.`),
+    inline || !L.expected ? null : h("p", { class: "edtext" }, L.why),
     ...(inline ? [] : reasons.map((r) => h("p", { class: "edtext" }, r))),
     /joint/i.test(L.description) ? jointLayoutNote() : null,
-    els.length && HOST ? h("div", { class: "tools" },
+    els.length && HOST && inline ? h("div", { class: "tools" },
       h("button", { type: "button", class: "btn sm", id: "btnSelRevit", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, `Select in Revit (${els.length})`),
       h("button", { type: "button", class: "btn sm", id: "btnIsoRevit", title: "Hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, "Isolate in Revit"),
       state.revitIso ? h("button", { type: "button", class: "btn sm dark", id: "btnShowAll", onclick: () => hostShowAll() }, "Show everything again") : null) : null,
     inline ? (els.length ? null : h("span", { class: "edsub" }, L.expected ? L.why : "No model elements behind this line."))
-      : els.length ? h("button", { type: "button", class: "link accent", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "Show"} the ${plural(els.length, "element")} in the model`) : h("span", { class: "edsub" }, "No model elements behind this line."),
+      : els.length ? h("button", { type: "button", class: "link accent edquietlink", "aria-expanded": String(!!state.showEls), onclick: () => { state.showEls = !state.showEls; renderMap(); } }, `${state.showEls ? "Hide" : "Show"} the ${plural(els.length, "element")} in the model`) : h("span", { class: "edsub" }, "No model elements behind this line."),
     showEls && els.length ? h("div", { class: "edels" },
       h("div", { class: "edelrow eh" }, h("span", {}, "ID"), h("span", {}, "Family : type · level"), h("span", { class: "r" }, L.unit || "")),
       // Docked in Revit, an element's row selects it there (and selecting in Revit highlights its row here)
@@ -14182,6 +14188,17 @@ function editorFor(L, lines, inline) {
         return h(HOST ? "button" : "div", { class: "edelrow" + (on ? " on" : "") + (HOST ? " pick" : ""), "data-el": String(e.Id), ...(HOST ? { type: "button", title: "Select it in Revit", "aria-pressed": String(on), onclick: () => { hostSelect([e.Id]); renderMap(); } } : {}) }, h("b", {}, String(e.Id)), h("span", {}, h("span", {}, `${e.Family || e.Category} : ${e.Type || "no type name"}`), h("small", {}, e.Level || "no level")), h("span", { class: "r" }, q == null ? "–" : mapQty(q, L.unit))); })),
       h("div", { class: "edelfoot" }, h("span", {}, "Paste into Revit: Manage › Select by ID"),
         h("button", { type: "button", class: "btn xs", id: "btnCopyIds", onclick: () => copyText(els.map(({ e }) => e.Id).join(";"), plural(els.length, "ID") + " copied for Revit’s Select by ID") }, "Copy IDs for Revit"))) : null);
+  // Docked: Revit's actions in one row (select, isolate, paint what it measured), right under the figure
+  const pnt = HOST && !inline && typeof paintOf === "function" ? paintOf(L) : null, painted = !!pnt?.ok && typeof PNT !== "undefined" && PNT.key === L.key;
+  const revitRow = HOST && !inline && els.length ? h("div", { class: "tools edrevit", id: "edRevit" },
+    h("span", { class: "edlabel" }, "In Revit"),
+    h("button", { type: "button", class: "btn sm", id: "btnSelRevit", onclick: () => hostSelect(els.map(({ e }) => e.Id)) }, `Select (${els.length})`),
+    state.revitIso ? h("button", { type: "button", class: "btn sm dark", id: "btnShowAll", onclick: () => hostShowAll() }, "Show all")
+      : h("button", { type: "button", class: "btn sm", id: "btnIsoRevit", title: "Hides everything else in the active view for now (Revit’s temporary isolate)", onclick: () => hostSelect(els.map(({ e }) => e.Id), "isolate") }, "Isolate"),
+    pnt?.ok ? (painted ? h("button", { type: "button", class: "btn sm dark", id: "btnPaintClear", onclick: () => { paintClear(); renderMap(); } }, "Clear paint")
+      : h("button", { type: "button", class: "btn sm", id: "btnPaint", title: "Draws what this line measured over the model, in 3D views; nothing is added to the model", onclick: () => { paintSend(L); toast("Painted in Revit’s 3D views"); renderMap(); } }, "Paint")) : null) : null;
+  const revitNote = painted && PNT.note ? h("p", { class: "edsub warn", id: "edRevitNote" }, PNT.note) : null;
+  const explainEl = inline ? null : explainBox(L);
   const types = pkTypes(L);
   // What would turn an estimate into a measurement
   const measure = L.est && !L.edited ? h("div", { class: "edmeasure" }, h("span", { class: "edmtitle" }, "To measure this, not estimate it"),
@@ -14288,7 +14305,7 @@ function editorFor(L, lines, inline) {
     h("div", { class: "edcol" }, ...why, ask, checks, figure, measure, footEl),
     h("div", { class: "edcol" }, working, typeof paintBox === "function" ? paintBox(L) : null, typeof overlapBox === "function" ? overlapBox(L) : null, types, changeEl))];
   const one = HOST && state.revitPicked && typeof elementCard === "function" ? elementCard(state.revitPicked, "Selected in Revit: what it gives the bill") : null;
-  return [head, h("div", { class: "edbody" }, figure, ...why, ask, checks, working, one, typeof paintBox === "function" ? paintBox(L) : null, typeof overlapBox === "function" ? overlapBox(L) : null, types, measure, footEl, changeEl)];
+  return [head, h("div", { class: "edbody" }, figure, ...why, revitRow, revitNote, ask, checks, working, explainEl, one, typeof paintBox === "function" ? paintBox(L) : null, typeof overlapBox === "function" ? overlapBox(L) : null, types, measure, footEl, changeEl)];
 }
 // Change: to the item, quantity and assumptions below the decisions
 function edChange() { setTimeout(() => { const c = $("edChange"); if (!c) return; c.scrollIntoView({ block: "start", behavior: "smooth" }); (c.querySelector("#edqty") || c.querySelector(".edselect"))?.focus({ preventScroll: true }); }, 0); }
@@ -19452,6 +19469,8 @@ function paintSync() {
 function paintBox(L) {
   const p = paintOf(L);
   if (!p || (!p.ok && !p.els?.length && !/^Not measured|box rule|footprint|layout/.test(p.note || ""))) return null;
+  // Docked, one row is the figure again (a joint, the excavation, formwork with nothing left out): Paint is in the line's Revit row
+  if (HOST && p.ok && p.legend.length < 2 && !p.note) return null;
   const on = PNT.key === L.key;
   const row = (x) => h("div", { class: "pntrow" + (x.left ? " out" : ""), "data-paint": x.key },
     h("span", { class: "pntsw", style: `background:${x.color}`, "aria-hidden": "true" }), h("span", { class: "pntlab" }, x.label), h("span", { class: "pntm" }, `${fmt2(x.area)} ${x.unit || "m²"}`));
@@ -19460,7 +19479,7 @@ function paintBox(L) {
     p.ok ? h("div", { class: "pntlist" }, ...p.legend.map(row)) : h("p", { class: "edsub" }, p.note),
     p.ok && p.note ? h("p", { class: "edsub", id: "paintNote" }, p.note) : null,
     PNT.note && on ? h("p", { class: "edsub warn" }, PNT.note) : null,
-    p.ok && HOST ? h("div", { class: "tools" }, on ? h("button", { type: "button", class: "btn sm dark", id: "btnPaintClear", onclick: () => { paintClear(); renderMap(); } }, "Clear the paint in Revit")
+    false ? h("div", { class: "tools" }, on ? h("button", { type: "button", class: "btn sm dark", id: "btnPaintClear", onclick: () => { paintClear(); renderMap(); } }, "Clear the paint in Revit")
       : h("button", { type: "button", class: "btn sm", id: "btnPaint", title: "Draws the faces counted and the parts left out over the model, in 3D views; nothing is added to the model", onclick: () => { paintSend(L); toast("Painted in Revit’s 3D views: counted in green, left out in orange"); renderMap(); } }, "Paint in Revit")) : null);
 }
 
