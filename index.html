@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="solvboq-build" content="2026-11-26T12:43:20Z">
+<meta name="solvboq-build" content="2026-11-26T13:06:53Z">
 <title>BoQ readiness · SolvBoQ</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1252,6 +1252,37 @@ body.docked.ed-open .editor{align-self:stretch;height:auto}
 .isobar .btn.sm:not(.dark){background:transparent;color:#fff;border-color:rgba(255,255,255,.4)}
 .isobar .btn[disabled]{opacity:.45}
 .docksumbtns{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+/* The panel's slim header and its menu (26 Nov 2026) */
+.dockmenu,.dockmenuback{display:none}
+body.docked .dockhead{padding:4px 6px;border-radius:14px;gap:6px;min-height:40px}
+body.docked .dockhead .dockwho{min-width:0;flex:1;display:flex;flex-direction:row;align-items:baseline;gap:8px;overflow:hidden}
+body.docked .dockhead .dockwho b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.docked .dockhead .dockwho span{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dockicon{display:inline-grid;place-items:center;width:34px;height:34px;flex:none;border:0;border-radius:10px;background:transparent;color:var(--ink);cursor:pointer}
+.dockicon:hover{background:var(--chip)}
+.dockicon:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+body.docked .dockmenuback:not([hidden]){display:block;position:fixed;inset:0;z-index:90;background:rgba(16,24,40,.35)}
+body.docked .dockmenu:not([hidden]){display:flex;flex-direction:column;gap:14px;position:fixed;top:0;left:0;bottom:0;z-index:91;width:min(300px,86vw);overflow:auto;padding:12px 14px 20px;background:var(--card);box-shadow:8px 0 28px rgba(16,24,40,.22);border-radius:0 18px 18px 0}
+.dockmenuhead{display:flex;align-items:center;justify-content:space-between}
+.dockmenuhead b{font-size:16px}
+.dockmenugroup{display:flex;flex-direction:column;gap:4px}
+.dockmenulabel{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin:2px 4px}
+body.docked .dockmenu .dockmenuitem,body.docked .dockmenu .dockbar .btn,body.docked .dockmenu #menuReread{display:flex;width:100%;justify-content:flex-start;text-align:left;min-height:40px;padding:0 12px;border:0;border-radius:10px;background:transparent;font:inherit;font-size:14px;color:var(--ink);cursor:pointer;box-shadow:none}
+.dockmenu .dockmenuitem:hover,.dockmenu .dockbar .btn:hover,.dockmenu #menuReread:hover{background:var(--chip)}
+body.docked .dockmenu .dockmenuitem[aria-current=page]{background:var(--chip);font-weight:700}
+body.docked .dockmenu .dockbar{display:flex;flex-direction:column;align-items:stretch;gap:4px;flex-wrap:nowrap}
+body.docked .dockmenu .dockbar #dockRevSlot{display:flex;flex-direction:column;align-items:stretch;gap:4px}
+.dockmenu .dockbar .btn.dark{background:var(--ink);color:#fff}
+/* Docked, Copy and Download are in the menu */
+body.docked #btnBoqCopy,body.docked #btnBoqCsv{display:none!important}
+/* Docked, the bill's sections open and close; closed, the bar says what is outstanding */
+body.docked #viewMap .mrow.dsec{display:flex;width:100%;align-items:center;justify-content:space-between;gap:8px;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;color:inherit}
+body.docked #viewMap .mrow.dsec .nlabel{display:flex;align-items:center;gap:6px}
+.dchev{display:inline-grid;transition:transform .15s;transform:rotate(90deg)}
+.dsec.shut .dchev{transform:none}
+body.docked #viewMap .mrow.dsec>.dsecout{display:inline-block;padding:3px 10px;margin:8px 8px 0 0;white-space:nowrap;line-height:1.4}   /* the narrow layout hides a row's second cell: not this one */
+.dsecout{flex:none;font-size:12px;font-weight:700;padding:3px 10px;border-radius:999px;background:var(--amber-s,#FFF1D6);color:var(--amber-d,#8A5300)}
+.dsecout.done{background:var(--green-s,#E3F6E8);color:var(--green-d,#1E7B3C)}
 /* Colour the model (T-049) */
 .coldlg{max-width:440px;width:calc(100% - 24px);border:0;border-radius:20px;padding:18px;box-shadow:0 12px 40px rgba(16,24,40,.25)}
 .coldlg h2{margin:0 0 6px;font-size:17px}
@@ -1726,10 +1757,18 @@ button.bqty:hover{border-color:var(--line);background:var(--card)}
 <!-- Docked in Revit (body.docked; the canvas's “Revit panel” boards, about 440 px wide): the structure and Read again on top,
      three tabs along the bottom (Next, Bill, Parts). The same page as the browser's, not a second app (dockview.js) -->
 <header class="dockhead" id="dockHead">
-  <div class="docklogo" aria-hidden="true">S</div>
+  <button type="button" class="dockicon" id="dockMenuBtn" aria-label="Menu" title="Menu" aria-expanded="false" aria-controls="dockMenu"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg></button>
   <div class="dockwho"><b id="dockName">SolvBoQ</b><span id="dockSub"></span></div>
-  <button type="button" class="hvbtn outline" id="dockReread">Read again</button>
+  <button type="button" class="dockicon" id="dockReread" aria-label="Read the model again" title="Read the model again"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7"></path></svg></button>
 </header>
+<!-- The panel's menu (26 Nov 2026): where to go, and what to do in Revit; it slides in from the left (dockview.js dockMenu*) -->
+<div class="dockmenuback" id="dockMenuBack" hidden></div>
+<aside class="dockmenu" id="dockMenu" hidden aria-label="Menu">
+  <div class="dockmenuhead"><b>SolvBoQ</b><button type="button" class="dockicon" id="dockMenuClose" aria-label="Close the menu" title="Close"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"></path></svg></button></div>
+  <div class="dockmenugroup" id="dockMenuGo" role="group" aria-label="Go to"></div>
+  <div class="dockmenugroup" id="dockMenuDo" role="group" aria-label="In Revit"></div>
+  <div class="dockmenugroup" id="dockMenuBill" role="group" aria-label="The bill"></div>
+</aside>
 <nav class="docknav" id="dockNav" aria-label="Panel">
   <button type="button" id="dockTabNext">Next</button>
   <button type="button" id="dockTabBill">Bill</button>
@@ -13121,7 +13160,8 @@ if (HOST && typeof document !== "undefined") {
   document.body.classList.add("docked");
   const bar = h("div", { class: "dockbar" },
     h("button", { type: "button", class: "btn sm", id: "btnOverview", onclick: () => { state.sel = null; state.ovOpen = true; if (state.view !== "map") { state.view = "map"; render(); } else renderMap(); } }, "Overview and fixes"), h("span", { id: "dockRevSlot" }));   // (Read again is in the panel's header: dockview.js)
-  const at = document.getElementById("btnBoqCopy"); if (at) at.before(bar);
+  // (since 26 Nov 2026 in the panel's menu, not above the bill: dockview.js)
+  const at = document.getElementById("dockMenuDo"); if (at) at.append(bar);
 }
 // He selected elements in the model: open the bill line they are on (the modelled line, where their volume, area or count
 // is billed), and say how many other lines they are also behind
@@ -13797,7 +13837,14 @@ function renderTree(lines, groups) {
   for (const sec of [...new Set(lines.map((L) => L.section))]) {
     const secLines = lines.filter((L) => L.section === sec), vis = secLines.filter(show);
     if (!vis.length) continue;
-    rows.push(h("div", { class: "mrow node sec", role: "row" }, h("span", { class: "nlabel" }, h("span", { class: "ntext" }, SECTION_LABEL(sec), sec === "Not mapped" || !SECTION_TITLE[sec] ? "" : ` · ${SECTION_TITLE[sec]}`))));
+    // Docked, each section opens and closes (26 Nov 2026, as the browser's bill does); closed, its bar says what's outstanding in it
+    const shut = !!state.dColl?.has(sec), need = secLines.filter((L) => OPEN.has(L.status)).length;
+    rows.push(h("button", { type: "button", class: "mrow node sec dsec" + (shut ? " shut" : ""), role: "row", "aria-expanded": String(!shut), "data-sec": sec,
+        onclick: () => { state.dColl = state.dColl || new Set(); if (state.dColl.has(sec)) state.dColl.delete(sec); else state.dColl.add(sec); renderMap(); } },
+      h("span", { class: "nlabel" }, h("span", { class: "dchev", "aria-hidden": "true" }, svg('<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"></path></svg>')),
+        h("span", { class: "ntext" }, SECTION_LABEL(sec), sec === "Not mapped" || !SECTION_TITLE[sec] ? "" : ` · ${SECTION_TITLE[sec]}`)),
+      shut ? h("span", { class: "dsecout" + (need ? "" : " done") }, need ? `${need} to review` : "All confirmed") : null));
+    if (shut) continue;
     let head = null, lastSub = null;
     for (const L of vis) {
       const hk = headKey(L), sub = subHeadOf(L);
@@ -13844,12 +13891,12 @@ function nextOpenAfter(L) {
 function selectLine(L) {
   if (!L) { state.sel = null; renderMap(); return; }
   state.sel = L.key; state.showEls = false; state.itemMenu = false; LN.edit = null; state.mapTarget = null; state.pickCode = null;
-  state.coll.delete(L.section); state.coll.delete(headKey(L));
+  state.coll.delete(L.section); state.coll.delete(headKey(L)); state.dColl?.delete(L.section);
   renderMap();
   const esc = window.CSS && CSS.escape ? CSS.escape(L.key) : L.key.replace(/["\\]/g, "\\$&");
   const row = document.querySelector(`#mTree [data-key="${esc}"]`); if (row) row.scrollIntoView({ block: "nearest", behavior: "smooth" });
 }
-function advance(L) { const n = nextOpenAfter(L); state.sel = n ? n.key : null; if (n) { state.coll.delete(n.section); state.coll.delete(headKey(n)); } }
+function advance(L) { const n = nextOpenAfter(L); state.sel = n ? n.key : null; if (n) { state.coll.delete(n.section); state.coll.delete(headKey(n)); state.dColl?.delete(n.section); } }
 // Confirm every open group on the line, save them for future models, and move on
 function confirmLine(L) {
   if (L.status === "moved" && typeof signAck === "function") signAck(L);   // its new quantity accepted since the signed version
@@ -19270,6 +19317,34 @@ $("dockTabBill").addEventListener("click", () => dockGo("bill"));
 $("dockTabParts").addEventListener("click", () => dockGo("parts"));
 $("dockReread").addEventListener("click", () => hostReread());
 
+// ----- The panel's menu (26 Nov 2026: "this is basically narrow like a mobile view"): where to go, and what to do -----
+// The header is one slim bar (the menu, the structure, Read again); the menu slides in from the left with the places (Next, Bill, Parts,
+// Sign off, the model checks) and the actions (Read again, Review in the model, Colour the model, Check a face, Overview and fixes, Copy
+// and Download the bill). Choosing one closes it; so do a click outside and Esc. The tabs along the bottom stay.
+function dockMenuOpen(on) {
+  const m = document.getElementById("dockMenu"), b = document.getElementById("dockMenuBack"); if (!m || !b) return;
+  m.hidden = !on; b.hidden = !on; document.getElementById("dockMenuBtn")?.setAttribute("aria-expanded", String(!!on));
+  if (on) { dockMenuDraw(); setTimeout(() => m.querySelector("button")?.focus(), 0); }
+}
+function dockMenuDraw() {
+  const go = document.getElementById("dockMenuGo"), bill = document.getElementById("dockMenuBill"); if (!go || !bill) return;
+  const here = state.view === "next" ? "next" : state.view === "parts" ? "parts" : state.view === "sign" ? "sign" : state.view === "overview" ? "checks" : "bill";
+  const item = (id, label, key, fn) => h("button", { type: "button", class: "dockmenuitem", id, "aria-current": key && key === here ? "page" : null, onclick: () => { dockMenuOpen(false); fn(); } }, label);
+  go.replaceChildren(h("span", { class: "dockmenulabel" }, "Go to"),
+    item("menuNext", "Next", "next", () => dockGo("next")), item("menuBill", "The bill", "bill", () => dockGo("bill")), item("menuParts", "Parts", "parts", () => dockGo("parts")),
+    item("menuSign", "Sign off", "sign", () => { state.view = "sign"; render(); window.scrollTo(0, 0); }),
+    item("menuChecks", "All the model checks", "checks", () => { state.view = "overview"; render(); window.scrollTo(0, 0); }));
+  bill.replaceChildren(h("span", { class: "dockmenulabel" }, "The bill"),
+    item("menuCopy", "Copy the bill", null, () => document.getElementById("btnBoqCopy")?.click()),
+    item("menuCsv", "Download the bill", null, () => document.getElementById("btnBoqCsv")?.click()));
+}
+$("dockMenuBtn").addEventListener("click", () => dockMenuOpen(document.getElementById("dockMenu").hidden));
+$("dockMenuClose").addEventListener("click", () => dockMenuOpen(false));
+$("dockMenuBack").addEventListener("click", () => dockMenuOpen(false));
+// Any action in the menu closes it (the actions from the old toolbar too)
+$("dockMenuDo").addEventListener("click", (e) => { if (e.target.closest("button")) setTimeout(() => dockMenuOpen(false), 0); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !document.getElementById("dockMenu").hidden) { e.preventDefault(); e.stopImmediatePropagation(); dockMenuOpen(false); } }, true);
+
 // A line from Next: open it full size, among the lines that need him
 function dockOpen(L, select) {
   state.view = "map"; state.mFilter2 = "need"; render();
@@ -19415,7 +19490,7 @@ function reviewBar() {
       h("button", { type: "button", class: "btn sm dark", id: "btnRevEnd", onclick: () => reviewEnd() }, "End review (Esc)"))];
 }
 // The start and end button beside “Overview and fixes” on the Bill tab, kept in step
-function reviewSlot() { const s = typeof document !== "undefined" && document.getElementById("dockRevSlot"); if (s) s.replaceChildren(reviewButton("btnReview") || "", colButton("btnColourBill") || "", faceButton("btnFaceBill") || ""); }
+function reviewSlot() { const s = typeof document !== "undefined" && document.getElementById("dockRevSlot"); if (s) s.replaceChildren(reviewButton("btnReview") || "", colButton("btnColourBill") || "", faceButton("btnFaceBill") || ""); if (!document.getElementById("menuReread") && document.getElementById("dockMenuDo")) document.getElementById("dockMenuDo").prepend(h("span", { class: "dockmenulabel" }, "In Revit"), h("button", { type: "button", class: "btn sm", id: "menuReread", onclick: () => hostReread() }, "Read the model again")); }
 const colButton = (id) => (HOST ? h("button", { type: "button", class: "btn sm", id, onclick: () => colOpen() }, "Colour the model") : null);
 function reviewButton(id) {
   return HOST ? h("button", { type: "button", class: "btn sm" + (REV.on ? " dark" : ""), id, "aria-pressed": String(REV.on), onclick: () => (REV.on ? reviewEnd() : reviewStart()) }, REV.on ? "End review" : "Review in the model") : null;
